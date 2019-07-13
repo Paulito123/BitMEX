@@ -30,7 +30,7 @@
         {
             this.tableLayoutPanel1 = new System.Windows.Forms.TableLayoutPanel();
             this.btnMarketOrder = new System.Windows.Forms.Button();
-            this.button2 = new System.Windows.Forms.Button();
+            this.btnSwagger = new System.Windows.Forms.Button();
             this.button3 = new System.Windows.Forms.Button();
             this.button4 = new System.Windows.Forms.Button();
             this.button5 = new System.Windows.Forms.Button();
@@ -53,7 +53,7 @@
             this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 12.5F));
             this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 12.5F));
             this.tableLayoutPanel1.Controls.Add(this.btnMarketOrder, 0, 0);
-            this.tableLayoutPanel1.Controls.Add(this.button2, 0, 1);
+            this.tableLayoutPanel1.Controls.Add(this.btnSwagger, 0, 1);
             this.tableLayoutPanel1.Controls.Add(this.button3, 0, 2);
             this.tableLayoutPanel1.Controls.Add(this.button4, 0, 3);
             this.tableLayoutPanel1.Controls.Add(this.button5, 0, 4);
@@ -86,14 +86,15 @@
             this.btnMarketOrder.UseVisualStyleBackColor = true;
             this.btnMarketOrder.Click += new System.EventHandler(this.btnMarketOrder_Click);
             // 
-            // button2
+            // btnSwagger
             // 
-            this.button2.Location = new System.Drawing.Point(3, 45);
-            this.button2.Name = "button2";
-            this.button2.Size = new System.Drawing.Size(75, 23);
-            this.button2.TabIndex = 1;
-            this.button2.Text = "button2";
-            this.button2.UseVisualStyleBackColor = true;
+            this.btnSwagger.Location = new System.Drawing.Point(3, 45);
+            this.btnSwagger.Name = "btnSwagger";
+            this.btnSwagger.Size = new System.Drawing.Size(75, 23);
+            this.btnSwagger.TabIndex = 1;
+            this.btnSwagger.Text = "Swagger";
+            this.btnSwagger.UseVisualStyleBackColor = true;
+            this.btnSwagger.Click += new System.EventHandler(this.btnSwagger_Click);
             // 
             // button3
             // 
@@ -175,7 +176,7 @@
 
         private System.Windows.Forms.TableLayoutPanel tableLayoutPanel1;
         private System.Windows.Forms.Button btnMarketOrder;
-        private System.Windows.Forms.Button button2;
+        private System.Windows.Forms.Button btnSwagger;
         private System.Windows.Forms.Button button3;
         private System.Windows.Forms.Button button4;
         private System.Windows.Forms.Button button5;
