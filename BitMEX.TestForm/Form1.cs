@@ -28,32 +28,124 @@ namespace BitMEX.TestForm
 
         private void btnMarketOrder_Click(object sender, EventArgs e)
         {
+            // Local environment checks...
             if (NUDMarketOrderQuantity.Value >= 1 || NUDMarketOrderQuantity.Value <= -1)
             {
+                // Catch API and connection errors
                 try
                 {
-                    string lastOrderID;
-                    object outcome = mconn.MarketOrder(TBMarketOrder.Text.ToString(), out lastOrderID, Decimal.ToInt32((decimal)NUDMarketOrderQuantity.Value));
+                    OrderResponse orderResp = new OrderResponse();
+                    OrderError orderErr = new OrderError();
+                    string clOrdID;
+                    object outcome = mconn.MarketOrder(
+                        TBMarketOrder.Text.ToString(), 
+                        out clOrdID, 
+                        Decimal.ToInt32((decimal)NUDMarketOrderQuantity.Value));
 
-                    switch (outcome.GetType().ToString())
+                    if (outcome.GetType() == orderResp.GetType())
                     {
-                        case "BitMEX.JSONClass.Order.OrderResponse":
-                            OutputLabel.Text = ((OrderResponse)outcome).ClOrdId.ToString();
-                            MessageBox.Show(((OrderResponse)outcome).ClOrdId.ToString());
-                            break;
-                        case "BitMEX.JSONClass.Order.OrderError":
-                            MessageBox.Show(((OrderError)outcome).Error.Message.ToString());
-                            break;
-                        default:
-                            MessageBox.Show("bla");
-                            break;
+                        // Successful API call with successful result...
+                        orderResp = (OrderResponse)outcome;
+                        MessageBox.Show("Order success: " + clOrdID + "=" + orderResp.ClOrdId.ToString());
+                    }
+                    else if (outcome.GetType() == orderErr.GetType())
+                    {
+                        // Successful API call with error as result...
+                        orderErr = (OrderError)outcome;
+                        MessageBox.Show("BitMEX API Error [" + orderErr.Error.Message.ToString() + "]");
+                    }
+                    else
+                    {
+                        // Should never happen...
+                        MessageBox.Show("Unknown return type [" + outcome.GetType().ToString() + "]");
                     }
                 }
                 catch (Exception exc)
                 {
                     // Catch all external exceptions like connection issues etc.
-                    MessageBox.Show(exc.Message.ToString());
+                    MessageBox.Show("Exception[" + exc.Message.ToString() + "]");
                 }
+            }
+        }
+        
+        private void btnLimitOrder_Click(object sender, EventArgs e)
+        {
+            // Local environment checks...
+            if ((NUDMarketOrderQuantity.Value >= 1 || NUDMarketOrderQuantity.Value <= -1))
+            {
+                // Catch API and connection errors
+                try
+                {
+                    OrderResponse orderResp = new OrderResponse();
+                    OrderError orderErr = new OrderError();
+                    string clOrdID;
+                    object outcome = mconn.LimitOrder(
+                        TBMarketOrder.Text.ToString(), 
+                        Decimal.ToInt32((decimal)NUDMarketOrderQuantity.Value), 
+                        Decimal.ToInt32((decimal)NUDPrice.Value), 
+                        out clOrdID);
+
+                    if (outcome.GetType() == orderResp.GetType())
+                    {
+                        // Successful API call with successful result...
+                        orderResp = (OrderResponse)outcome;
+                        MessageBox.Show("Order success: " + clOrdID + "=" + orderResp.ClOrdId.ToString());
+                    }
+                    else if (outcome.GetType() == orderErr.GetType())
+                    {
+                        // Successful API call with error as result...
+                        orderErr = (OrderError)outcome;
+                        MessageBox.Show("BitMEX API Error [" + orderErr.Error.Message.ToString() + "]");
+                    }
+                    else
+                    {
+                        // Should never happen...
+                        MessageBox.Show("Unknown return type [" + outcome.GetType().ToString() + "]");
+                    }
+                }
+                catch (Exception exc)
+                {
+                    // Catch all external exceptions like connection issues etc.
+                    MessageBox.Show("Exception[" + exc.Message.ToString() + "]");
+                }
+            }
+        }
+
+        private void btnGetOrders_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                List<OrderResponse> orderResp = new List<OrderResponse>();
+                OrderError orderErr = new OrderError();
+                object outcome = mconn.GetOpenOrdersForSymbol(TBMarketOrder.Text.ToString());
+
+                if(outcome.GetType() == orderResp.GetType())
+                {
+                    // Successful API call with successful result...
+                    string orderAccumulation = "";
+                    orderResp = (List<OrderResponse>)outcome;
+                    foreach(var resp in orderResp.Where(x=> x.OrdStatus == "New").Select(n => n.OrderId))
+                    {
+                        orderAccumulation = orderAccumulation + "¦" + resp.ToString();
+                    }
+                    MessageBox.Show(orderAccumulation);
+                }
+                else if(outcome.GetType() == orderErr.GetType())
+                {
+                    // Successful API call with error as result...
+                    orderErr = (OrderError)outcome;
+                    MessageBox.Show("BitMEX API Error [" + orderErr.Error.Message.ToString() + "]");
+                }
+                else
+                {
+                    // Should never happen...
+                    MessageBox.Show("Unknown return type [" + outcome.GetType().ToString() + "]");
+                }
+            }
+            catch (Exception exc)
+            {
+                // Unsuccessful API call
+                MessageBox.Show("Exception [" + exc.Message.ToString() + "]");
             }
         }
 
@@ -108,10 +200,7 @@ namespace BitMEX.TestForm
             }
         }
 
-        private long GetExpires()
-        {
-            return ToUnixTimeSeconds(DateTimeOffset.UtcNow) + 3600; // set expires one hour in the future
-        }
+        #region HELPERS
 
         private static long ToUnixTimeSeconds(DateTimeOffset dateTimeOffset)
         {
@@ -120,72 +209,11 @@ namespace BitMEX.TestForm
             return unixTimeStampInTicks / TimeSpan.TicksPerSecond;
         }
 
-        private void btnLimitOrder_Click(object sender, EventArgs e)
+        private long GetExpires()
         {
-            if ((NUDMarketOrderQuantity.Value >= 1 || NUDMarketOrderQuantity.Value <= -1))
-            {
-                try
-                {
-                    string lastOrderID;
-                    object outcome = mconn.LimitOrder(TBMarketOrder.Text.ToString(), Decimal.ToInt32((decimal)NUDMarketOrderQuantity.Value), Decimal.ToInt32((decimal)NUDPrice.Value), out lastOrderID);
-
-                    switch (outcome.GetType().ToString())
-                    {
-                        case "BitMEX.JSONClass.Order.OrderResponse":
-                            OutputLabel.Text = ((OrderResponse)outcome).ClOrdId.ToString();
-                            MessageBox.Show(((OrderResponse)outcome).ClOrdId.ToString());
-                            break;
-                        case "BitMEX.JSONClass.Order.OrderError":
-                            MessageBox.Show(((OrderError)outcome).Error.Message.ToString());
-                            break;
-                        default:
-                            MessageBox.Show("bla");
-                            break;
-                    }
-                }
-                catch (Exception exc)
-                {
-                    // Catch all external exceptions like connection issues etc.
-                    MessageBox.Show(exc.Message.ToString());
-                }
-            }
+            return ToUnixTimeSeconds(DateTimeOffset.UtcNow) + 3600; // set expires one hour in the future
         }
 
-        private void btnGetOrders_Click(object sender, EventArgs e)
-        {
-            try
-            {
-                List<OrderResponse> orderResp = new List<OrderResponse>();
-                object outcome = mconn.GetOpenOrdersForSymbol(TBMarketOrder.Text.ToString());
-
-                if(outcome.GetType() == orderResp.GetType())
-                { 
-                    orderResp = (List<OrderResponse>)outcome;
-                    foreach(var resp in orderResp.Where(x=> x.OrdStatus == "New").Select(n => n.OrderId))
-                    {
-                        MessageBox.Show(resp.ToString());
-                    }
-                }
-
-                //switch (outcome.GetType().ToString())
-                //{
-                //    case "BitMEX.JSONClass.Order.OrderResponse":
-                //        OutputLabel.Text = ((OrderResponse)outcome).ClOrdId.ToString();
-                //        MessageBox.Show(((OrderResponse)outcome).ClOrdId.ToString());
-                //        break;
-                //    case "BitMEX.JSONClass.Order.OrderError":
-                //        MessageBox.Show(((OrderError)outcome).Error.Message.ToString());
-                //        break;
-                //    default:
-                //        MessageBox.Show("bla");
-                //        break;
-                //}
-            }
-            catch (Exception exc)
-            {
-                // Catch all external exceptions like connection issues etc.
-                MessageBox.Show(exc.Message.ToString());
-            }
-        }
+        #endregion HELPERS
     }
 }
