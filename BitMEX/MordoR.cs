@@ -9,6 +9,7 @@ using System.Net;
 using System.Security.Cryptography;
 using System.Text;
 using BitMEX.JSONClass.Order;
+using System.Diagnostics;
 
 namespace BitMEX
 {
@@ -203,7 +204,7 @@ namespace BitMEX
             string res = Query("GET", "/order", false, param, true);
 
             // Deserialize JSON result
-            return ProcessJSONOrderResponse(res);
+            return ProcessJSONOrderResponse(res, true);
         }
         #endregion
 
@@ -372,34 +373,56 @@ namespace BitMEX
             return Guid.NewGuid().ToString("N");
         }
 
-        private object ProcessJSONOrderResponse(string res)
+        private object ProcessJSONOrderResponse(string res, Boolean isArray = false)
         {
-            // Deserialize JSON result
-            var orderResponse = OrderResponse.FromJson(res);
-            List<OrderResponse> resp = OrdersResponse.FromJson(res);
+            if (isArray)
+            {
+                List<OrderResponse> multiOrderResp = OrdersResponse.FromJson(res);
 
-            if (orderResponse.ClOrdId != null)
-            {
-                return orderResponse;
-            }
-            else if (resp.Count > 0)
-            {
-                return resp;
-            }
-            else
-            {
-                var orderError = OrderError.FromJson(res);
-
-                if (orderError.Error != null)
+                if (multiOrderResp.Count > 0)
                 {
-                    return orderError;
+                    return multiOrderResp;
                 }
                 else
                 {
-                    orderError = new OrderError();
-                    orderError.Error.Name = "Custom error";
-                    orderError.Error.Message = "No JSON response received...";
-                    return orderError;
+                    var orderError = OrderError.FromJson(res);
+
+                    if (orderError.Error != null)
+                    {
+                        return orderError;
+                    }
+                    else
+                    {
+                        orderError = new OrderError();
+                        orderError.Error.Name = "Custom error";
+                        orderError.Error.Message = "No JSON response received...";
+                        return orderError;
+                    }
+                }
+            }
+            else
+            {
+                var oderResp = OrderResponse.FromJson(res);
+
+                if (oderResp.OrderId != null)
+                {
+                    return oderResp;
+                }
+                else
+                {
+                    var orderError = OrderError.FromJson(res);
+
+                    if (orderError.Error != null)
+                    {
+                        return orderError;
+                    }
+                    else
+                    {
+                        orderError = new OrderError();
+                        orderError.Error.Name = "Custom error";
+                        orderError.Error.Message = "No JSON response received...";
+                        return orderError;
+                    }
                 }
             }
         }

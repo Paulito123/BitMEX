@@ -119,5 +119,73 @@ namespace BitMEX.TestForm
             var unixTimeStampInTicks = (dateTimeOffset.ToUniversalTime() - unixStart).Ticks;
             return unixTimeStampInTicks / TimeSpan.TicksPerSecond;
         }
+
+        private void btnLimitOrder_Click(object sender, EventArgs e)
+        {
+            if ((NUDMarketOrderQuantity.Value >= 1 || NUDMarketOrderQuantity.Value <= -1))
+            {
+                try
+                {
+                    string lastOrderID;
+                    object outcome = mconn.LimitOrder(TBMarketOrder.Text.ToString(), Decimal.ToInt32((decimal)NUDMarketOrderQuantity.Value), Decimal.ToInt32((decimal)NUDPrice.Value), out lastOrderID);
+
+                    switch (outcome.GetType().ToString())
+                    {
+                        case "BitMEX.JSONClass.Order.OrderResponse":
+                            OutputLabel.Text = ((OrderResponse)outcome).ClOrdId.ToString();
+                            MessageBox.Show(((OrderResponse)outcome).ClOrdId.ToString());
+                            break;
+                        case "BitMEX.JSONClass.Order.OrderError":
+                            MessageBox.Show(((OrderError)outcome).Error.Message.ToString());
+                            break;
+                        default:
+                            MessageBox.Show("bla");
+                            break;
+                    }
+                }
+                catch (Exception exc)
+                {
+                    // Catch all external exceptions like connection issues etc.
+                    MessageBox.Show(exc.Message.ToString());
+                }
+            }
+        }
+
+        private void btnGetOrders_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                List<OrderResponse> orderResp = new List<OrderResponse>();
+                object outcome = mconn.GetOpenOrdersForSymbol(TBMarketOrder.Text.ToString());
+
+                if(outcome.GetType() == orderResp.GetType())
+                { 
+                    orderResp = (List<OrderResponse>)outcome;
+                    foreach(var resp in orderResp.Where(x=> x.OrdStatus == "New").Select(n => n.OrderId))
+                    {
+                        MessageBox.Show(resp.ToString());
+                    }
+                }
+
+                //switch (outcome.GetType().ToString())
+                //{
+                //    case "BitMEX.JSONClass.Order.OrderResponse":
+                //        OutputLabel.Text = ((OrderResponse)outcome).ClOrdId.ToString();
+                //        MessageBox.Show(((OrderResponse)outcome).ClOrdId.ToString());
+                //        break;
+                //    case "BitMEX.JSONClass.Order.OrderError":
+                //        MessageBox.Show(((OrderError)outcome).Error.Message.ToString());
+                //        break;
+                //    default:
+                //        MessageBox.Show("bla");
+                //        break;
+                //}
+            }
+            catch (Exception exc)
+            {
+                // Catch all external exceptions like connection issues etc.
+                MessageBox.Show(exc.Message.ToString());
+            }
+        }
     }
 }

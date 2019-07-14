@@ -31,14 +31,16 @@
             this.tableLayoutPanel1 = new System.Windows.Forms.TableLayoutPanel();
             this.btnMarketOrder = new System.Windows.Forms.Button();
             this.btnSwagger = new System.Windows.Forms.Button();
-            this.button3 = new System.Windows.Forms.Button();
-            this.button4 = new System.Windows.Forms.Button();
+            this.btnLimitOrder = new System.Windows.Forms.Button();
+            this.btnGetOrders = new System.Windows.Forms.Button();
             this.button5 = new System.Windows.Forms.Button();
             this.TBMarketOrder = new System.Windows.Forms.TextBox();
             this.NUDMarketOrderQuantity = new System.Windows.Forms.NumericUpDown();
             this.OutputLabel = new System.Windows.Forms.Label();
+            this.NUDPrice = new System.Windows.Forms.NumericUpDown();
             this.tableLayoutPanel1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.NUDMarketOrderQuantity)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.NUDPrice)).BeginInit();
             this.SuspendLayout();
             // 
             // tableLayoutPanel1
@@ -54,12 +56,13 @@
             this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 12.5F));
             this.tableLayoutPanel1.Controls.Add(this.btnMarketOrder, 0, 0);
             this.tableLayoutPanel1.Controls.Add(this.btnSwagger, 0, 1);
-            this.tableLayoutPanel1.Controls.Add(this.button3, 0, 2);
-            this.tableLayoutPanel1.Controls.Add(this.button4, 0, 3);
+            this.tableLayoutPanel1.Controls.Add(this.btnLimitOrder, 0, 2);
+            this.tableLayoutPanel1.Controls.Add(this.btnGetOrders, 0, 3);
             this.tableLayoutPanel1.Controls.Add(this.button5, 0, 4);
             this.tableLayoutPanel1.Controls.Add(this.TBMarketOrder, 1, 0);
             this.tableLayoutPanel1.Controls.Add(this.NUDMarketOrderQuantity, 2, 0);
             this.tableLayoutPanel1.Controls.Add(this.OutputLabel, 0, 5);
+            this.tableLayoutPanel1.Controls.Add(this.NUDPrice, 3, 2);
             this.tableLayoutPanel1.Location = new System.Drawing.Point(12, 12);
             this.tableLayoutPanel1.Name = "tableLayoutPanel1";
             this.tableLayoutPanel1.RowCount = 10;
@@ -96,23 +99,25 @@
             this.btnSwagger.UseVisualStyleBackColor = true;
             this.btnSwagger.Click += new System.EventHandler(this.btnSwagger_Click);
             // 
-            // button3
+            // btnLimitOrder
             // 
-            this.button3.Location = new System.Drawing.Point(3, 87);
-            this.button3.Name = "button3";
-            this.button3.Size = new System.Drawing.Size(75, 23);
-            this.button3.TabIndex = 2;
-            this.button3.Text = "button3";
-            this.button3.UseVisualStyleBackColor = true;
+            this.btnLimitOrder.Location = new System.Drawing.Point(3, 87);
+            this.btnLimitOrder.Name = "btnLimitOrder";
+            this.btnLimitOrder.Size = new System.Drawing.Size(75, 23);
+            this.btnLimitOrder.TabIndex = 2;
+            this.btnLimitOrder.Text = "LimitOrder";
+            this.btnLimitOrder.UseVisualStyleBackColor = true;
+            this.btnLimitOrder.Click += new System.EventHandler(this.btnLimitOrder_Click);
             // 
-            // button4
+            // btnGetOrders
             // 
-            this.button4.Location = new System.Drawing.Point(3, 129);
-            this.button4.Name = "button4";
-            this.button4.Size = new System.Drawing.Size(75, 23);
-            this.button4.TabIndex = 3;
-            this.button4.Text = "button4";
-            this.button4.UseVisualStyleBackColor = true;
+            this.btnGetOrders.Location = new System.Drawing.Point(3, 129);
+            this.btnGetOrders.Name = "btnGetOrders";
+            this.btnGetOrders.Size = new System.Drawing.Size(75, 23);
+            this.btnGetOrders.TabIndex = 3;
+            this.btnGetOrders.Text = "GetOrders";
+            this.btnGetOrders.UseVisualStyleBackColor = true;
+            this.btnGetOrders.Click += new System.EventHandler(this.btnGetOrders_Click);
             // 
             // button5
             // 
@@ -157,6 +162,33 @@
             this.OutputLabel.TabIndex = 9;
             this.OutputLabel.Text = "OUTPUT";
             // 
+            // NUDPrice
+            // 
+            this.NUDPrice.Increment = new decimal(new int[] {
+            5,
+            0,
+            0,
+            65536});
+            this.NUDPrice.Location = new System.Drawing.Point(294, 87);
+            this.NUDPrice.Maximum = new decimal(new int[] {
+            1000000,
+            0,
+            0,
+            0});
+            this.NUDPrice.Minimum = new decimal(new int[] {
+            1,
+            0,
+            0,
+            0});
+            this.NUDPrice.Name = "NUDPrice";
+            this.NUDPrice.Size = new System.Drawing.Size(91, 20);
+            this.NUDPrice.TabIndex = 10;
+            this.NUDPrice.Value = new decimal(new int[] {
+            1,
+            0,
+            0,
+            0});
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -168,6 +200,7 @@
             this.tableLayoutPanel1.ResumeLayout(false);
             this.tableLayoutPanel1.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.NUDMarketOrderQuantity)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.NUDPrice)).EndInit();
             this.ResumeLayout(false);
 
         }
@@ -177,12 +210,13 @@
         private System.Windows.Forms.TableLayoutPanel tableLayoutPanel1;
         private System.Windows.Forms.Button btnMarketOrder;
         private System.Windows.Forms.Button btnSwagger;
-        private System.Windows.Forms.Button button3;
-        private System.Windows.Forms.Button button4;
+        private System.Windows.Forms.Button btnLimitOrder;
+        private System.Windows.Forms.Button btnGetOrders;
         private System.Windows.Forms.Button button5;
         private System.Windows.Forms.TextBox TBMarketOrder;
         private System.Windows.Forms.NumericUpDown NUDMarketOrderQuantity;
         private System.Windows.Forms.Label OutputLabel;
+        private System.Windows.Forms.NumericUpDown NUDPrice;
     }
 }
 
