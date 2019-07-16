@@ -130,7 +130,7 @@ namespace BitMEX.JSONClass.Order
         [JsonProperty("transactTime", NullValueHandling = NullValueHandling.Ignore)]
         public DateTimeOffset? TransactTime { get; set; }
 
-        [JsonProperty("timestamp", NullValueHandling = NullValueHandling.Ignore)]
+        [JsonProperty("timestamp")]
         public DateTimeOffset? Timestamp { get; set; }
     }
 
@@ -158,28 +158,13 @@ namespace BitMEX.JSONClass.Order
         }
     }
 
-    //public static class Serialize
-    //{
-    //    public static string ToJson(this OrderResponse self)
-    //    {
-    //        return JsonConvert.SerializeObject(self, BitMEX.JSONClass.Order.Converter.Settings);
-    //    }
-    //    public static string ToJson(this OrderError self)
-    //    {
-    //        return JsonConvert.SerializeObject(self, BitMEX.JSONClass.Order.Converter.Settings);
-    //    }
-    //    public static string ToJson(this List<OrderResponse> self)
-    //    {
-    //        return JsonConvert.SerializeObject(self, BitMEX.JSONClass.Order.Converter.Settings);
-    //    }
-    //}
-
     internal static class Converter
     {
         public static readonly JsonSerializerSettings Settings = new JsonSerializerSettings
         {
             MetadataPropertyHandling = MetadataPropertyHandling.Ignore,
             DateParseHandling = DateParseHandling.None,
+            //MissingMemberHandling = MissingMemberHandling.Ignore,
             Converters =
             {
                 new IsoDateTimeConverter { DateTimeStyles = DateTimeStyles.AssumeUniversal }

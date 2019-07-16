@@ -38,6 +38,9 @@
             this.NUDMarketOrderQuantity = new System.Windows.Forms.NumericUpDown();
             this.OutputLabel = new System.Windows.Forms.Label();
             this.NUDPrice = new System.Windows.Forms.NumericUpDown();
+            this.label1 = new System.Windows.Forms.Label();
+            this.label2 = new System.Windows.Forms.Label();
+            this.label3 = new System.Windows.Forms.Label();
             this.tableLayoutPanel1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.NUDMarketOrderQuantity)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.NUDPrice)).BeginInit();
@@ -45,9 +48,7 @@
             // 
             // tableLayoutPanel1
             // 
-            this.tableLayoutPanel1.ColumnCount = 8;
-            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 12.5F));
-            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 12.5F));
+            this.tableLayoutPanel1.ColumnCount = 6;
             this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 12.5F));
             this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 12.5F));
             this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 12.5F));
@@ -59,10 +60,13 @@
             this.tableLayoutPanel1.Controls.Add(this.btnLimitOrder, 0, 2);
             this.tableLayoutPanel1.Controls.Add(this.btnGetOrders, 0, 3);
             this.tableLayoutPanel1.Controls.Add(this.button5, 0, 4);
-            this.tableLayoutPanel1.Controls.Add(this.TBMarketOrder, 1, 0);
-            this.tableLayoutPanel1.Controls.Add(this.NUDMarketOrderQuantity, 2, 0);
-            this.tableLayoutPanel1.Controls.Add(this.OutputLabel, 0, 5);
-            this.tableLayoutPanel1.Controls.Add(this.NUDPrice, 3, 2);
+            this.tableLayoutPanel1.Controls.Add(this.NUDMarketOrderQuantity, 2, 1);
+            this.tableLayoutPanel1.Controls.Add(this.TBMarketOrder, 2, 0);
+            this.tableLayoutPanel1.Controls.Add(this.NUDPrice, 2, 2);
+            this.tableLayoutPanel1.Controls.Add(this.label1, 1, 0);
+            this.tableLayoutPanel1.Controls.Add(this.label2, 1, 1);
+            this.tableLayoutPanel1.Controls.Add(this.label3, 1, 2);
+            this.tableLayoutPanel1.Controls.Add(this.OutputLabel, 0, 6);
             this.tableLayoutPanel1.Location = new System.Drawing.Point(12, 12);
             this.tableLayoutPanel1.Name = "tableLayoutPanel1";
             this.tableLayoutPanel1.RowCount = 10;
@@ -130,7 +134,7 @@
             // 
             // TBMarketOrder
             // 
-            this.TBMarketOrder.Location = new System.Drawing.Point(100, 3);
+            this.TBMarketOrder.Location = new System.Drawing.Point(261, 3);
             this.TBMarketOrder.Name = "TBMarketOrder";
             this.TBMarketOrder.Size = new System.Drawing.Size(91, 20);
             this.TBMarketOrder.TabIndex = 7;
@@ -138,7 +142,7 @@
             // 
             // NUDMarketOrderQuantity
             // 
-            this.NUDMarketOrderQuantity.Location = new System.Drawing.Point(197, 3);
+            this.NUDMarketOrderQuantity.Location = new System.Drawing.Point(261, 45);
             this.NUDMarketOrderQuantity.Maximum = new decimal(new int[] {
             10,
             0,
@@ -156,7 +160,7 @@
             // OutputLabel
             // 
             this.OutputLabel.AutoSize = true;
-            this.OutputLabel.Location = new System.Drawing.Point(3, 210);
+            this.OutputLabel.Location = new System.Drawing.Point(3, 252);
             this.OutputLabel.Name = "OutputLabel";
             this.OutputLabel.Size = new System.Drawing.Size(52, 13);
             this.OutputLabel.TabIndex = 9;
@@ -169,7 +173,7 @@
             0,
             0,
             65536});
-            this.NUDPrice.Location = new System.Drawing.Point(294, 87);
+            this.NUDPrice.Location = new System.Drawing.Point(261, 87);
             this.NUDPrice.Maximum = new decimal(new int[] {
             1000000,
             0,
@@ -188,6 +192,36 @@
             0,
             0,
             0});
+            // 
+            // label1
+            // 
+            this.label1.AutoSize = true;
+            this.label1.Font = new System.Drawing.Font("Microsoft Sans Serif", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label1.Location = new System.Drawing.Point(132, 0);
+            this.label1.Name = "label1";
+            this.label1.Size = new System.Drawing.Size(85, 17);
+            this.label1.TabIndex = 11;
+            this.label1.Text = "SYMBOL >>";
+            // 
+            // label2
+            // 
+            this.label2.AutoSize = true;
+            this.label2.Font = new System.Drawing.Font("Microsoft Sans Serif", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label2.Location = new System.Drawing.Point(132, 42);
+            this.label2.Name = "label2";
+            this.label2.Size = new System.Drawing.Size(98, 17);
+            this.label2.TabIndex = 12;
+            this.label2.Text = "QUANTITY >>";
+            // 
+            // label3
+            // 
+            this.label3.AutoSize = true;
+            this.label3.Font = new System.Drawing.Font("Microsoft Sans Serif", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label3.Location = new System.Drawing.Point(132, 84);
+            this.label3.Name = "label3";
+            this.label3.Size = new System.Drawing.Size(68, 17);
+            this.label3.TabIndex = 13;
+            this.label3.Text = "PRICE >>";
             // 
             // Form1
             // 
@@ -217,6 +251,9 @@
         private System.Windows.Forms.NumericUpDown NUDMarketOrderQuantity;
         private System.Windows.Forms.Label OutputLabel;
         private System.Windows.Forms.NumericUpDown NUDPrice;
+        private System.Windows.Forms.Label label1;
+        private System.Windows.Forms.Label label2;
+        private System.Windows.Forms.Label label3;
     }
 }
 
