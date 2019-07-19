@@ -33,14 +33,14 @@
             this.btnSwagger = new System.Windows.Forms.Button();
             this.btnLimitOrder = new System.Windows.Forms.Button();
             this.btnGetOrders = new System.Windows.Forms.Button();
-            this.button5 = new System.Windows.Forms.Button();
-            this.TBMarketOrder = new System.Windows.Forms.TextBox();
+            this.btnTest = new System.Windows.Forms.Button();
             this.NUDMarketOrderQuantity = new System.Windows.Forms.NumericUpDown();
-            this.OutputLabel = new System.Windows.Forms.Label();
+            this.TBMarketOrder = new System.Windows.Forms.TextBox();
             this.NUDPrice = new System.Windows.Forms.NumericUpDown();
             this.label1 = new System.Windows.Forms.Label();
             this.label2 = new System.Windows.Forms.Label();
             this.label3 = new System.Windows.Forms.Label();
+            this.OutputLabel = new System.Windows.Forms.Label();
             this.tableLayoutPanel1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.NUDMarketOrderQuantity)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.NUDPrice)).BeginInit();
@@ -59,7 +59,7 @@
             this.tableLayoutPanel1.Controls.Add(this.btnSwagger, 0, 1);
             this.tableLayoutPanel1.Controls.Add(this.btnLimitOrder, 0, 2);
             this.tableLayoutPanel1.Controls.Add(this.btnGetOrders, 0, 3);
-            this.tableLayoutPanel1.Controls.Add(this.button5, 0, 4);
+            this.tableLayoutPanel1.Controls.Add(this.btnTest, 0, 4);
             this.tableLayoutPanel1.Controls.Add(this.NUDMarketOrderQuantity, 2, 1);
             this.tableLayoutPanel1.Controls.Add(this.TBMarketOrder, 2, 0);
             this.tableLayoutPanel1.Controls.Add(this.NUDPrice, 2, 2);
@@ -123,22 +123,15 @@
             this.btnGetOrders.UseVisualStyleBackColor = true;
             this.btnGetOrders.Click += new System.EventHandler(this.btnGetOrders_Click);
             // 
-            // button5
+            // btnTest
             // 
-            this.button5.Location = new System.Drawing.Point(3, 171);
-            this.button5.Name = "button5";
-            this.button5.Size = new System.Drawing.Size(75, 23);
-            this.button5.TabIndex = 4;
-            this.button5.Text = "button5";
-            this.button5.UseVisualStyleBackColor = true;
-            // 
-            // TBMarketOrder
-            // 
-            this.TBMarketOrder.Location = new System.Drawing.Point(261, 3);
-            this.TBMarketOrder.Name = "TBMarketOrder";
-            this.TBMarketOrder.Size = new System.Drawing.Size(91, 20);
-            this.TBMarketOrder.TabIndex = 7;
-            this.TBMarketOrder.Text = "XBTUSD";
+            this.btnTest.Location = new System.Drawing.Point(3, 171);
+            this.btnTest.Name = "btnTest";
+            this.btnTest.Size = new System.Drawing.Size(75, 23);
+            this.btnTest.TabIndex = 4;
+            this.btnTest.Text = "Test";
+            this.btnTest.UseVisualStyleBackColor = true;
+            this.btnTest.Click += new System.EventHandler(this.btnTest_Click);
             // 
             // NUDMarketOrderQuantity
             // 
@@ -157,14 +150,13 @@
             this.NUDMarketOrderQuantity.Size = new System.Drawing.Size(91, 20);
             this.NUDMarketOrderQuantity.TabIndex = 8;
             // 
-            // OutputLabel
+            // TBMarketOrder
             // 
-            this.OutputLabel.AutoSize = true;
-            this.OutputLabel.Location = new System.Drawing.Point(3, 252);
-            this.OutputLabel.Name = "OutputLabel";
-            this.OutputLabel.Size = new System.Drawing.Size(52, 13);
-            this.OutputLabel.TabIndex = 9;
-            this.OutputLabel.Text = "OUTPUT";
+            this.TBMarketOrder.Location = new System.Drawing.Point(261, 3);
+            this.TBMarketOrder.Name = "TBMarketOrder";
+            this.TBMarketOrder.Size = new System.Drawing.Size(91, 20);
+            this.TBMarketOrder.TabIndex = 7;
+            this.TBMarketOrder.Text = "XBTUSD";
             // 
             // NUDPrice
             // 
@@ -223,6 +215,15 @@
             this.label3.TabIndex = 13;
             this.label3.Text = "PRICE >>";
             // 
+            // OutputLabel
+            // 
+            this.OutputLabel.AutoSize = true;
+            this.OutputLabel.Location = new System.Drawing.Point(3, 252);
+            this.OutputLabel.Name = "OutputLabel";
+            this.OutputLabel.Size = new System.Drawing.Size(52, 13);
+            this.OutputLabel.TabIndex = 9;
+            this.OutputLabel.Text = "OUTPUT";
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -246,7 +247,7 @@
         private System.Windows.Forms.Button btnSwagger;
         private System.Windows.Forms.Button btnLimitOrder;
         private System.Windows.Forms.Button btnGetOrders;
-        private System.Windows.Forms.Button button5;
+        private System.Windows.Forms.Button btnTest;
         private System.Windows.Forms.TextBox TBMarketOrder;
         private System.Windows.Forms.NumericUpDown NUDMarketOrderQuantity;
         private System.Windows.Forms.Label OutputLabel;

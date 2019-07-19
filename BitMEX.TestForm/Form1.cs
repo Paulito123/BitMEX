@@ -330,5 +330,22 @@ namespace BitMEX.TestForm
         }
 
         #endregion HELPERS
+
+        private void btnTest_Click(object sender, EventArgs e)
+        {
+            foreach (int i in Numbers(10).Take(3))
+            {
+                Console.WriteLine("Number {0}", i);
+            }
+        }
+
+        public static IEnumerable<int> Numbers(int max)
+        {
+            for (int i = 0; i < max; i++)
+            {
+                Console.WriteLine("Returning {0}", i);
+                yield return i;
+            }
+        }
     }
 }

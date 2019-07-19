@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BitMEX.TestForm", "BitMEX.T
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IO.Swagger", "IO.Swagger\IO.Swagger.csproj", "{664B4B71-DDB8-4534-A886-1CE6CE5F3234}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenAPI", "VSRestAPI\OpenAPI.csproj", "{8A00AAA8-A58F-45F6-8A4C-4192525345C4}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +29,10 @@ Global
 		{664B4B71-DDB8-4534-A886-1CE6CE5F3234}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{664B4B71-DDB8-4534-A886-1CE6CE5F3234}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{664B4B71-DDB8-4534-A886-1CE6CE5F3234}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8A00AAA8-A58F-45F6-8A4C-4192525345C4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8A00AAA8-A58F-45F6-8A4C-4192525345C4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8A00AAA8-A58F-45F6-8A4C-4192525345C4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8A00AAA8-A58F-45F6-8A4C-4192525345C4}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

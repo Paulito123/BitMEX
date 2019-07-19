@@ -550,9 +550,7 @@ namespace IO.Swagger.Model
                     this.TransactTime.Equals(input.TransactTime))
                 ) && 
                 (
-                    this.Timestamp == input.Timestamp ||
-                    (this.Timestamp != null &&
-                    this.Timestamp.Equals(input.Timestamp))
+                    this.Timestamp == input.Timestamp || (this.Timestamp != null && this.Timestamp.Equals(input.Timestamp))
                 );
         }
 
@@ -640,7 +638,7 @@ namespace IO.Swagger.Model
         /// </summary>
         /// <param name="validationContext">Validation context</param>
         /// <returns>Validation Result</returns>
-        IEnumerable<System.ComponentModel.DataAnnotations.ValidationResult> IValidatableObject.Validate(ValidationContext validationContext)
+        IEnumerable<ValidationResult> IValidatableObject.Validate(ValidationContext validationContext)
         {
             yield break;
         }

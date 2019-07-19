@@ -35,9 +35,9 @@ namespace IO.Swagger.Client
         /// </summary>
         /// <value>The data.</value>
         public T Data { get; private set; }
-
+        
         /// <summary>
-        /// Initializes a new instance of the <see cref="ApiResponse&lt;T&gt;" /> class.
+        /// Initializes a new instance of the <see cref="ApiResponse<T> /> class.
         /// </summary>
         /// <param name="statusCode">HTTP status code.</param>
         /// <param name="headers">HTTP headers.</param>
