@@ -48,6 +48,8 @@
     <Compile Include="JSONClass\Order.cs" />
     <Compile Include="MordoR.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Utilities\DatabaseUtil.cs" />
+    <Compile Include="Utilities\DBLogger.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

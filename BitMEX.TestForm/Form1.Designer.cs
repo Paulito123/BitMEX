@@ -33,7 +33,7 @@
             this.btnSwagger = new System.Windows.Forms.Button();
             this.btnLimitOrder = new System.Windows.Forms.Button();
             this.btnGetOrders = new System.Windows.Forms.Button();
-            this.btnTest = new System.Windows.Forms.Button();
+            this.btnOpenAPI = new System.Windows.Forms.Button();
             this.NUDMarketOrderQuantity = new System.Windows.Forms.NumericUpDown();
             this.TBMarketOrder = new System.Windows.Forms.TextBox();
             this.NUDPrice = new System.Windows.Forms.NumericUpDown();
@@ -59,7 +59,7 @@
             this.tableLayoutPanel1.Controls.Add(this.btnSwagger, 0, 1);
             this.tableLayoutPanel1.Controls.Add(this.btnLimitOrder, 0, 2);
             this.tableLayoutPanel1.Controls.Add(this.btnGetOrders, 0, 3);
-            this.tableLayoutPanel1.Controls.Add(this.btnTest, 0, 4);
+            this.tableLayoutPanel1.Controls.Add(this.btnOpenAPI, 0, 4);
             this.tableLayoutPanel1.Controls.Add(this.NUDMarketOrderQuantity, 2, 1);
             this.tableLayoutPanel1.Controls.Add(this.TBMarketOrder, 2, 0);
             this.tableLayoutPanel1.Controls.Add(this.NUDPrice, 2, 2);
@@ -123,15 +123,15 @@
             this.btnGetOrders.UseVisualStyleBackColor = true;
             this.btnGetOrders.Click += new System.EventHandler(this.btnGetOrders_Click);
             // 
-            // btnTest
+            // btnOpenAPI
             // 
-            this.btnTest.Location = new System.Drawing.Point(3, 171);
-            this.btnTest.Name = "btnTest";
-            this.btnTest.Size = new System.Drawing.Size(75, 23);
-            this.btnTest.TabIndex = 4;
-            this.btnTest.Text = "Test";
-            this.btnTest.UseVisualStyleBackColor = true;
-            this.btnTest.Click += new System.EventHandler(this.btnTest_Click);
+            this.btnOpenAPI.Location = new System.Drawing.Point(3, 171);
+            this.btnOpenAPI.Name = "btnOpenAPI";
+            this.btnOpenAPI.Size = new System.Drawing.Size(75, 23);
+            this.btnOpenAPI.TabIndex = 4;
+            this.btnOpenAPI.Text = "OpenAPI";
+            this.btnOpenAPI.UseVisualStyleBackColor = true;
+            this.btnOpenAPI.Click += new System.EventHandler(this.btnTest_Click);
             // 
             // NUDMarketOrderQuantity
             // 
@@ -247,7 +247,7 @@
         private System.Windows.Forms.Button btnSwagger;
         private System.Windows.Forms.Button btnLimitOrder;
         private System.Windows.Forms.Button btnGetOrders;
-        private System.Windows.Forms.Button btnTest;
+        private System.Windows.Forms.Button btnOpenAPI;
         private System.Windows.Forms.TextBox TBMarketOrder;
         private System.Windows.Forms.NumericUpDown NUDMarketOrderQuantity;
         private System.Windows.Forms.Label OutputLabel;
