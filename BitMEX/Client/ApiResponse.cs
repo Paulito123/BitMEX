@@ -76,14 +76,13 @@ namespace BitMEX.Client
         {
             // Json is empty > Shit...
             if(this.Json == null || this.Json == "")
-            {
-                return new object();
-            }
+                return null;
 
             // Uri is empty > Shit...
-            object o;
             if (this.Uri == null || this.Uri.AbsolutePath == "")
-                return new object();
+                return null;
+
+            object o;
 
             // Return the correct type based on the Uri
             switch (this.Uri.AbsolutePath)
@@ -107,7 +106,7 @@ namespace BitMEX.Client
                     break;
                 case "/api/v1/order/cancelAllAfter":
                 default:
-                    o = new object();
+                    o = null;
                     break;
             }
 

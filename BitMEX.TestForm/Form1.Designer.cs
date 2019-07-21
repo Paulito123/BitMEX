@@ -136,13 +136,8 @@
             // NUDMarketOrderQuantity
             // 
             this.NUDMarketOrderQuantity.Location = new System.Drawing.Point(261, 45);
-            this.NUDMarketOrderQuantity.Maximum = new decimal(new int[] {
-            10,
-            0,
-            0,
-            0});
             this.NUDMarketOrderQuantity.Minimum = new decimal(new int[] {
-            10,
+            100,
             0,
             0,
             -2147483648});
