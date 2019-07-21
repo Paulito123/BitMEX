@@ -8,11 +8,11 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using BitMEX;
-using BitMEX.JSONClass.Order;
+using BitMEX.Model;
 //using IO.Swagger.Api;
 //using IO.Swagger.Client;
 //using IO.Swagger.Model;
-using OpenAPI.Api
+using OpenAPI.Api;
 using OpenAPI.Client;
 using OpenAPI.Model;
 using System.Data.SqlClient;
@@ -343,7 +343,7 @@ namespace BitMEX.TestForm
             // Uncomment below to setup prefix (e.g. Bearer) for API key, if needed
             // Configuration.Default.AddApiKeyPrefix("api-key", "Bearer");
             // Configure API key authorization: apiNonce
-            Configuration.Default.AddApiKey("api-nonce", "rTAFXRKn2dLARuG_t1dDOtgI");
+            //Configuration.Default.AddApiKey("api-nonce", "rTAFXRKn2dLARuG_t1dDOtgI");
             // Uncomment below to setup prefix (e.g. Bearer) for API key, if needed
             // Configuration.Default.AddApiKeyPrefix("api-nonce", "Bearer");
             // Configure API key authorization: apiSignature

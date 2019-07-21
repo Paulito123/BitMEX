@@ -45,7 +45,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="JSONClass\Order.cs" />
+    <Compile Include="Client\ApiResponse.cs" />
+    <Compile Include="Model\BaseError.cs" />
+    <Compile Include="Model\OrderResponse.cs" />
     <Compile Include="MordoR.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Utilities\DatabaseUtil.cs" />

@@ -8,7 +8,8 @@ using System.IO;
 using System.Net;
 using System.Security.Cryptography;
 using System.Text;
-using BitMEX.JSONClass.Order;
+using BitMEX.Model;
+using BitMEX.Client;
 using System.Diagnostics;
 
 namespace BitMEX
@@ -92,11 +93,12 @@ namespace BitMEX
          * auth (optional)
          * json (optional)
          */
-        private string Query(string method, string function, bool refreshLimitInfo = false, Dictionary<string, string> param = null, bool auth = false, bool json = false)
+        private ApiResponse Query(string method, string function, bool refreshLimitInfo = false, Dictionary<string, string> param = null, bool auth = false, bool json = false)
         {
             string paramData = json ? BuildJSON(param) : BuildQueryData(param);
             string url = "/api/v1" + function + ((method == "GET" && paramData != "") ? "?" + paramData : "");
             string postData = (method != "GET") ? paramData : "";
+            //ApiResponse outputResp;
 
             HttpWebRequest webRequest = (HttpWebRequest)WebRequest.Create(domain + url);
             webRequest.Method = method;
@@ -124,30 +126,41 @@ namespace BitMEX
                         stream.Write(data, 0, data.Length);
                     }
                 }
-
-                using (WebResponse webResponse = webRequest.GetResponse())
+                
+                //using (WebResponse webResponse = webRequest.GetResponse())
+                using (HttpWebResponse webResponse = (HttpWebResponse)webRequest.GetResponse())
                 using (Stream str = webResponse.GetResponseStream())
                 using (StreamReader sr = new StreamReader(str))
                 {
-                    return sr.ReadToEnd();
+                    Dictionary<string, string> respHeadr = new Dictionary<string, string>();
+                    respHeadr.Add("content-type", webResponse.GetResponseHeader("content-type")) ;
+                    respHeadr.Add("status", webResponse.GetResponseHeader("status"));
+
+                    //return sr.ReadToEnd();
+                    return new ApiResponse((int)webResponse.StatusCode, respHeadr, sr.ReadToEnd(), webResponse.ResponseUri);
                 }
             }
             catch (WebException wex)
             {
-                using (HttpWebResponse response = (HttpWebResponse)wex.Response)
+                using (HttpWebResponse webResponse = (HttpWebResponse)wex.Response)
                 {
-                    if (response == null)
-                        // Catch error
-                        throw;
+                    if (webResponse == null)
+                        return new ApiResponse(400, new Dictionary<string, string>(), "{ \"error\": { \"message\": \"WebResponse is NULL\", \"name\": \"NullWebResponse\" } }");
 
-                    using (Stream str = response.GetResponseStream())
+                    using (Stream str = webResponse.GetResponseStream())
+                    using (StreamReader sr = new StreamReader(str))
                     {
-                        using (StreamReader sr = new StreamReader(str))
-                        {
-                            return sr.ReadToEnd();
-                        }
+                        Dictionary<string, string> respHeadr = new Dictionary<string, string>();
+                        //respHeadr.Add("content-type", webResponse.GetResponseHeader("content-type"));
+                        //respHeadr.Add("status", webResponse.GetResponseHeader("status"));
+
+                        return new ApiResponse((int)webResponse.StatusCode, respHeadr, sr.ReadToEnd(), webResponse.ResponseUri);
                     }
                 }
+            }
+            catch (Exception exc)
+            {
+                return new ApiResponse(400, new Dictionary<string, string>(), "{ \"error\": { \"message\": \"" + exc.ToString() + "\", \"name\": \"BadWebResponse\" } }");
             }
         }
         #endregion
@@ -201,10 +214,10 @@ namespace BitMEX
         {
             var param = new Dictionary<string, string>();
             param["symbol"] = symbol;
-            string res = Query("GET", "/order", false, param, true);
+            ApiResponse res = Query("GET", "/order", false, param, true);
 
             // Deserialize JSON result
-            return ProcessJSONOrderResponse(res, true);
+            return res.ApiResponseProcessor();
         }
         #endregion
 
@@ -239,9 +252,9 @@ namespace BitMEX
                 param["stopPx"] = stopPx.ToString();
             }
             
-            string res = Query("PUT", "/order", false, param, true);
+            ApiResponse res = Query("PUT", "/order", false, param, true);
             // Deserialize JSON result
-            return ProcessJSONOrderResponse(res);
+            return res.ApiResponseProcessor();
         }
         #endregion
 
@@ -261,10 +274,10 @@ namespace BitMEX
             param["orderQty"] = orderQty.ToString();
             param["clOrdID"] = clOrdID;
             param["ordType"] = "Market";
-            string res = Query("POST", "/order", false, param, true);
+            ApiResponse res = Query("POST", "/order", false, param, true);
 
             // Deserialize JSON result
-            return ProcessJSONOrderResponse(res);
+            return res.ApiResponseProcessor();
         }
 
         /* XXXX StopOrder XXXX
@@ -284,10 +297,10 @@ namespace BitMEX
             param["stopPx"] = stopPx.ToString();
             param["ordType"] = "Stop";
             param["execInst"] = "MarkPrice"; // Close, [ MarkPrice OR LastPrice OR IndexPrice ]
-            string res = Query("POST", "/order", false, param, true);
+            ApiResponse res = Query("POST", "/order", false, param, true);
 
             // Deserialize JSON result
-            return ProcessJSONOrderResponse(res);
+            return res.ApiResponseProcessor();
         }
 
         /* XXXX LimitOrder XXXX
@@ -335,10 +348,10 @@ namespace BitMEX
 
             param["text"] = "Some text";
 
-            string res = Query("POST", "/order", false, param, true);
+            ApiResponse res = Query("POST", "/order", false, param, true);
 
             // Deserialize JSON result
-            return ProcessJSONOrderResponse(res);
+            return res.ApiResponseProcessor();
         }
         #endregion
 
@@ -352,10 +365,10 @@ namespace BitMEX
             var param = new Dictionary<string, string>();
             param["clOrdID"] = clOrdID;
             param["text"] = message;
-            string res = Query("DELETE", "/order", false, param, true, true);
+            ApiResponse res = Query("DELETE", "/order", false, param, true, true);
 
             // Deserialize JSON result
-            return ProcessJSONOrderResponse(res);
+            return res.ApiResponseProcessor();
         }
         #endregion
 
@@ -373,59 +386,59 @@ namespace BitMEX
             return Guid.NewGuid().ToString("N");
         }
 
-        private object ProcessJSONOrderResponse(string res, Boolean isArray = false)
-        {
-            if (isArray)
-            {
-                List<OrderResponse> multiOrderResp = OrdersResponse.FromJson(res);
+        //private object ProcessJSONOrderResponse(string res, Boolean isArray = false)
+        //{
+        //    if (isArray)
+        //    {
+        //        List<OrderResponse> multiOrderResp = OrdersResponse.FromJson(res);
 
-                if (multiOrderResp.Count > 0)
-                {
-                    return multiOrderResp;
-                }
-                else
-                {
-                    var orderError = OrderError.FromJson(res);
+        //        if (multiOrderResp.Count > 0)
+        //        {
+        //            return multiOrderResp;
+        //        }
+        //        else
+        //        {
+        //            var orderError = BaseError.FromJson(res);
 
-                    if (orderError.Error != null)
-                    {
-                        return orderError;
-                    }
-                    else
-                    {
-                        orderError = new OrderError();
-                        orderError.Error.Name = "Custom error";
-                        orderError.Error.Message = "No JSON response received...";
-                        return orderError;
-                    }
-                }
-            }
-            else
-            {
-                var oderResp = OrderResponse.FromJson(res);
+        //            if (orderError.Error != null)
+        //            {
+        //                return orderError;
+        //            }
+        //            else
+        //            {
+        //                orderError = new BaseError();
+        //                orderError.Error.Name = "Custom error";
+        //                orderError.Error.Message = "No JSON response received...";
+        //                return orderError;
+        //            }
+        //        }
+        //    }
+        //    else
+        //    {
+        //        var oderResp = OrderResponse.FromJson(res);
 
-                if (oderResp.OrderId != null)
-                {
-                    return oderResp;
-                }
-                else
-                {
-                    var orderError = OrderError.FromJson(res);
+        //        if (oderResp.OrderId != null)
+        //        {
+        //            return oderResp;
+        //        }
+        //        else
+        //        {
+        //            var orderError = BaseError.FromJson(res);
 
-                    if (orderError.Error != null)
-                    {
-                        return orderError;
-                    }
-                    else
-                    {
-                        orderError = new OrderError();
-                        orderError.Error.Name = "Custom error";
-                        orderError.Error.Message = "No JSON response received...";
-                        return orderError;
-                    }
-                }
-            }
-        }
+        //            if (orderError.Error != null)
+        //            {
+        //                return orderError;
+        //            }
+        //            else
+        //            {
+        //                orderError = new BaseError();
+        //                orderError.Error.Name = "Custom error";
+        //                orderError.Error.Message = "No JSON response received...";
+        //                return orderError;
+        //            }
+        //        }
+        //    }
+        //}
         #endregion
     }
 }

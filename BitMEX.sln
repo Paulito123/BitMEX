@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IO.Swagger", "IO.Swagger\IO
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenAPI", "VSRestAPI\OpenAPI.csproj", "{8A00AAA8-A58F-45F6-8A4C-4192525345C4}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Marufios.Test", "Marufios.Test\Marufios.Test.csproj", "{9DB79EBB-E0D1-45F9-901A-F48604EB6254}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -33,6 +35,10 @@ Global
 		{8A00AAA8-A58F-45F6-8A4C-4192525345C4}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8A00AAA8-A58F-45F6-8A4C-4192525345C4}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8A00AAA8-A58F-45F6-8A4C-4192525345C4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9DB79EBB-E0D1-45F9-901A-F48604EB6254}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9DB79EBB-E0D1-45F9-901A-F48604EB6254}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9DB79EBB-E0D1-45F9-901A-F48604EB6254}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9DB79EBB-E0D1-45F9-901A-F48604EB6254}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

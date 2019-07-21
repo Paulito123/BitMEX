@@ -53,12 +53,12 @@ namespace OpenAPI.Client
         public ApiClient()
         {
             Configuration = OpenAPI.Client.Configuration.Default;
-            RestClient = new RestClient("https://localhost/api/v1");
+            RestClient = new RestClient("https://testnet.bitmex.com/api/v1");
         }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ApiClient" /> class
-        /// with default base path (https://localhost/api/v1).
+        /// with default base path (https://testnet.bitmex.com/api/v1).
         /// </summary>
         /// <param name="config">An instance of Configuration.</param>
         public ApiClient(Configuration config)
@@ -73,7 +73,7 @@ namespace OpenAPI.Client
         /// with default configuration.
         /// </summary>
         /// <param name="basePath">The base path.</param>
-        public ApiClient(String basePath = "https://localhost/api/v1")
+        public ApiClient(String basePath = "https://testnet.bitmex.com/api/v1")
         {
            if (String.IsNullOrEmpty(basePath))
                 throw new ArgumentException("basePath cannot be empty");
