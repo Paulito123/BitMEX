@@ -9,7 +9,8 @@ namespace PStrategies.ZoneRecovery
 {
     public class Calculator
     {
-        #region Variables
+        #region Private variables
+
         /// <summary>
         /// Object used to lock a piece of code to prevent it from being executed multiple times within one instance of the calculator class.
         /// </summary>
@@ -57,6 +58,10 @@ namespace PStrategies.ZoneRecovery
         /// </summary>
         private int CurrentZRPosition;
 
+        #endregion Private variables
+
+        #region Public variables
+        
         /// <summary>
         /// It is the price at the time the Calculator class is initialized and it is used as the reference price
         /// for calculating the zone.
@@ -93,7 +98,8 @@ namespace PStrategies.ZoneRecovery
         /// Reflects how deep inside the FactorArray, this instance of the Calculator class, is allowed to go.
         /// </summary>
         public int MaxDepthIndex { get; set; }
-        #endregion Variables
+
+        #endregion Public variables
 
         #region Constructor(s)
         /// <summary>
@@ -157,6 +163,24 @@ namespace PStrategies.ZoneRecovery
         }
 
         /// <summary>
+        /// Returns the direction of the next trade in this instance of the Zone Recovery strategy.
+        /// </summary>
+        /// <returns>1 = LONG, -1 = SHORT, 0 = UNDEFINED</returns>
+        private int GetNextDirection()
+        {
+            if (OpenPositions.Count > 0)
+            {
+                // Determine the direction of next step relative to the first position
+                if (OpenPositions.Single(s => s.PositionIndex == 1).TotalVolume > 0) // First position = LONG position
+                    return (OpenPositions.Count % 2 == 1) ? -1 : 1;
+                else                                                                 // First position = SHORT position
+                    return (OpenPositions.Count % 2 == 1) ? 1 : -1;
+            }
+            else
+                return 0;
+        }
+
+        /// <summary>
         /// Returns the price at which profit should be taken to be mathematically "Break Even". Commissions are not yet taken into account.
         /// TODO: Extend the calculation to take into account commissions and real profit using the MinimumProfitPercentage variable.
         /// </summary>
@@ -173,9 +197,41 @@ namespace PStrategies.ZoneRecovery
                 v_denominator = v_denominator + (zp.TotalVolume);
             }
 
-            o = Math.Round(v_numerator / v_denominator * (1 / PipSize), MidpointRounding.AwayFromZero) / (1 / PipSize);
+            o = v_numerator / v_denominator * (1 / PipSize);
 
-            return o;
+            // Add the calculated minimum profit margin
+            o = o + (-this.GetNextDirection() *
+
+            return Math.Round(o, MidpointRounding.AwayFromZero) / (1 / PipSize);
+        }
+
+        /// <summary>
+        /// Calculates the total Qty of all the open positions for a given direction
+        /// </summary>
+        /// <param name="direction">The direction for which the total Qty needs to be summed</param>
+        /// <returns></returns>
+        private double CalculateOpenQtyForDirection(int direction)
+        {
+            double outp = 0;
+            foreach(ZoneRecoveryPosition zrp in OpenPositions)
+            {
+                outp = outp + ((zrp.TotalVolume / Math.Abs(zrp.TotalVolume) == direction) ? zrp.TotalVolume : 0);
+            }
+            return outp;
+        }
+
+        /// <summary>
+        /// Calculate the next price at which a reverse order should be placed.
+        /// </summary>
+        /// <returns>The next reverse price</returns>
+        private double CalculateNextReversePrice()
+        {
+            ZoneRecoveryPosition zrp = OpenPositions.Single(s => s.PositionIndex == 1);
+            int firstDir = (int)(zrp.TotalVolume / Math.Abs(zrp.TotalVolume));
+            if (GetNextDirection() == firstDir)
+                return zrp.AVGPrice;
+            else
+                return zrp.AVGPrice + ((firstDir * -1) * PipSize * ZoneSize);
         }
 
         /// <summary>
@@ -212,21 +268,18 @@ namespace PStrategies.ZoneRecovery
             // Add the new averaged position to the positions collection
             this.OpenPositions.Add(newPos);
 
-            if(CurrentStatus == ZoneRecoveryStatus.Winding)
+            if (CurrentStatus == ZoneRecoveryStatus.Winding)
             {
-                //if(CurrentZRPosition == 0)
-                //{
-                //    // Initialize stuff
-                //}
-
                 CurrentZRPosition++;
 
                 // Zone Recovery logic is reversed
                 if (CurrentZRPosition == MaxDepthIndex)
                     CurrentStatus = ZoneRecoveryStatus.Unwinding;
             }
-            else // Unwinding...
+            else if (CurrentStatus == ZoneRecoveryStatus.Unwinding) // Unwinding...
                 CurrentZRPosition--;
+            else
+                CurrentZRPosition = 0; // Should not happen...
         }
 
         /// <summary>
@@ -255,37 +308,24 @@ namespace PStrategies.ZoneRecovery
                     if (CurrentZRPosition > 0)
                     {
                         // Calculate the next take profit price
-                        zra.TPPrice = this.CalculateTPPrice();
-                        //zra.TPVolume = 
-
-                        // Determine the direction of next step relative to the first position
-                        if (OpenPositions.Single(s => s.PositionIndex == 1).TotalVolume > 0) // First position = LONG position
-                        {
-                            // Trade direction
-                            int dir = (OpenPositions.Count % 2 == 1) ? -1 : 1;
-                            
-                            //TODO: fill ZoneRecoveryAction zra
-
-                        }
-                        else                                                                // First position = SHORT position
-                        {
-                            // Trade direction
-                            int dir = (OpenPositions.Count % 2 == 1) ? 1 : -1;
-
-
-                        }
-
+                        zra.TPPrice = CalculateTPPrice();
+                        zra.TPVolumeSell = CalculateOpenQtyForDirection(1);
+                        zra.TPVolumeBuy = CalculateOpenQtyForDirection(-1);
+                        zra.ReverseVolume = MaximumUnitSize * FactorArray[OpenPositions.Count];
+                        zra.ReversePrice = CalculateNextReversePrice();
+                        return zra;
                     }
                     else
                         //Should never happen because GetNextStep is called only after the first position is taken...
                         return null;
                 }
-                else // Unwinding
+                else if (CurrentStatus == ZoneRecoveryStatus.Unwinding) // Unwinding
                 {
 
                 }
+                else
+                    return null;
             }
-            
             return null;
         }
     }
@@ -307,7 +347,16 @@ namespace PStrategies.ZoneRecovery
         /// The price where a profit is taken. TP = Take Profit
         /// </summary>
         public double TPPrice { set; get; }
-        public double TPVolume { set; get; }
+
+        /// <summary>
+        /// Volume to Sell all your Buy positions
+        /// </summary>
+        public double TPVolumeSell { set; get; }
+
+        /// <summary>
+        /// Volume to Buy all your Sell positions
+        /// </summary>
+        public double TPVolumeBuy { set; get; }
 
         /// <summary>
         /// The price at which the position should be reversed
