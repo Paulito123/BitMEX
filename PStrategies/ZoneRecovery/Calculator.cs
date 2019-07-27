@@ -33,6 +33,7 @@ namespace PStrategies.ZoneRecovery
 
         /// <summary>
         /// A list of ZoneRecoveryPositions that are taken in the lifecycle of this instance of the Calculator class.
+        /// Idea: Use Stack<T> here
         /// </summary>
         private List<ZoneRecoveryPosition> OpenPositions;
 
