@@ -10,7 +10,7 @@
     public partial class OrderResponse
     {
         [JsonProperty("orderID")]
-        public Guid? OrderId { get; set; }
+        public string OrderId { get; set; }
 
         [JsonProperty("clOrdID", NullValueHandling = NullValueHandling.Ignore)]
         public string ClOrdId { get; set; }

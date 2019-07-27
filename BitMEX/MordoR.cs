@@ -24,7 +24,7 @@ namespace BitMEX
         {
             this.apiKey = bitmexKey;
             this.apiSecret = bitmexSecret;
-            this.domain = bitmexDomain;
+            this.domain = bitmexDomain; 
         }
 
         #region API Connector - Helpers

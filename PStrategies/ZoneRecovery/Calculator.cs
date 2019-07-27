@@ -10,12 +10,43 @@ namespace PStrategies.ZoneRecovery
     public class Calculator
     {
         #region Variables
+        /// <summary>
+        /// Object used to lock a piece of code to prevent it from being executed multiple times within one instance of the calculator class.
+        /// </summary>
         private Object _Lock = new Object();
+
+        /// <summary>
+        /// An array of factors used to calculate the size of each winding.
+        /// </summary>
         private static double[] FactorArray = new double[] { 1, 2, 3, 6, 12, 24, 48, 96 };
-        private enum ZoneRecoveryStatus { Winding, Unwinding }
+
+        /// <summary>
+        /// An enumeration used for expressing in which part of the Zone Recovery algorithm the class is at a given moment.
+        /// </summary>
+        private enum ZoneRecoveryStatus { Winding, Unwinding, Unwound }
+
+        /// <summary>
+        /// The value of the current ZoneRecoveryStatus
+        /// </summary>
         private ZoneRecoveryStatus CurrentStatus;
+
+        /// <summary>
+        /// A list of ZoneRecoveryPositions that are taken in the lifecycle of this instance of the Calculator class.
+        /// </summary>
         private List<ZoneRecoveryPosition> OpenPositions;
+
+        /// <summary>
+        /// The maximum unit size used for each trade within this instance of the Calculator class. 
+        /// To calculate this measure: InitialPrice * Leverage * TotalBalance * MaxExposure / totalDepthMaxExposure
+        /// Basically it comes down to calculating the maximum amount of exposure you would want for one instance of 
+        /// the Calculator class. The key parameter to adjust the risk is MaxExposure.
+        /// </summary>
         private double MaximumUnitSize;
+
+        /// <summary>
+        /// When the mathematical break even price has been reached, this percentage defines how far in profit
+        /// the strategy needs to be before closing all related positions.
+        /// </summary>
         private double MinimumProfitPercentage;
 
         /// <summary>
@@ -24,17 +55,47 @@ namespace PStrategies.ZoneRecovery
         /// When 1 > First Winding / last Unwinding
         /// When CurrentZRPosition = MaxDepthIndex > ZoneRecoveryStatus is switched and winding process reversed
         /// </summary>
-        private int? CurrentZRPosition;
+        private int CurrentZRPosition;
 
+        /// <summary>
+        /// It is the price at the time the Calculator class is initialized and it is used as the reference price
+        /// for calculating the zone.
+        /// </summary>
         public double InitialPrice { get; set; }
+
+        /// <summary>
+        /// At any time, this measure reflects the maximum percentage of the TotalBalance that can be exposed to 
+        /// the market. 
+        /// </summary>
         public double MaxExposure { get; set; }
+
+        /// <summary>
+        /// The total balance of the wallet at the time that the Calculator class is initialized.
+        /// </summary>
         public double TotalBalance { get; set; }
+
+        /// <summary>
+        /// The current leverage used for calculating other measures
+        /// </summary>
         public double Leverage { get; set; }
+
+        /// <summary>
+        /// The minimum pip size of the exchange, used for rounding prices.
+        /// </summary>
         public double PipSize { get; set; }
+
+        /// <summary>
+        /// The size of the zone expressed in number of pips. ZoneSize * PipSize = Real Zone Size
+        /// </summary>
         public int ZoneSize { get; set; }
+
+        /// <summary>
+        /// Reflects how deep inside the FactorArray, this instance of the Calculator class, is allowed to go.
+        /// </summary>
         public int MaxDepthIndex { get; set; }
         #endregion Variables
 
+        #region Constructor(s)
         /// <summary>
         /// Initializes the Zone Recovery Calculator.
         /// TODO: InitialPrice and its derived calculations should be recalculated when the first order is filled. Zone is 
@@ -63,6 +124,7 @@ namespace PStrategies.ZoneRecovery
             MinimumProfitPercentage = minPrftPerc;
             MaximumUnitSize = GetRelativeUnitSize();
         }
+        #endregion Constructor(s)
 
         /// <summary>
         /// Calculates the total maximum exposure (depth) possible, according to the depths defines in FactorArray. Basically
@@ -126,14 +188,19 @@ namespace PStrategies.ZoneRecovery
         ///     Position L/S      >  -   L   S   L   S   L4  S3  L2  S1  X
         ///     (Un)Winding       >  W   W   W   W   U   U   U   U   U   X
         /// 
+        /// When the TP is reached at the exchange, a new position should not be set. The current Calculator 
+        /// instance should be disposed.
+        /// 
         /// TODO: Check how WebSocket returns updates on resting orders. This function makes the assumption 
         /// that a list of OrderResponses is returned.
         /// </summary>
         /// <param name="orderResp">The List object with all the OrderResponses for one order returned by the Exchange.</param>
         public void SetNewPosition(List<BitMEX.Model.OrderResponse> orderResp)
         {
+            // Assuming that all OrderResponses are 
+
             // Create a new position object for the calculation of the average position size
-            ZoneRecoveryPosition newPos = new ZoneRecoveryPosition((double)PipSize, OpenPositions.Count + 1);
+            ZoneRecoveryPosition newPos = new ZoneRecoveryPosition(orderResp[1].OrderId, (double)PipSize, OpenPositions.Count + 1);
 
             // Loop all the OrderResponse objects related to a specific filled previously resting or market order.
             foreach (BitMEX.Model.OrderResponse resp in orderResp)
@@ -177,7 +244,7 @@ namespace PStrategies.ZoneRecovery
         /// OpenPositions.Single(s => s.PositionIndex == 1).AVGPrice returns the initial reference price (= price of first position)
         /// </summary>
         /// <returns>ZoneRecoveryAction</returns>
-        public ZoneRecoveryAction GetNextStep()
+        public ZoneRecoveryAction GetNextAction()
         {
             lock (_Lock)
             {
@@ -263,6 +330,7 @@ namespace PStrategies.ZoneRecovery
     /// </summary>
     public class ZoneRecoveryPosition
     {
+        public string OrderID { get; set; }
         public double AVGPrice { get; set; }
         public double TotalVolume { get; set; }
         public double PipSize { get; set; }
@@ -279,8 +347,9 @@ namespace PStrategies.ZoneRecovery
             this.TotalVolume = this.TotalVolume + executionVolume;
         }
 
-        public ZoneRecoveryPosition(double pipSize, int posIndex)
+        public ZoneRecoveryPosition(string ordID, double pipSize, int posIndex)
         {
+            this.OrderID = ordID;
             this.AVGPrice = 0.0;
             this.TotalVolume = 0.0;
             this.PipSize = pipSize;

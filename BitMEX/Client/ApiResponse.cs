@@ -20,7 +20,7 @@ namespace BitMEX.Client
         /// Initializes a new instance of the <see cref="ApiResponse<T> /> class.
         /// </summary>
         /// <param name="statusCode">HTTP status code.</param>
-        /// <param name="headers">HTTP headers.</param>
+        /// <param name="headers">HTTP headers. Currently not used...</param>
         /// <param name="json">json (parsed HTTP body)</param>
         /// <param name="uri">URI of the response.</param>
         public ApiResponse(int statusCode, IDictionary<string, string> headers, string json, Uri uri = null)
@@ -31,7 +31,10 @@ namespace BitMEX.Client
             this.Json = json;
         }
         
-        // Processes json responses
+        /// <summary>
+        /// Depending on the http status code received, determine what is the expected type of the json string.
+        /// </summary>
+        /// <returns></returns>
         public object ApiResponseProcessor()
         {
             object o;
@@ -71,7 +74,10 @@ namespace BitMEX.Client
             }
         }
 
-        // Creates objects from a JSON response.
+        /// <summary>
+        /// Finds the expected response object derived from the URI of the call.
+        /// </summary>
+        /// <returns></returns>
         private object ApiResponseDispatcher()
         {
             // Json is empty > Shit...
@@ -113,6 +119,7 @@ namespace BitMEX.Client
             return o;
         }
 
+        // TODO: (Logging) save every response to the DB to be able to evaluate every movement hind sight...
         //private void ApiResponseDBHandler(object o)
         //{
         //    try
