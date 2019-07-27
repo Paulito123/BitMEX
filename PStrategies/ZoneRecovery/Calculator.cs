@@ -9,7 +9,7 @@ namespace PStrategies.ZoneRecovery
 {
     public class Calculator
     {
-        #region Private variables
+        #region Variables
 
         /// <summary>
         /// Object used to lock a piece of code to prevent it from being executed multiple times within one instance of the calculator class.
@@ -58,48 +58,44 @@ namespace PStrategies.ZoneRecovery
         /// </summary>
         private int CurrentZRPosition;
 
-        #endregion Private variables
-
-        #region Public variables
-        
         /// <summary>
         /// It is the price at the time the Calculator class is initialized and it is used as the reference price
         /// for calculating the zone.
         /// </summary>
-        public double InitialPrice { get; set; }
+        private double InitialPrice { get; set; }
 
         /// <summary>
         /// At any time, this measure reflects the maximum percentage of the TotalBalance that can be exposed to 
         /// the market. 
         /// </summary>
-        public double MaxExposure { get; set; }
+        private double MaxExposure { get; set; }
 
         /// <summary>
         /// The total balance of the wallet at the time that the Calculator class is initialized.
         /// </summary>
-        public double TotalBalance { get; set; }
+        private double TotalBalance { get; set; }
 
         /// <summary>
         /// The current leverage used for calculating other measures
         /// </summary>
-        public double Leverage { get; set; }
+        private double Leverage { get; set; }
 
         /// <summary>
         /// The minimum pip size of the exchange, used for rounding prices.
         /// </summary>
-        public double PipSize { get; set; }
+        private double PipSize { get; set; }
 
         /// <summary>
         /// The size of the zone expressed in number of pips. ZoneSize * PipSize = Real Zone Size
         /// </summary>
-        public int ZoneSize { get; set; }
+        private int ZoneSize { get; set; }
 
         /// <summary>
         /// Reflects how deep inside the FactorArray, this instance of the Calculator class, is allowed to go.
         /// </summary>
-        public int MaxDepthIndex { get; set; }
+        private int MaxDepthIndex { get; set; }
 
-        #endregion Public variables
+        #endregion Variables
 
         #region Constructor(s)
         /// <summary>
@@ -181,6 +177,14 @@ namespace PStrategies.ZoneRecovery
         }
 
         /// <summary>
+        /// Calculate the difference in price relative to the InitialPrice.
+        /// </summary>
+        private double CalculateProfitPriceDifference()
+        {
+            return InitialPrice * MinimumProfitPercentage;
+        }
+
+        /// <summary>
         /// Returns the price at which profit should be taken to be mathematically "Break Even". Commissions are not yet taken into account.
         /// TODO: Extend the calculation to take into account commissions and real profit using the MinimumProfitPercentage variable.
         /// </summary>
@@ -200,7 +204,7 @@ namespace PStrategies.ZoneRecovery
             o = v_numerator / v_denominator * (1 / PipSize);
 
             // Add the calculated minimum profit margin
-            o = o + (-this.GetNextDirection() *
+            o = o + (-this.GetNextDirection() * CalculateProfitPriceDifference());
 
             return Math.Round(o, MidpointRounding.AwayFromZero) / (1 / PipSize);
         }
@@ -253,33 +257,34 @@ namespace PStrategies.ZoneRecovery
         /// <param name="orderResp">The List object with all the OrderResponses for one order returned by the Exchange.</param>
         public void SetNewPosition(List<BitMEX.Model.OrderResponse> orderResp)
         {
-            // Assuming that all OrderResponses are 
-
-            // Create a new position object for the calculation of the average position size
-            ZoneRecoveryPosition newPos = new ZoneRecoveryPosition(orderResp[1].OrderId, (double)PipSize, OpenPositions.Count + 1);
-
-            // Loop all the OrderResponse objects related to a specific filled previously resting or market order.
-            foreach (BitMEX.Model.OrderResponse resp in orderResp)
+            lock(_Lock)
             {
-                // TODO: Check if assumption is correct that AvgPx is the average price for the filled OrderQty...
-                newPos.AddToPosition((double)resp.AvgPx, (double)resp.OrderQty);
+                // Create a new position object for the calculation of the average position size
+                ZoneRecoveryPosition newPos = new ZoneRecoveryPosition(orderResp[1].OrderId, (double)PipSize, OpenPositions.Count + 1);
+
+                // Loop all the OrderResponse objects related to a specific filled previously resting or market order.
+                foreach (BitMEX.Model.OrderResponse resp in orderResp)
+                {
+                    // TODO: Check if assumption is correct that AvgPx is the average price for the filled OrderQty...
+                    newPos.AddToPosition((double)resp.AvgPx, (double)resp.OrderQty);
+                }
+
+                // Add the new averaged position to the positions collection
+                this.OpenPositions.Add(newPos);
+
+                if (CurrentStatus == ZoneRecoveryStatus.Winding)
+                {
+                    CurrentZRPosition++;
+
+                    // Zone Recovery logic is reversed
+                    if (CurrentZRPosition == MaxDepthIndex)
+                        CurrentStatus = ZoneRecoveryStatus.Unwinding;
+                }
+                else if (CurrentStatus == ZoneRecoveryStatus.Unwinding) // Unwinding...
+                    CurrentZRPosition--;
+                else
+                    CurrentZRPosition = 0; // Should not happen...
             }
-
-            // Add the new averaged position to the positions collection
-            this.OpenPositions.Add(newPos);
-
-            if (CurrentStatus == ZoneRecoveryStatus.Winding)
-            {
-                CurrentZRPosition++;
-
-                // Zone Recovery logic is reversed
-                if (CurrentZRPosition == MaxDepthIndex)
-                    CurrentStatus = ZoneRecoveryStatus.Unwinding;
-            }
-            else if (CurrentStatus == ZoneRecoveryStatus.Unwinding) // Unwinding...
-                CurrentZRPosition--;
-            else
-                CurrentZRPosition = 0; // Should not happen...
         }
 
         /// <summary>
@@ -321,12 +326,17 @@ namespace PStrategies.ZoneRecovery
                 }
                 else if (CurrentStatus == ZoneRecoveryStatus.Unwinding) // Unwinding
                 {
-
+                    // Calculate the next take profit price
+                    zra.TPPrice = CalculateTPPrice();
+                    zra.TPVolumeSell = CalculateOpenQtyForDirection(1);
+                    zra.TPVolumeBuy = CalculateOpenQtyForDirection(-1);
+                    zra.ReverseVolume = -OpenPositions.Single(s => s.PositionIndex == (CurrentZRPosition + 1)).TotalVolume;
+                    zra.ReversePrice = CalculateNextReversePrice();
+                    return zra;
                 }
                 else
                     return null;
             }
-            return null;
         }
     }
 
