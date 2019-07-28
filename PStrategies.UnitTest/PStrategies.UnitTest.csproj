@@ -49,11 +49,22 @@
     <Reference Include="System.Core" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="UnitTest1.cs" />
+    <Compile Include="ZoneRecovery\CalculatorTests.cs" />
+    <Compile Include="ZoneRecovery\ZoneRecoveryPositionTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\BitMEX\BitMEX.csproj">
+      <Project>{f8d81e53-f615-4d90-abb8-857c8c617eeb}</Project>
+      <Name>BitMEX</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\PStrategies\PStrategies.csproj">
+      <Project>{bba09875-410f-46b5-bc68-1f647bc00c1b}</Project>
+      <Name>PStrategies</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VSToolsPath)\TeamTest\Microsoft.TestTools.targets" Condition="Exists('$(VSToolsPath)\TeamTest\Microsoft.TestTools.targets')" />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

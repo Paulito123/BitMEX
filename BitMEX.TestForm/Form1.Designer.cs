@@ -30,7 +30,7 @@
         {
             this.tableLayoutPanel1 = new System.Windows.Forms.TableLayoutPanel();
             this.btnMarketOrder = new System.Windows.Forms.Button();
-            this.btnSwagger = new System.Windows.Forms.Button();
+            this.btnTestMe = new System.Windows.Forms.Button();
             this.btnLimitOrder = new System.Windows.Forms.Button();
             this.btnGetOrders = new System.Windows.Forms.Button();
             this.btnOpenAPI = new System.Windows.Forms.Button();
@@ -56,7 +56,7 @@
             this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 12.5F));
             this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 12.5F));
             this.tableLayoutPanel1.Controls.Add(this.btnMarketOrder, 0, 0);
-            this.tableLayoutPanel1.Controls.Add(this.btnSwagger, 0, 1);
+            this.tableLayoutPanel1.Controls.Add(this.btnTestMe, 0, 1);
             this.tableLayoutPanel1.Controls.Add(this.btnLimitOrder, 0, 2);
             this.tableLayoutPanel1.Controls.Add(this.btnGetOrders, 0, 3);
             this.tableLayoutPanel1.Controls.Add(this.btnOpenAPI, 0, 4);
@@ -93,15 +93,15 @@
             this.btnMarketOrder.UseVisualStyleBackColor = true;
             this.btnMarketOrder.Click += new System.EventHandler(this.btnMarketOrder_Click);
             // 
-            // btnSwagger
+            // btnTestMe
             // 
-            this.btnSwagger.Location = new System.Drawing.Point(3, 45);
-            this.btnSwagger.Name = "btnSwagger";
-            this.btnSwagger.Size = new System.Drawing.Size(75, 23);
-            this.btnSwagger.TabIndex = 1;
-            this.btnSwagger.Text = "Swagger";
-            this.btnSwagger.UseVisualStyleBackColor = true;
-            this.btnSwagger.Click += new System.EventHandler(this.btnSwagger_Click);
+            this.btnTestMe.Location = new System.Drawing.Point(3, 45);
+            this.btnTestMe.Name = "btnTestMe";
+            this.btnTestMe.Size = new System.Drawing.Size(75, 23);
+            this.btnTestMe.TabIndex = 1;
+            this.btnTestMe.Text = "TESTME";
+            this.btnTestMe.UseVisualStyleBackColor = true;
+            this.btnTestMe.Click += new System.EventHandler(this.btnTestMe_ClickAsync);
             // 
             // btnLimitOrder
             // 
@@ -239,7 +239,7 @@
 
         private System.Windows.Forms.TableLayoutPanel tableLayoutPanel1;
         private System.Windows.Forms.Button btnMarketOrder;
-        private System.Windows.Forms.Button btnSwagger;
+        private System.Windows.Forms.Button btnTestMe;
         private System.Windows.Forms.Button btnLimitOrder;
         private System.Windows.Forms.Button btnGetOrders;
         private System.Windows.Forms.Button btnOpenAPI;

@@ -39,9 +39,9 @@ namespace PStrategies.ZoneRecovery
 
         /// <summary>
         /// The maximum unit size used for each trade within this instance of the Calculator class. 
-        /// To calculate this measure: InitialPrice * Leverage * TotalBalance * MaxExposure / totalDepthMaxExposure
+        /// To calculate this measure: InitialPrice * Leverage * TotalBalance * MaxExposurePerc / totalDepthMaxExposure
         /// Basically it comes down to calculating the maximum amount of exposure you would want for one instance of 
-        /// the Calculator class. The key parameter to adjust the risk is MaxExposure.
+        /// the Calculator class. The key parameter to adjust the risk is MaxExposurePerc.
         /// </summary>
         private double MaximumUnitSize;
 
@@ -69,7 +69,7 @@ namespace PStrategies.ZoneRecovery
         /// At any time, this measure reflects the maximum percentage of the TotalBalance that can be exposed to 
         /// the market. 
         /// </summary>
-        private double MaxExposure { get; set; }
+        private double MaxExposurePerc { get; set; }
 
         /// <summary>
         /// The total balance of the wallet at the time that the Calculator class is initialized.
@@ -112,12 +112,12 @@ namespace PStrategies.ZoneRecovery
         /// <param name="maxDepthIndex">Maximum dept allowed in the Zone Recovery system</param>
         /// <param name="zoneSize">The size of the zone in nr of pips</param>
         /// <param name="minPrftPerc">Minimum required profit margin</param>
-        public Calculator(double initialPrice, double maxExposure, double totalBalance, double leverage, double pipSize, int maxDepthIndex, int zoneSize, double minPrftPerc)
+        public Calculator(double initialPrice, double maxExposurePerc, double totalBalance, double leverage, double pipSize, int maxDepthIndex, int zoneSize, double minPrftPerc)
         {
             CurrentStatus = ZoneRecoveryStatus.Winding;
             OpenPositions = new List<ZoneRecoveryPosition>();
             InitialPrice = initialPrice;
-            MaxExposure = maxExposure;
+            MaxExposurePerc = maxExposurePerc;
             TotalBalance = totalBalance;
             Leverage = leverage;
             PipSize = pipSize;
@@ -128,6 +128,8 @@ namespace PStrategies.ZoneRecovery
             MaximumUnitSize = GetRelativeUnitSize();
         }
         #endregion Constructor(s)
+
+        #region Private methods
 
         /// <summary>
         /// Calculates the total maximum exposure (depth) possible, according to the depths defines in FactorArray. Basically
@@ -150,13 +152,13 @@ namespace PStrategies.ZoneRecovery
         }
 
         /// <summary>
-        /// For a given InitialPrice, Balance, MaxExposure and Leverage, this function returns the calculated maximum unit size. 
+        /// For a given InitialPrice, Balance, MaxExposurePerc and Leverage, this function returns the calculated maximum unit size. 
         /// This unit size multiplied with the factors in FactorArray will give the unit size of each order.
         /// </summary>
         private double GetRelativeUnitSize()
         {
             double totalDepthMaxExposure = (double)this.GetTotalDepthMaxExposure();
-            return Math.Round((double)(InitialPrice * Leverage * TotalBalance * MaxExposure / totalDepthMaxExposure) * (1 / (double)PipSize), MidpointRounding.AwayFromZero) / (1 / (double)PipSize);
+            return Math.Round((double)(InitialPrice * Leverage * TotalBalance * MaxExposurePerc / totalDepthMaxExposure) * (1 / (double)PipSize), MidpointRounding.AwayFromZero) / (1 / (double)PipSize);
         }
 
         /// <summary>
@@ -168,7 +170,7 @@ namespace PStrategies.ZoneRecovery
             if (OpenPositions.Count > 0)
             {
                 // Determine the direction of next step relative to the first position
-                if (OpenPositions.Single(s => s.PositionIndex == 1).TotalVolume > 0) // First position = LONG position
+                if (OpenPositions.Single(s => s.PositionIndex == 1).TotalQty > 0) // First position = LONG position
                     return (OpenPositions.Count % 2 == 1) ? -1 : 1;
                 else                                                                 // First position = SHORT position
                     return (OpenPositions.Count % 2 == 1) ? 1 : -1;
@@ -198,8 +200,8 @@ namespace PStrategies.ZoneRecovery
 
             foreach(ZoneRecoveryPosition zp in OpenPositions)
             {
-                v_numerator = v_numerator + (zp.TotalVolume * zp.AVGPrice);
-                v_denominator = v_denominator + (zp.TotalVolume);
+                v_numerator = v_numerator + (zp.TotalQty * zp.AVGPrice);
+                v_denominator = v_denominator + (zp.TotalQty);
             }
 
             o = v_numerator / v_denominator * (1 / PipSize);
@@ -220,7 +222,7 @@ namespace PStrategies.ZoneRecovery
             double outp = 0;
             foreach(ZoneRecoveryPosition zrp in OpenPositions)
             {
-                outp = outp + ((zrp.TotalVolume / Math.Abs(zrp.TotalVolume) == direction) ? zrp.TotalVolume : 0);
+                outp = outp + ((zrp.TotalQty / Math.Abs(zrp.TotalQty) == direction) ? zrp.TotalQty : 0);
             }
             return outp;
         }
@@ -232,12 +234,16 @@ namespace PStrategies.ZoneRecovery
         private double CalculateNextReversePrice()
         {
             ZoneRecoveryPosition zrp = OpenPositions.Single(s => s.PositionIndex == 1);
-            int firstDir = (int)(zrp.TotalVolume / Math.Abs(zrp.TotalVolume));
+            int firstDir = (int)(zrp.TotalQty / Math.Abs(zrp.TotalQty));
             if (GetNextDirection() == firstDir)
                 return zrp.AVGPrice;
             else
                 return zrp.AVGPrice + ((firstDir * -1) * PipSize * ZoneSize);
         }
+
+        #endregion Private methods
+
+        #region Public methods
 
         /// <summary>
         /// SetNewPosition should be called when a new position is taken on the exchange. The Zone Recovery
@@ -331,7 +337,7 @@ namespace PStrategies.ZoneRecovery
                     zra.TPPrice = CalculateTPPrice();
                     zra.TPVolumeSell = CalculateOpenQtyForDirection(1);
                     zra.TPVolumeBuy = CalculateOpenQtyForDirection(-1);
-                    zra.ReverseVolume = -OpenPositions.Single(s => s.PositionIndex == (CurrentZRPosition + 1)).TotalVolume;
+                    zra.ReverseVolume = -OpenPositions.Single(s => s.PositionIndex == (CurrentZRPosition + 1)).TotalQty;
                     zra.ReversePrice = CalculateNextReversePrice();
                     return zra;
                 }
@@ -339,87 +345,8 @@ namespace PStrategies.ZoneRecovery
                     return null;
             }
         }
-    }
 
-    /// <summary>
-    /// ZoneRecoveryAction class serves merely the purpose of transporting all the parameters needed for creating the orders in the
-    /// application that uses this library.
-    /// TODO: Make ZoneRecoveryAction class dual account friendly by extending it with TPVolumeSellAccount and TPVolumeBuyAccount.
-    /// </summary>
-    public class ZoneRecoveryAction
-    {
-        /// <summary>
-        /// PositionIndex represents the number of positions taken in the past within the current strategy instance. It can be used 
-        /// as a unique identifier by the application that uses this library to make sure the same action is not taken twice...
-        /// </summary>
-        public int PositionIndex { set; get; }
-
-        /// <summary>
-        /// The price where a profit is taken. TP = Take Profit
-        /// </summary>
-        public double TPPrice { set; get; }
-
-        /// <summary>
-        /// Volume to Sell all your Buy positions
-        /// </summary>
-        public double TPVolumeSell { set; get; }
-
-        /// <summary>
-        /// Volume to Buy all your Sell positions
-        /// </summary>
-        public double TPVolumeBuy { set; get; }
-
-        /// <summary>
-        /// The price at which the position should be reversed
-        /// </summary>
-        public double ReversePrice { set; get; }
-        public double ReverseVolume { set; get; }
-
-        public ZoneRecoveryAction(int posIndex)
-        {
-            PositionIndex = posIndex;
-        }
-    }
-
-    /// <summary>
-    /// Class that represents a taken position. Since one order could be filled by a number of OrderResponses, it is
-    /// easier to have a calculated object with only the information needed rather than the collection of
-    /// OrderResponses.
-    /// When Volume is negative, the position is a Sell position.
-    /// When Volume is position, the position is a Long position.
-    /// </summary>
-    public class ZoneRecoveryPosition
-    {
-        public string OrderID { get; set; }
-        public double AVGPrice { get; set; }
-        public double TotalVolume { get; set; }
-        public double PipSize { get; set; }
-
-        /// <summary>
-        /// PositionIndex keeps the sequence number of a position within its container. (followup number)
-        /// Could be deleted later on if not used...
-        /// </summary>
-        public int PositionIndex { get; set; }
-
-        public void AddToPosition(double executionPrice, double executionVolume)
-        {
-            this.AVGPrice = CalculateAveragePrice(AVGPrice, executionPrice, TotalVolume, executionVolume, PipSize);
-            this.TotalVolume = this.TotalVolume + executionVolume;
-        }
-
-        public ZoneRecoveryPosition(string ordID, double pipSize, int posIndex)
-        {
-            this.OrderID = ordID;
-            this.AVGPrice = 0.0;
-            this.TotalVolume = 0.0;
-            this.PipSize = pipSize;
-            this.PositionIndex = posIndex;
-        }
-
-        public static double CalculateAveragePrice(double price1, double price2, double vol1, double vol2, double pipSize)
-        {
-            return Math.Round(((price1 * vol1) + (price2 * vol2)) / (vol1 + vol2) * (1 / pipSize), MidpointRounding.AwayFromZero) / (1 / pipSize);
-        }
+        #endregion Public methods
     }
 }
 

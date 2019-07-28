@@ -4,16 +4,16 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{BBA09875-410F-46B5-BC68-1F647BC00C1B}</ProjectGuid>
-    <OutputType>Library</OutputType>
-    <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>PStrategies</RootNamespace>
-    <AssemblyName>PStrategies</AssemblyName>
+    <ProjectGuid>{2FFCC907-690E-4C49-B8D7-B4D91C45033A}</ProjectGuid>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>BitMEX.TestConsole</RootNamespace>
+    <AssemblyName>BitMEX.TestConsole</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
@@ -23,6 +23,7 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
     <OutputPath>bin\Release\</OutputPath>
@@ -41,19 +42,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="KnifeCatch\Calculator.cs" />
-    <Compile Include="MeanSearch\Calculator.cs" />
+    <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="ZoneRecovery\Calculator.cs" />
-    <Compile Include="ZoneRecovery\ZoneRecoveryAction.cs" />
-    <Compile Include="ZoneRecovery\ZoneRecoveryPosition.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\BitMEX\BitMEX.csproj">
-      <Project>{f8d81e53-f615-4d90-abb8-857c8c617eeb}</Project>
-      <Name>BitMEX</Name>
-    </ProjectReference>
+    <None Include="App.config" />
   </ItemGroup>
-  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
