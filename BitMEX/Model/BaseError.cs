@@ -11,6 +11,20 @@
     {
         [JsonProperty("error")]
         public Error Error { get; set; }
+
+        /// <summary>
+        /// Returns the string presentation of the object
+        /// </summary>
+        /// <returns>String presentation of the object</returns>
+        public override string ToString()
+        {
+            var sb = new System.Text.StringBuilder();
+            sb.Append("class Error {\n");
+            sb.Append("  Message: ").Append(Error.Message.ToString()).Append("\n");
+            sb.Append("  Name: ").Append(Error.Name.ToString()).Append("\n");
+            sb.Append("}\n");
+            return sb.ToString();
+        }
     }
 
     public partial class Error

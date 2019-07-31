@@ -10,308 +10,293 @@ using Bitmex.Client.Websocket.Requests;
 using Bitmex.Client.Websocket.Websockets;
 using Serilog;
 using BitMEX.Model;
-using OpenAPI.Api;
-using OpenAPI.Client;
-using OpenAPI.Model;
+using BitMEX.Client;
 using System.Data.SqlClient;
-using Bitmex.Client.Websocket;
+//using Bitmex.Client.Websocket;
+using log4net; 
 
 namespace BitMEX.TestForm
 {
     public partial class Form1 : Form
     {
         private MordoR mconn;
+        ILog log;
+        string guid;
 
-        // Required for WebSocket
-        private static readonly ManualResetEvent ExitEvent = new ManualResetEvent(false);
-        private static readonly string API_KEY = "rTAFXRKn2dLARuG_t1dDOtgI";
-        private static readonly string API_SECRET = "K2LmL6aTbj8eW_LVj7OLa7iA6eZa8TJMllh3sjCynV4fpnMr";
-
+        //private static readonly ManualResetEvent ExitEvent = new ManualResetEvent(false);
+        //private static readonly string API_KEY = "rTAFXRKn2dLARuG_t1dDOtgI";
+        //private static readonly string API_SECRET = "K2LmL6aTbj8eW_LVj7OLa7iA6eZa8TJMllh3sjCynV4fpnMr";
+        
         public Form1()
         {
             InitializeComponent();
+            guid = MordoR.generateGUID();
             mconn = new MordoR();
             TBMarketOrder.Text = "XBTUSD";
+
+            log4net.Config.XmlConfigurator.Configure();
+            log = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
         }
 
         private void btnMarketOrder_Click(object sender, EventArgs e)
         {
+            log.Info("btnMarketOrder_Click Clicked!");
+
             // Local environment checks...
             if (NUDMarketOrderQuantity.Value >= 1 || NUDMarketOrderQuantity.Value <= -1)
             {
-                // Catch API and connection errors
-                try
+                lock (guid)
                 {
-                    string clOrdID;
-                    object outcome = mconn.MarketOrder(
-                        TBMarketOrder.Text.ToString(), 
-                        out clOrdID, 
-                        Decimal.ToInt32((decimal)NUDMarketOrderQuantity.Value));
-
-                    if (outcome != null)
+                    // Catch API and connection errors
+                    try
                     {
-                        if (outcome.GetType().ToString() == "BitMEX.Model.OrderResponse")
+                        object outcome = mconn.MarketOrder(
+                            TBMarketOrder.Text.ToString(),
+                            guid,
+                            Decimal.ToInt32((decimal)NUDMarketOrderQuantity.Value));
+
+                        log.Info("Marked order sent: Qty = " + NUDMarketOrderQuantity.Value.ToString());
+
+                        if (outcome != null)
                         {
-                            // Successful API call with successful result...
-                            MessageBox.Show("Order success: " + clOrdID + "=" + ((OrderResponse)outcome).ClOrdId.ToString());
+                            if (outcome.GetType().ToString() == "BitMEX.Model.OrderResponse")
+                            {
+                                // Successful API call with successful result...
+                                log.Info((OrderResponse)outcome);
+                                //MessageBox.Show("Order success: " + clOrdID + "=" + ((OrderResponse)outcome).ClOrdId.ToString());
+                            }
+                            else
+                            {
+                                // Successful API call with error as result...
+                                log.Info((BaseError)outcome);
+                                //MessageBox.Show("Order error: " + ((BaseError)outcome).Error.Message.ToString());
+                            }
                         }
                         else
                         {
-                            // Successful API call with error as result...
-                            MessageBox.Show("Order error: " + ((BaseError)outcome).Error.Message.ToString());
+                            log.Error("Outcome is null");
+                            //MessageBox.Show("Outcome is null");
                         }
+                        guid = MordoR.generateGUID();
+                        log.Info("Guid changed to " + guid);
                     }
-                    else 
+                    catch (Exception exc)
                     {
-                        MessageBox.Show("Outcome is null");
+                        // Catch all external exceptions like connection issues etc.
+                        log.Error(exc);
+                        //MessageBox.Show("Exception[" + exc.Message.ToString() + "]");
                     }
-                }
-                catch (Exception exc)
-                {
-                    // Catch all external exceptions like connection issues etc.
-                    MessageBox.Show("Exception[" + exc.Message.ToString() + "]");
                 }
             }
+            log.Info("btnMarketOrder_Click End!");
         }
         
         private void btnLimitOrder_Click(object sender, EventArgs e)
         {
+            log.Info("btnLimitOrder_Click Clicked!");
+
             // Local environment checks...
             if ((NUDMarketOrderQuantity.Value >= 1 || NUDMarketOrderQuantity.Value <= -1))
             {
-                // Catch API and connection errors
+                lock (guid)
+                {
+                    // Catch API and connection errors
+                    try
+                    {
+                        OrderResponse orderResp = new OrderResponse();
+                        BaseError orderErr = new BaseError();
+
+                        object outcome = mconn.LimitOrder(
+                            TBMarketOrder.Text.ToString(),
+                            Decimal.ToInt32((decimal)NUDMarketOrderQuantity.Value),
+                            Decimal.ToInt32((decimal)NUDPrice.Value),
+                            guid);
+
+                        log.Info("Limit order sent: Price = " + NUDPrice.Value.ToString() + " & = Qty = " + NUDMarketOrderQuantity.Value.ToString());
+
+                        if (outcome.GetType() == orderResp.GetType())
+                        {
+                            // Successful API call with successful result...
+                            log.Info((OrderResponse)outcome);
+                            //orderResp = (OrderResponse)outcome;
+                            //MessageBox.Show("Order success: " + clOrdID + "=" + orderResp.ClOrdId.ToString());
+                        }
+                        else if (outcome.GetType() == orderErr.GetType())
+                        {
+                            // Successful API call with error as result...
+                            log.Error((BaseError)outcome);
+                            //orderErr = (BaseError)outcome;
+                            //MessageBox.Show("BitMEX API Error [" + orderErr.Error.Message.ToString() + "]");
+                        }
+                        else
+                        {
+                            // Should never happen...
+                            log.Error("Unknown return type [" + outcome.GetType().ToString() + "]");
+                            //MessageBox.Show("Unknown return type [" + outcome.GetType().ToString() + "]");
+                        }
+                        guid = MordoR.generateGUID();
+                        log.Info("Guid changed to " + guid);
+                    }
+                    catch (Exception exc)
+                    {
+                        // Catch all external exceptions like connection issues etc.
+                        log.Error("Exception[" + exc.Message.ToString() + "]");
+                        //MessageBox.Show("Exception[" + exc.Message.ToString() + "]");
+                    }
+                }
+            }
+            log.Info("btnLimitOrder_Click End!");
+        }
+
+        private void btnGetOpenOrders_Click(object sender, EventArgs e)
+        {
+            log.Info("btnGetOpenOrders_Click Clicked!");
+            
+            // Local environment checks...
+            if (!String.IsNullOrEmpty(TBClOrdId.Text))
+            {
+                
                 try
                 {
-                    OrderResponse orderResp = new OrderResponse();
+                    List<OrderResponse> orderResp = new List<OrderResponse>();
                     BaseError orderErr = new BaseError();
-                    string clOrdID;
-                    object outcome = mconn.LimitOrder(
-                        TBMarketOrder.Text.ToString(), 
-                        Decimal.ToInt32((decimal)NUDMarketOrderQuantity.Value), 
-                        Decimal.ToInt32((decimal)NUDPrice.Value), 
-                        out clOrdID);
+                    object outcome = mconn.GetOpenOrdersForSymbol(TBMarketOrder.Text.ToString());
+
+                    log.Info("Get open orders sent");
 
                     if (outcome.GetType() == orderResp.GetType())
                     {
                         // Successful API call with successful result...
-                        orderResp = (OrderResponse)outcome;
-                        MessageBox.Show("Order success: " + clOrdID + "=" + orderResp.ClOrdId.ToString());
+                        //string orderAccumulation = "";
+                        orderResp = (List<OrderResponse>)outcome;
+
+                        foreach (var resp in orderResp.Where(x => x.OrdStatus == "New")/*.Select(n => n.OrderId)*/)
+                        {
+                            log.Info(resp.ToString());
+                            //orderAccumulation = orderAccumulation + "¦" + resp.ToString();
+                        }
+                        //MessageBox.Show(orderAccumulation);
                     }
                     else if (outcome.GetType() == orderErr.GetType())
                     {
                         // Successful API call with error as result...
-                        orderErr = (BaseError)outcome;
-                        MessageBox.Show("BitMEX API Error [" + orderErr.Error.Message.ToString() + "]");
+                        log.Error(((BaseError)outcome).ToString());
+                        //orderErr = (BaseError)outcome;
+                        //MessageBox.Show("BitMEX API Error [" + orderErr.Error.Message.ToString() + "]");
                     }
                     else
                     {
+                        log.Error("Unknown return type [" + outcome.GetType().ToString() + "]");
                         // Should never happen...
-                        MessageBox.Show("Unknown return type [" + outcome.GetType().ToString() + "]");
+                        //MessageBox.Show("Unknown return type [" + outcome.GetType().ToString() + "]");
                     }
                 }
                 catch (Exception exc)
                 {
-                    // Catch all external exceptions like connection issues etc.
-                    MessageBox.Show("Exception[" + exc.Message.ToString() + "]");
+                    // Unsuccessful API call
+                    log.Error("Exception[" + exc.Message.ToString() + "]");
+                    //MessageBox.Show("Exception [" + exc.Message.ToString() + "]");
                 }
             }
+            log.Info("btnGetOpenOrders_Click End!");
         }
-
-        private void btnGetOrders_Click(object sender, EventArgs e)
+        
+        private void btnStopOrder_Click(object sender, EventArgs e)
         {
-            try
-            {
-                List<OrderResponse> orderResp = new List<OrderResponse>();
-                BaseError orderErr = new BaseError();
-                object outcome = mconn.GetOpenOrdersForSymbol(TBMarketOrder.Text.ToString());
-
-                if(outcome.GetType() == orderResp.GetType())
-                {
-                    // Successful API call with successful result...
-                    string orderAccumulation = "";
-                    orderResp = (List<OrderResponse>)outcome;
-                    foreach(var resp in orderResp.Where(x=> x.OrdStatus == "New").Select(n => n.OrderId))
-                    {
-                        orderAccumulation = orderAccumulation + "¦" + resp.ToString();
-                    }
-                    MessageBox.Show(orderAccumulation);
-                }
-                else if(outcome.GetType() == orderErr.GetType())
-                {
-                    // Successful API call with error as result...
-                    orderErr = (BaseError)outcome;
-                    MessageBox.Show("BitMEX API Error [" + orderErr.Error.Message.ToString() + "]");
-                }
-                else
-                {
-                    // Should never happen...
-                    MessageBox.Show("Unknown return type [" + outcome.GetType().ToString() + "]");
-                }
-            }
-            catch (Exception exc)
-            {
-                // Unsuccessful API call
-                MessageBox.Show("Exception [" + exc.Message.ToString() + "]");
-            }
-        }
-
-        private void btnTestMe_ClickAsync(object sender, EventArgs e)
-        {
-            AppDomain.CurrentDomain.ProcessExit += CurrentDomainOnProcessExit;
-            Console.CancelKeyPress += ConsoleOnCancelKeyPress;
-
-            var url = BitmexValues.ApiWebsocketUrl;
-            using (var communicator = new BitmexWebsocketCommunicator(url))
-            {
-                communicator.Name = "Bitmex-1";
-                communicator.ReconnectTimeoutMs = (int)TimeSpan.FromMinutes(10).TotalMilliseconds;
-                communicator.ReconnectionHappened.Subscribe(type =>
-                    Log.Information($"Reconnection happened, type: {type}")
-                );
-
-                using (var client = new BitmexWebsocketClient(communicator))
-                {
-
-                    client.Streams.InfoStream.Subscribe(info =>
-                    {
-                        Log.Information($"Reconnection happened, Message: {info.Info}, Version: {info.Version:D}");
-                        SendSubscriptionRequests(client).Wait();
-                    });
-
-                    SubscribeToStreams(client);
-
-                    communicator.Start();
-
-                    ExitEvent.WaitOne();
-                }
-            }
-        }
-
-        #region Bitmex.Websocket
-
-        private static async Task SendSubscriptionRequests(BitmexWebsocketClient client)
-        {
-            await client.Send(new PingRequest());
-            //await client.Send(new BookSubscribeRequest("XBTUSD"));
-            await client.Send(new TradesSubscribeRequest("XBTUSD"));
-            //await client.Send(new TradeBinSubscribeRequest("1m", "XBTUSD"));
-            //await client.Send(new TradeBinSubscribeRequest("5m", "XBTUSD"));
-            //await client.Send(new QuoteSubscribeRequest("XBTUSD"));
-            //await client.Send(new LiquidationSubscribeRequest());
-            //await client.Send(new InstrumentSubscribeRequest("XBTUSD"));
-
-            if (!string.IsNullOrWhiteSpace(API_SECRET))
-                await client.Send(new AuthenticationRequest(API_KEY, API_SECRET));
-        }
-
-        private static void SubscribeToStreams(BitmexWebsocketClient client)
-        {
-            client.Streams.ErrorStream.Subscribe(x =>
-                Log.Warning($"Error received, message: {x.Error}, status: {x.Status}")
-            );
-
-            client.Streams.AuthenticationStream.Subscribe(x =>
-            {
-                // Log.Information($"Authentication happened, success: {x.Success}");
-                //client.Send(new WalletSubscribeRequest()).Wait();
-                client.Send(new OrderSubscribeRequest()).Wait();
-                client.Send(new PositionSubscribeRequest()).Wait();
-            });
+            log.Info("btnStopOrder_Click Clicked!");
             
-            //client.Streams.SubscribeStream.Subscribe(x =>
-            //{
-            //    Log.Information(x.IsSubscription
-            //        ? $"Subscribed ({x.Success}) to {x.Subscribe}"
-            //        : $"Unsubscribed ({x.Success}) from {x.Unsubscribe}");
-            //});
+            // Local environment checks...
+            if ((NUDMarketOrderQuantity.Value >= 1 || NUDMarketOrderQuantity.Value <= -1))
+            {
+                lock (guid)
+                {
+                    // Catch API and connection errors
+                    try
+                    {
+                        OrderResponse orderResp = new OrderResponse();
+                        BaseError orderErr = new BaseError();
 
-            //client.Streams.PongStream.Subscribe(x =>
-            //    Log.Information($"Pong received ({x.Message})"));
+                        object outcome = mconn.LimitOrder(
+                            TBMarketOrder.Text.ToString(),
+                            Decimal.ToInt32((decimal)NUDMarketOrderQuantity.Value),
+                            Decimal.ToInt32((decimal)NUDPrice.Value),
+                            guid);
 
+                        log.Info("Limit order sent: Price = " + NUDPrice.Value.ToString() + " & = Qty = " + NUDMarketOrderQuantity.Value.ToString());
 
-            //client.Streams.WalletStream.Subscribe(y =>
-            //    y.Data.ToList().ForEach(x =>
-            //        Log.Information($"Wallet {x.Account}, {x.Currency} amount: {x.BalanceBtc}"))
-            //);
+                        if (outcome.GetType() == orderResp.GetType())
+                        {
+                            // Successful API call with successful result...
+                            log.Info((OrderResponse)outcome);
+                            //orderResp = (OrderResponse)outcome;
+                            //MessageBox.Show("Order success: " + clOrdID + "=" + orderResp.ClOrdId.ToString());
+                        }
+                        else if (outcome.GetType() == orderErr.GetType())
+                        {
+                            // Successful API call with error as result...
+                            log.Error((BaseError)outcome);
+                            //orderErr = (BaseError)outcome;
+                            //MessageBox.Show("BitMEX API Error [" + orderErr.Error.Message.ToString() + "]");
+                        }
+                        else
+                        {
+                            // Should never happen...
+                            log.Error("Unknown return type [" + outcome.GetType().ToString() + "]");
+                            //MessageBox.Show("Unknown return type [" + outcome.GetType().ToString() + "]");
+                        }
 
-            client.Streams.OrderStream.Subscribe(y =>
-                y.Data.ToList().ForEach(x =>
-                    Log.Information(
-                        $"Order {x.Symbol} updated. Time: {x.Timestamp:HH:mm:ss.fff}, Amount: {x.OrderQty}, " +
-                        $"Price: {x.Price}, Direction: {x.Side}, Working: {x.WorkingIndicator}, Status: {x.OrdStatus}"))
-            );
-
-            client.Streams.PositionStream.Subscribe(y =>
-                y.Data.ToList().ForEach(x =>
-                    Log.Information(
-                        $"Position {x.Symbol}, {x.Currency} updated. Time: {x.Timestamp:HH:mm:ss.fff}, Amount: {x.CurrentQty}, " +
-                        $"Price: {x.LastPrice}, PNL: {x.UnrealisedPnl}"))
-            );
-
-            //client.Streams.TradesStream.Subscribe(y =>
-            //    y.Data.ToList().ForEach(x =>
-            //        Log.Information($"Trade {x.Symbol} executed. Time: {x.Timestamp:mm:ss.fff}, [{x.Side}] Amount: {x.Size}, " +
-            //                        $"Price: {x.Price}"))
-            //);
-
-            //client.Streams.BookStream.Subscribe(book =>
-            //    book.Data.Take(100).ToList().ForEach(x => Log.Information(
-            //        $"Book | {book.Action} pair: {x.Symbol}, price: {x.Price}, amount {x.Size}, side: {x.Side}"))
-            //);
-
-            //client.Streams.QuoteStream.Subscribe(y =>
-            //    y.Data.ToList().ForEach(x =>
-            //        Log.Information($"Quote {x.Symbol}. Bid: {x.BidPrice} - {x.BidSize} Ask: {x.AskPrice} - {x.AskSize}"))
-            //);
-
-            //client.Streams.LiquidationStream.Subscribe(y =>
-            //    y.Data.ToList().ForEach(x =>
-            //        Log.Information(
-            //            $"Liquadation Action: {y.Action}, OrderID: {x.OrderID}, Symbol: {x.Symbol}, Side: {x.Side}, Price: {x.Price}, LeavesQty: {x.leavesQty}"))
-            //);
-
-            //client.Streams.TradeBinStream.Subscribe(y =>
-            //    y.Data.ToList().ForEach(x =>
-            //    Log.Information($"TradeBin table:{y.Table} {x.Symbol} executed. Time: {x.Timestamp:mm:ss.fff}, Open: {x.Open}, " +
-            //            $"Close: {x.Close}, Volume: {x.Volume}, Trades: {x.Trades}"))
-            //);
-
-            //client.Streams.InstrumentStream.Subscribe(x =>
-            //{
-            //    x.Data.ToList().ForEach(y =>
-            //    {
-            //        Log.Information($"Instrument, {y.Symbol}, " +
-            //                        $"price: {y.MarkPrice}, last: {y.LastPrice}, " +
-            //                        $"mark: {y.MarkMethod}, fair: {y.FairMethod}, direction: {y.LastTickDirection}, " +
-            //                        $"funding: {y.FundingRate} i: {y.IndicativeFundingRate} s: {y.FundingQuoteSymbol}");
-            //    });
-            //});
-
-
-            // example of unsubscribe requests
-            //Task.Run(async () =>
-            //{
-            //    await Task.Delay(5000);
-            //    await client.Send(new BookSubscribeRequest("XBTUSD") {IsUnsubscribe = true});
-            //    await Task.Delay(5000);
-            //    await client.Send(new TradesSubscribeRequest() {IsUnsubscribe = true});
-            //});
+                        guid = MordoR.generateGUID();
+                        log.Info("Guid changed to " + guid);
+                    }
+                    catch (Exception exc)
+                    {
+                        // Catch all external exceptions like connection issues etc.
+                        log.Error("Exception[" + exc.Message.ToString() + "]");
+                        //MessageBox.Show("Exception[" + exc.Message.ToString() + "]");
+                    }
+                }
+            }
+            log.Info("btnStopOrder_Click End!");
         }
 
-        private static void CurrentDomainOnProcessExit(object sender, EventArgs eventArgs)
+        private void btnGetOrdersForId_Click(object sender, EventArgs e)
         {
-            Log.Warning("Exiting process");
-            ExitEvent.Set();
-        }
+            log.Info("btnGetOpenOrders_Click Clicked!");
 
-        private static void ConsoleOnCancelKeyPress(object sender, ConsoleCancelEventArgs e)
-        {
-            Log.Warning("Canceling process");
-            e.Cancel = true;
-            ExitEvent.Set();
-        }
+            // Local environment checks...
+            if (!String.IsNullOrEmpty(TBClOrdId.Text))
+            {
+                string IDInput = TBClOrdId.Text;
 
-        #endregion Bitmex.Websocket
+                try
+                {
+                    object outcome = mconn.GetFilledOrdersForId(IDInput);
+
+                    log.Info("Get closed orders for ID:" + IDInput);
+
+                    if (outcome.GetType() == new List<OrderResponse>().GetType())
+                    {
+                        // Successful API call with successful result...
+                        var orderResp = (List<OrderResponse>)outcome;
+                        foreach (var resp in orderResp)
+                            log.Info(resp);
+                    }
+                    else if(outcome.GetType() == new OrderResponse().GetType())
+                        log.Info(outcome);
+                    else if (outcome.GetType() == new BaseError().GetType())
+                        log.Error(outcome);
+                    else
+                        log.Error("Unknown return type [" + outcome.GetType().ToString() + "]");
+                }
+                
+                catch (Exception exc)
+                {
+                    // Unsuccessful API call
+                    log.Error("Exception [" + exc.Message.ToString() + "]");
+                }
+            }
+            log.Info("btnGetOpenOrders_Click End!");
+        }
 
         private void DBLogOperation(string operation, object obj)
         {
@@ -442,58 +427,15 @@ namespace BitMEX.TestForm
         }
 
         #endregion HELPERS
-
-        private void btnTest_Click(object sender, EventArgs e)
+        
+        private void Form1_Load(object sender, EventArgs e)
         {
-            // Examples: https://github.com/BitMEX/api-connectors/blob/master/auto-generated/csharp/docs/OrderApi.md#ordernew
 
-            // Configure API key authorization: apiKey
-            Configuration.Default.AddApiKey("api-key", "rTAFXRKn2dLARuG_t1dDOtgI");
-            // Uncomment below to setup prefix (e.g. Bearer) for API key, if needed
-            // Configuration.Default.AddApiKeyPrefix("api-key", "Bearer");
-            // Configure API key authorization: apiNonce
-            //Configuration.Default.AddApiKey("api-nonce", "rTAFXRKn2dLARuG_t1dDOtgI");
-            // Uncomment below to setup prefix (e.g. Bearer) for API key, if needed
-            // Configuration.Default.AddApiKeyPrefix("api-nonce", "Bearer");
-            // Configure API key authorization: apiSignature
-            Configuration.Default.AddApiKey("api-signature", "K2LmL6aTbj8eW_LVj7OLa7iA6eZa8TJMllh3sjCynV4fpnMr");
-            // Uncomment below to setup prefix (e.g. Bearer) for API key, if needed
-            // Configuration.Default.AddApiKeyPrefix("api-signature", "Bearer");
-            // Configure API key authorization: apiExpires
-            Configuration.Default.AddDefaultHeader("api-expires", GetExpires().ToString());
-            // Uncomment below to setup prefix (e.g. Bearer) for API key, if needed
-            // Configuration.Default.ApiKeyPrefix.Add("api-expires", "Bearer");
-
-            var apiInstance = new OrderApi();
-            var symbol = TBMarketOrder.Text.ToString();  // string | Instrument symbol. e.g. 'XBTUSD'.
-            var side = (Decimal.ToInt32((decimal)NUDMarketOrderQuantity.Value) >= 0) ? "Buy" : "Sell";  // string | Order side. Valid options: Buy, Sell. Defaults to 'Buy' unless `orderQty` or `simpleOrderQty` is negative. (optional) 
-            //var simpleOrderQty = 0;  // double? | Order quantity in units of the underlying instrument (i.e. Bitcoin). (optional,Deprecated) 
-            var orderQty = Decimal.ToInt32((decimal)NUDMarketOrderQuantity.Value);  // decimal? | Order quantity in units of the instrument (i.e. contracts). (optional) 
-            //var price = 1.2;  // double? | Optional limit price for 'Limit', 'StopLimit', and 'LimitIfTouched' orders. (optional) 
-            //var displayQty = 8.14;  // decimal? | Optional quantity to display in the book. Use 0 for a fully hidden order. (optional) 
-            //var stopPx = 1.2;  // double? | Optional trigger price for 'Stop', 'StopLimit', 'MarketIfTouched', and 'LimitIfTouched' orders. Use a price below the current price for stop-sell orders and buy-if-touched orders. Use `execInst` of 'MarkPrice' or 'LastPrice' to define the current price used for triggering. (optional) 
-            var clOrdID = "123456789";  // string | Optional Client Order ID. This clOrdID will come back on the order and any related executions. (optional) 
-            //var clOrdLinkID = clOrdLinkID_example;  // string | Optional Client Order Link ID for contingent orders. (optional,Deprecated) 
-            //var pegOffsetValue = 1.2;  // double? | Optional trailing offset from the current price for 'Stop', 'StopLimit', 'MarketIfTouched', and 'LimitIfTouched' orders; use a negative offset for stop-sell orders and buy-if-touched orders. Optional offset from the peg price for 'Pegged' orders. (optional) 
-            //var pegPriceType = pegPriceType_example;  // string | Optional peg price type. Valid options: LastPeg, MidPricePeg, MarketPeg, PrimaryPeg, TrailingStopPeg. (optional) 
-            var ordType = "Market";  // string | Order type. Valid options: Market, Limit, Stop, StopLimit, MarketIfTouched, LimitIfTouched, MarketWithLeftOverAsLimit, Pegged. Defaults to 'Limit' when `price` is specified. Defaults to 'Stop' when `stopPx` is specified. Defaults to 'StopLimit' when `price` and `stopPx` are specified. (optional)  (default to Limit)
-            //var timeInForce = timeInForce_example;  // string | Time in force. Valid options: Day, GoodTillCancel, ImmediateOrCancel, FillOrKill. Defaults to 'GoodTillCancel' for 'Limit', 'StopLimit', 'LimitIfTouched', and 'MarketWithLeftOverAsLimit' orders. (optional) 
-            //var execInst = execInst_example;  // string | Optional execution instructions. Valid options: ParticipateDoNotInitiate, AllOrNone, MarkPrice, IndexPrice, LastPrice, Close, ReduceOnly, Fixed. 'AllOrNone' instruction requires `displayQty` to be 0. 'MarkPrice', 'IndexPrice' or 'LastPrice' instruction valid for 'Stop', 'StopLimit', 'MarketIfTouched', and 'LimitIfTouched' orders. (optional) 
-            //var contingencyType = contingencyType_example;  // string | Optional contingency type for use with `clOrdLinkID`. Valid options: OneCancelsTheOther, OneTriggersTheOther, OneUpdatesTheOtherAbsolute, OneUpdatesTheOtherProportional. (optional,Deprecated) 
-            //var text = text_example;  // string | Optional order annotation. e.g. 'Take profit'. (optional) 
-
-            try
-            {
-                // Create a new order.
-                Order result = apiInstance.OrderNew(symbol, side, null, orderQty, null, null, null, clOrdID, null, null, null, ordType, null, null, null, null);
-                MessageBox.Show(result.ClOrdID.ToString());
-            }
-            catch (Exception exc)
-            {
-                MessageBox.Show("Exception when calling OrderApi.OrderNew: " + exc.Message);
-            }
         }
 
-        
+        private void Form1_FormClosed(object sender, FormClosedEventArgs e)
+        {
+
+        }
     }
 }

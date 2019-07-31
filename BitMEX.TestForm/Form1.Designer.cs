@@ -30,10 +30,10 @@
         {
             this.tableLayoutPanel1 = new System.Windows.Forms.TableLayoutPanel();
             this.btnMarketOrder = new System.Windows.Forms.Button();
-            this.btnTestMe = new System.Windows.Forms.Button();
+            this.btnStopOrder = new System.Windows.Forms.Button();
             this.btnLimitOrder = new System.Windows.Forms.Button();
             this.btnGetOrders = new System.Windows.Forms.Button();
-            this.btnOpenAPI = new System.Windows.Forms.Button();
+            this.btnGetOrderForId = new System.Windows.Forms.Button();
             this.NUDMarketOrderQuantity = new System.Windows.Forms.NumericUpDown();
             this.TBMarketOrder = new System.Windows.Forms.TextBox();
             this.NUDPrice = new System.Windows.Forms.NumericUpDown();
@@ -41,6 +41,8 @@
             this.label2 = new System.Windows.Forms.Label();
             this.label3 = new System.Windows.Forms.Label();
             this.OutputLabel = new System.Windows.Forms.Label();
+            this.TBClOrdId = new System.Windows.Forms.TextBox();
+            this.lblClOrdId = new System.Windows.Forms.Label();
             this.tableLayoutPanel1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.NUDMarketOrderQuantity)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.NUDPrice)).BeginInit();
@@ -56,17 +58,19 @@
             this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 12.5F));
             this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 12.5F));
             this.tableLayoutPanel1.Controls.Add(this.btnMarketOrder, 0, 0);
-            this.tableLayoutPanel1.Controls.Add(this.btnTestMe, 0, 1);
+            this.tableLayoutPanel1.Controls.Add(this.btnStopOrder, 0, 1);
             this.tableLayoutPanel1.Controls.Add(this.btnLimitOrder, 0, 2);
             this.tableLayoutPanel1.Controls.Add(this.btnGetOrders, 0, 3);
-            this.tableLayoutPanel1.Controls.Add(this.btnOpenAPI, 0, 4);
+            this.tableLayoutPanel1.Controls.Add(this.btnGetOrderForId, 0, 4);
             this.tableLayoutPanel1.Controls.Add(this.NUDMarketOrderQuantity, 2, 1);
             this.tableLayoutPanel1.Controls.Add(this.TBMarketOrder, 2, 0);
             this.tableLayoutPanel1.Controls.Add(this.NUDPrice, 2, 2);
             this.tableLayoutPanel1.Controls.Add(this.label1, 1, 0);
             this.tableLayoutPanel1.Controls.Add(this.label2, 1, 1);
             this.tableLayoutPanel1.Controls.Add(this.label3, 1, 2);
-            this.tableLayoutPanel1.Controls.Add(this.OutputLabel, 0, 6);
+            this.tableLayoutPanel1.Controls.Add(this.OutputLabel, 0, 8);
+            this.tableLayoutPanel1.Controls.Add(this.lblClOrdId, 1, 4);
+            this.tableLayoutPanel1.Controls.Add(this.TBClOrdId, 2, 4);
             this.tableLayoutPanel1.Location = new System.Drawing.Point(12, 12);
             this.tableLayoutPanel1.Name = "tableLayoutPanel1";
             this.tableLayoutPanel1.RowCount = 10;
@@ -87,27 +91,27 @@
             // 
             this.btnMarketOrder.Location = new System.Drawing.Point(3, 3);
             this.btnMarketOrder.Name = "btnMarketOrder";
-            this.btnMarketOrder.Size = new System.Drawing.Size(75, 23);
+            this.btnMarketOrder.Size = new System.Drawing.Size(123, 23);
             this.btnMarketOrder.TabIndex = 0;
             this.btnMarketOrder.Text = "MarketOrder";
             this.btnMarketOrder.UseVisualStyleBackColor = true;
             this.btnMarketOrder.Click += new System.EventHandler(this.btnMarketOrder_Click);
             // 
-            // btnTestMe
+            // btnStopOrder
             // 
-            this.btnTestMe.Location = new System.Drawing.Point(3, 45);
-            this.btnTestMe.Name = "btnTestMe";
-            this.btnTestMe.Size = new System.Drawing.Size(75, 23);
-            this.btnTestMe.TabIndex = 1;
-            this.btnTestMe.Text = "TESTME";
-            this.btnTestMe.UseVisualStyleBackColor = true;
-            this.btnTestMe.Click += new System.EventHandler(this.btnTestMe_ClickAsync);
+            this.btnStopOrder.Location = new System.Drawing.Point(3, 45);
+            this.btnStopOrder.Name = "btnStopOrder";
+            this.btnStopOrder.Size = new System.Drawing.Size(123, 23);
+            this.btnStopOrder.TabIndex = 1;
+            this.btnStopOrder.Text = "StopOrder";
+            this.btnStopOrder.UseVisualStyleBackColor = true;
+            this.btnStopOrder.Click += new System.EventHandler(this.btnStopOrder_Click);
             // 
             // btnLimitOrder
             // 
             this.btnLimitOrder.Location = new System.Drawing.Point(3, 87);
             this.btnLimitOrder.Name = "btnLimitOrder";
-            this.btnLimitOrder.Size = new System.Drawing.Size(75, 23);
+            this.btnLimitOrder.Size = new System.Drawing.Size(123, 23);
             this.btnLimitOrder.TabIndex = 2;
             this.btnLimitOrder.Text = "LimitOrder";
             this.btnLimitOrder.UseVisualStyleBackColor = true;
@@ -117,27 +121,32 @@
             // 
             this.btnGetOrders.Location = new System.Drawing.Point(3, 129);
             this.btnGetOrders.Name = "btnGetOrders";
-            this.btnGetOrders.Size = new System.Drawing.Size(75, 23);
+            this.btnGetOrders.Size = new System.Drawing.Size(123, 23);
             this.btnGetOrders.TabIndex = 3;
-            this.btnGetOrders.Text = "GetOrders";
+            this.btnGetOrders.Text = "GetOpenOrders";
             this.btnGetOrders.UseVisualStyleBackColor = true;
-            this.btnGetOrders.Click += new System.EventHandler(this.btnGetOrders_Click);
+            this.btnGetOrders.Click += new System.EventHandler(this.btnGetOpenOrders_Click);
             // 
-            // btnOpenAPI
+            // btnGetOrderForId
             // 
-            this.btnOpenAPI.Location = new System.Drawing.Point(3, 171);
-            this.btnOpenAPI.Name = "btnOpenAPI";
-            this.btnOpenAPI.Size = new System.Drawing.Size(75, 23);
-            this.btnOpenAPI.TabIndex = 4;
-            this.btnOpenAPI.Text = "OpenAPI";
-            this.btnOpenAPI.UseVisualStyleBackColor = true;
-            this.btnOpenAPI.Click += new System.EventHandler(this.btnTest_Click);
+            this.btnGetOrderForId.Location = new System.Drawing.Point(3, 171);
+            this.btnGetOrderForId.Name = "btnGetOrderForId";
+            this.btnGetOrderForId.Size = new System.Drawing.Size(123, 23);
+            this.btnGetOrderForId.TabIndex = 4;
+            this.btnGetOrderForId.Text = "GetOrdersForID";
+            this.btnGetOrderForId.UseVisualStyleBackColor = true;
+            this.btnGetOrderForId.Click += new System.EventHandler(this.btnGetOrdersForId_Click);
             // 
             // NUDMarketOrderQuantity
             // 
             this.NUDMarketOrderQuantity.Location = new System.Drawing.Point(261, 45);
+            this.NUDMarketOrderQuantity.Maximum = new decimal(new int[] {
+            2500,
+            0,
+            0,
+            0});
             this.NUDMarketOrderQuantity.Minimum = new decimal(new int[] {
-            100,
+            2500,
             0,
             0,
             -2147483648});
@@ -213,11 +222,28 @@
             // OutputLabel
             // 
             this.OutputLabel.AutoSize = true;
-            this.OutputLabel.Location = new System.Drawing.Point(3, 252);
+            this.OutputLabel.Location = new System.Drawing.Point(3, 336);
             this.OutputLabel.Name = "OutputLabel";
             this.OutputLabel.Size = new System.Drawing.Size(52, 13);
             this.OutputLabel.TabIndex = 9;
             this.OutputLabel.Text = "OUTPUT";
+            // 
+            // TBClOrdId
+            // 
+            this.TBClOrdId.Location = new System.Drawing.Point(261, 171);
+            this.TBClOrdId.Name = "TBClOrdId";
+            this.TBClOrdId.Size = new System.Drawing.Size(123, 20);
+            this.TBClOrdId.TabIndex = 14;
+            // 
+            // lblClOrdId
+            // 
+            this.lblClOrdId.AutoSize = true;
+            this.lblClOrdId.Font = new System.Drawing.Font("Microsoft Sans Serif", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.lblClOrdId.Location = new System.Drawing.Point(132, 168);
+            this.lblClOrdId.Name = "lblClOrdId";
+            this.lblClOrdId.Size = new System.Drawing.Size(75, 17);
+            this.lblClOrdId.TabIndex = 13;
+            this.lblClOrdId.Text = "ClOrdId >>";
             // 
             // Form1
             // 
@@ -227,6 +253,8 @@
             this.Controls.Add(this.tableLayoutPanel1);
             this.Name = "Form1";
             this.Text = "Form1";
+            this.FormClosed += new System.Windows.Forms.FormClosedEventHandler(this.Form1_FormClosed);
+            this.Load += new System.EventHandler(this.Form1_Load);
             this.tableLayoutPanel1.ResumeLayout(false);
             this.tableLayoutPanel1.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.NUDMarketOrderQuantity)).EndInit();
@@ -239,10 +267,10 @@
 
         private System.Windows.Forms.TableLayoutPanel tableLayoutPanel1;
         private System.Windows.Forms.Button btnMarketOrder;
-        private System.Windows.Forms.Button btnTestMe;
+        private System.Windows.Forms.Button btnStopOrder;
         private System.Windows.Forms.Button btnLimitOrder;
         private System.Windows.Forms.Button btnGetOrders;
-        private System.Windows.Forms.Button btnOpenAPI;
+        private System.Windows.Forms.Button btnGetOrderForId;
         private System.Windows.Forms.TextBox TBMarketOrder;
         private System.Windows.Forms.NumericUpDown NUDMarketOrderQuantity;
         private System.Windows.Forms.Label OutputLabel;
@@ -250,6 +278,8 @@
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.Label label2;
         private System.Windows.Forms.Label label3;
+        private System.Windows.Forms.TextBox TBClOrdId;
+        private System.Windows.Forms.Label lblClOrdId;
     }
 }
 

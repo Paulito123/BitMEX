@@ -9,26 +9,36 @@ using System.Net;
 using System.Security.Cryptography;
 using System.Text;
 using BitMEX.Model;
-using BitMEX.Client;
 using System.Diagnostics;
+using log4net;
 
-namespace BitMEX
+namespace BitMEX.Client
 {
     public class MordoR
     {
         private string domain = "https://testnet.bitmex.com";
         private string apiKey;
         private string apiSecret;
+        ILog log;
 
         public MordoR(string bitmexKey = "rTAFXRKn2dLARuG_t1dDOtgI", string bitmexSecret = "K2LmL6aTbj8eW_LVj7OLa7iA6eZa8TJMllh3sjCynV4fpnMr", string bitmexDomain = "https://testnet.bitmex.com")
         {
             this.apiKey = bitmexKey;
             this.apiSecret = bitmexSecret;
-            this.domain = bitmexDomain; 
+            this.domain = bitmexDomain;
+            log4net.Config.XmlConfigurator.Configure();
+            log = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
         }
 
         #region API Connector - Helpers
-        private string BuildQueryData(Dictionary<string, string> param)
+        /// <summary>
+        /// 
+        /// Example for filter "filter": {"timestamp.time":"12:00", "timestamp.ww":6}
+        /// </summary>
+        /// <param name="param"></param>
+        /// <param name="depth"></param>
+        /// <returns></returns>
+        private string BuildQueryData(Dictionary<string, string> param, string filter = null)
         {
             if (param == null)
                 return "";
@@ -37,10 +47,13 @@ namespace BitMEX
             foreach (var item in param)
                 b.Append(string.Format("&{0}={1}", item.Key, WebUtility.UrlEncode(item.Value)));
 
+            if (!String.IsNullOrEmpty(filter))
+                b.Append(string.Format("&{0}={1}", "filter", WebUtility.UrlEncode(filter)));
+
             try { return b.ToString().Substring(1); }
             catch (Exception e)
             {
-                //StaticLogger.LogError(this.GetType(), e.Message);
+                log.Error(e.Message);
                 return e.Message;
             }
         }
@@ -53,7 +66,7 @@ namespace BitMEX
             var entries = new List<string>();
             foreach (var item in param)
                 entries.Add(string.Format("\"{0}\":\"{1}\"", item.Key, item.Value));
-
+            
             return "{" + string.Join(",", entries) + "}";
         }
 
@@ -93,12 +106,23 @@ namespace BitMEX
          * auth (optional)
          * json (optional)
          */
-        private ApiResponse Query(string method, string function, bool refreshLimitInfo = false, Dictionary<string, string> param = null, bool auth = false, bool json = false)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="method"></param>
+        /// <param name="function"></param>
+        /// <param name="refreshLimitInfo"></param>
+        /// <param name="param"></param>
+        /// <param name="auth"></param>
+        /// <param name="json"></param>
+        /// <param name="filter"></param>
+        /// <returns></returns>
+        private ApiResponse Query(string method, string function, bool refreshLimitInfo = false, Dictionary<string, string> param = null, bool auth = false, bool json = false, string filter = null)
         {
-            string paramData = json ? BuildJSON(param) : BuildQueryData(param);
+            string f = (String.IsNullOrEmpty(filter)) ? "" : filter;
+            string paramData = json ? BuildJSON(param) : BuildQueryData(param, f);
             string url = "/api/v1" + function + ((method == "GET" && paramData != "") ? "?" + paramData : "");
             string postData = (method != "GET") ? paramData : "";
-            //ApiResponse outputResp;
 
             HttpWebRequest webRequest = (HttpWebRequest)WebRequest.Create(domain + url);
             webRequest.Method = method;
@@ -137,7 +161,7 @@ namespace BitMEX
                     respHeadr.Add("status", webResponse.GetResponseHeader("status"));
 
                     //return sr.ReadToEnd();
-                    return new ApiResponse((int)webResponse.StatusCode, respHeadr, sr.ReadToEnd(), webResponse.ResponseUri);
+                    return new ApiResponse((int)webResponse.StatusCode, respHeadr, sr.ReadToEnd(), log, webResponse.ResponseUri);
                 }
             }
             catch (WebException wex)
@@ -145,7 +169,7 @@ namespace BitMEX
                 using (HttpWebResponse webResponse = (HttpWebResponse)wex.Response)
                 {
                     if (webResponse == null)
-                        return new ApiResponse(400, new Dictionary<string, string>(), "{ \"error\": { \"message\": \"WebResponse is NULL\", \"name\": \"NullWebResponse\" } }");
+                        return new ApiResponse(400, new Dictionary<string, string>(), "{ \"error\": { \"message\": \"WebResponse is NULL\", \"name\": \"NullWebResponse\" } }", log);
 
                     using (Stream str = webResponse.GetResponseStream())
                     using (StreamReader sr = new StreamReader(str))
@@ -154,13 +178,13 @@ namespace BitMEX
                         //respHeadr.Add("content-type", webResponse.GetResponseHeader("content-type"));
                         //respHeadr.Add("status", webResponse.GetResponseHeader("status"));
 
-                        return new ApiResponse((int)webResponse.StatusCode, respHeadr, sr.ReadToEnd(), webResponse.ResponseUri);
+                        return new ApiResponse((int)webResponse.StatusCode, respHeadr, sr.ReadToEnd(), log, webResponse.ResponseUri);
                     }
                 }
             }
             catch (Exception exc)
             {
-                return new ApiResponse(400, new Dictionary<string, string>(), "{ \"error\": { \"message\": \"" + exc.ToString() + "\", \"name\": \"BadWebResponse\" } }");
+                return new ApiResponse(400, new Dictionary<string, string>(), "{ \"error\": { \"message\": \"" + exc.ToString() + "\", \"name\": \"BadWebResponse\" } }", log);
             }
         }
         #endregion
@@ -207,18 +231,42 @@ namespace BitMEX
          */
 
         #region GET /order
-        /* XXXX GetOrders XXXX
-         * Symbol:      The symbol for which an order is placed e.g. XBTUSD
-         */
+
+        /// <summary>
+        /// Return all orders that are resting in the ordrbook.
+        /// </summary>
+        /// <param name="symbol">The symbol for which an order is placed e.g. XBTUSD</param>
+        /// <returns></returns>
         public object GetOpenOrdersForSymbol(string symbol)
         {
+            string filter = "{\"OrdStatus\": \"New\"}";
             var param = new Dictionary<string, string>();
             param["symbol"] = symbol;
-            ApiResponse res = Query("GET", "/order", false, param, true);
+            param["reverse"] = true.ToString();
+            ApiResponse res = Query("GET", "/order", false, param, true, false, filter);
 
             // Deserialize JSON result
             return res.ApiResponseProcessor();
         }
+
+        /// <summary>
+        /// Get all the orders for a given ClOrdId.
+        /// Filter example: "filter": {"timestamp.time":"12:00", "timestamp.ww":6}
+        /// TODO: Create a bulk GetOrdersForId's method.
+        /// </summary>
+        /// <param name="ClOrdId">The client side order ID used for the search.</param>
+        /// <returns></returns>
+        public object GetFilledOrdersForId(string ClOrdId)
+        {
+            string filter = "{\"clOrdID\":\"" + ClOrdId + "\",\"OrdStatus\":\"Filled\"}";
+            var param = new Dictionary<string, string>();
+            param["reverse"] = true.ToString();
+            ApiResponse res = Query("GET", "/order", false, param, true, false, filter);
+
+            // Deserialize JSON result
+            return res.ApiResponseProcessor();
+        }
+
         #endregion
 
         #region PUT /order
@@ -264,10 +312,8 @@ namespace BitMEX
          * orderQty:    Number of contracts to trade e.g. 10
          * clOrdID:     Locally generated ID is passed as the unique reference to this specific order.
          */
-        public object MarketOrder(string symbol, out string clOrdID, int orderQty)
+        public object MarketOrder(string symbol, string clOrdID, int orderQty)
         {
-            clOrdID = this.generateGUID();
-
             var param = new Dictionary<string, string>();
             param["symbol"] = symbol;
             param["side"] = (orderQty >= 0) ? "Buy" : "Sell";
@@ -285,10 +331,8 @@ namespace BitMEX
          * clOrdID:     Locally generated ID is passed as the unique reference to this specific order.
          * orderQty:    Number of contracts to trade e.g. 10
          */
-        public object StopOrder(string symbol, int orderQty, double stopPx, out string clOrdID)
+        public object StopOrder(string symbol, int orderQty, double stopPx, string clOrdID)
         {
-            clOrdID = this.generateGUID();
-
             var param = new Dictionary<string, string>();
             param["symbol"] = symbol;
             param["side"] = (orderQty >= 0) ? "Buy" : "Sell";
@@ -325,9 +369,8 @@ namespace BitMEX
          * orders.
          * 
          */
-        public object LimitOrder(string symbol, int orderQty, double price, out string clOrdID, string options = "")
+        public object LimitOrder(string symbol, int orderQty, double price, string clOrdID, string options = "")
         {
-            clOrdID = this.generateGUID();
             var param = new Dictionary<string, string>();
             param["symbol"] = symbol;
             param["side"] = (orderQty >= 0) ? "Buy" : "Sell";
@@ -381,64 +424,12 @@ namespace BitMEX
         #endregion
 
         #region Helpers
-        private string generateGUID()
+
+        public static string generateGUID()
         {
             return Guid.NewGuid().ToString("N");
         }
-
-        //private object ProcessJSONOrderResponse(string res, Boolean isArray = false)
-        //{
-        //    if (isArray)
-        //    {
-        //        List<OrderResponse> multiOrderResp = OrdersResponse.FromJson(res);
-
-        //        if (multiOrderResp.Count > 0)
-        //        {
-        //            return multiOrderResp;
-        //        }
-        //        else
-        //        {
-        //            var orderError = BaseError.FromJson(res);
-
-        //            if (orderError.Error != null)
-        //            {
-        //                return orderError;
-        //            }
-        //            else
-        //            {
-        //                orderError = new BaseError();
-        //                orderError.Error.Name = "Custom error";
-        //                orderError.Error.Message = "No JSON response received...";
-        //                return orderError;
-        //            }
-        //        }
-        //    }
-        //    else
-        //    {
-        //        var oderResp = OrderResponse.FromJson(res);
-
-        //        if (oderResp.OrderId != null)
-        //        {
-        //            return oderResp;
-        //        }
-        //        else
-        //        {
-        //            var orderError = BaseError.FromJson(res);
-
-        //            if (orderError.Error != null)
-        //            {
-        //                return orderError;
-        //            }
-        //            else
-        //            {
-        //                orderError = new BaseError();
-        //                orderError.Error.Name = "Custom error";
-        //                orderError.Error.Message = "No JSON response received...";
-        //                return orderError;
-        //            }
-        //        }
-        //    }
-        //}
+        
         #endregion
     }
 }

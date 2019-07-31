@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using BitMEX.Model;
 using BitMEX.Utilities;
+using log4net;
 
 namespace BitMEX.Client
 {
@@ -15,6 +16,7 @@ namespace BitMEX.Client
         public int StatusCode { get; private set; }
         public IDictionary<string, string> Headers { get; private set; }
         public string Json { get; private set; }
+        private ILog log;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ApiResponse<T> /> class.
@@ -23,12 +25,13 @@ namespace BitMEX.Client
         /// <param name="headers">HTTP headers. Currently not used...</param>
         /// <param name="json">json (parsed HTTP body)</param>
         /// <param name="uri">URI of the response.</param>
-        public ApiResponse(int statusCode, IDictionary<string, string> headers, string json, Uri uri = null)
+        public ApiResponse(int statusCode, IDictionary<string, string> headers, string json, ILog i, Uri uri = null)
         {
             this.Uri = uri;
             this.StatusCode = statusCode;
             this.Headers = headers;
             this.Json = json;
+            this.log = i;
         }
         
         /// <summary>
@@ -70,6 +73,7 @@ namespace BitMEX.Client
                 o = new BaseError();
                 ((BaseError)o).Error.Name = "ApiResponseError";
                 ((BaseError)o).Error.Message = exc.ToString();
+                log.Error(exc.ToString());
                 return o;
             }
         }
@@ -81,13 +85,19 @@ namespace BitMEX.Client
         private object ApiResponseDispatcher()
         {
             // Json is empty > Shit...
-            if(this.Json == null || this.Json == "")
+            if(String.IsNullOrEmpty(Json))
+            {
+                log.Error("Json == null or empty");
                 return null;
-
+            }
+                
             // Uri is empty > Shit...
             if (this.Uri == null || this.Uri.AbsolutePath == "")
+            {
+                log.Error("Uri.AbsolutePath null or empty");
                 return null;
-
+            }
+                
             object o;
 
             // Return the correct type based on the Uri
@@ -113,32 +123,11 @@ namespace BitMEX.Client
                 case "/api/v1/order/cancelAllAfter":
                 default:
                     o = null;
+                    log.Error("Uri unknown. Please add [" + this.Uri.AbsolutePath + "] to the evaluated Uri's.");
                     break;
             }
 
             return o;
         }
-
-        // TODO: (Logging) save every response to the DB to be able to evaluate every movement hind sight...
-        //private void ApiResponseDBHandler(object o)
-        //{
-        //    try
-        //    {
-        //        DatabaseUtil dbUtil = new DatabaseUtil("connstring", "provider");
-
-        //        switch (o.GetType().ToString())
-        //        {
-        //            case "BitMEX.Model.OrderResponse":
-        //                dbUtil.WriteResponseToDB();
-        //                break;
-        //            case "System.Collections.Generic.List<BitMEX.Model.OrderResponse>":
-        //                break;
-        //        }
-        //    }
-        //    catch (Exception exc)
-        //    {
-
-        //    }
-        //}
     }
 }

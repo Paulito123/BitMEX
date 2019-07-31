@@ -430,6 +430,48 @@
         /// </summary>
         [JsonProperty("timestamp")]
         public DateTimeOffset? Timestamp { get; set; }
+
+        /// <summary>
+        /// Returns the string presentation of the object
+        /// </summary>
+        /// <returns>String presentation of the object</returns>
+        public override string ToString()
+        {
+            var sb = new System.Text.StringBuilder();
+            sb.Append("class OrderResponse {\n");
+            sb.Append("  OrderID: ").Append(OrderId.ToString()).Append("\n");
+            sb.Append("  ClOrdID: ").Append(ClOrdId.ToString()).Append("\n");
+            sb.Append("  ClOrdLinkID: ").Append(ClOrdLinkId.ToString()).Append("\n");
+            sb.Append("  Account: ").Append(Account.ToString()).Append("\n");
+            sb.Append("  Symbol: ").Append(Symbol.ToString()).Append("\n");
+            sb.Append("  Side: ").Append(Side.ToString()).Append("\n");
+            sb.Append("  OrderQty: ").Append(OrderQty.ToString()).Append("\n");
+            sb.Append("  Price: ").Append(Price.ToString()).Append("\n");
+            sb.Append("  DisplayQty: ").Append((DisplayQty == null) ? "null" : DisplayQty.ToString()).Append("\n");
+            sb.Append("  StopPx: ").Append((StopPx == null) ? "null" : StopPx.ToString()).Append("\n");
+            sb.Append("  PegOffsetValue: ").Append((PegOffsetValue == null) ? "null" : PegOffsetValue.ToString()).Append("\n");
+            sb.Append("  PegPriceType: ").Append((PegPriceType == null) ? "null" : PegPriceType.ToString()).Append("\n");
+            sb.Append("  Currency: ").Append((Currency == null) ? "null" : Currency.ToString()).Append("\n");
+            sb.Append("  SettlCurrency: ").Append((SettlCurrency == null) ? "null" : SettlCurrency.ToString()).Append("\n");
+            sb.Append("  OrdType: ").Append((OrdType == null) ? "null" : OrdType.ToString()).Append("\n");
+            sb.Append("  TimeInForce: ").Append((TimeInForce == null) ? "null" : TimeInForce.ToString()).Append("\n");
+            sb.Append("  ExecInst: ").Append((ExecInst == null) ? "null" : ExecInst.ToString()).Append("\n");
+            sb.Append("  ContingencyType: ").Append((ContingencyType == null) ? "null" : ContingencyType.ToString()).Append("\n");
+            sb.Append("  ExDestination: ").Append((ExDestination == null) ? "null" : ExDestination.ToString()).Append("\n");
+            sb.Append("  OrdStatus: ").Append((OrdStatus == null) ? "null" : OrdStatus.ToString()).Append("\n");
+            sb.Append("  Triggered: ").Append((Triggered == null) ? "null" : Triggered.ToString()).Append("\n");
+            sb.Append("  WorkingIndicator: ").Append((WorkingIndicator == null) ? "null" : WorkingIndicator.ToString()).Append("\n");
+            sb.Append("  OrdRejReason: ").Append((OrdRejReason == null) ? "null" : OrdRejReason.ToString()).Append("\n");
+            sb.Append("  LeavesQty: ").Append((LeavesQty == null) ? "null" : LeavesQty.ToString()).Append("\n");
+            sb.Append("  CumQty: ").Append((CumQty == null) ? "null" : CumQty.ToString()).Append("\n");
+            sb.Append("  AvgPx: ").Append((AvgPx == null) ? "null" : AvgPx.ToString()).Append("\n");
+            sb.Append("  MultiLegReportingType: ").Append((MultiLegReportingType == null) ? "null" : MultiLegReportingType.ToString()).Append("\n");
+            sb.Append("  Text: ").Append((Text == null) ? "null" : Text.ToString()).Append("\n");
+            sb.Append("  TransactTime: ").Append(TransactTime.ToString()).Append("\n");
+            sb.Append("  Timestamp: ").Append(Timestamp.ToString()).Append("\n");
+            sb.Append("}\n");
+            return sb.ToString();
+        }
     }
 
     public partial class OrderResponse
