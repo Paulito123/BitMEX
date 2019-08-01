@@ -58,6 +58,28 @@ namespace BitMEX.Client
             }
         }
 
+        private static string CreateSubHierarchy(string mainKey, Dictionary<string, object> param)
+        {
+            if (param == null)
+                return "";
+
+            string output = "&" + mainKey + "={";
+
+            foreach (var item in param)
+            {
+                if (item.Value is string s)
+                    string.Format("&{0}={1}", "filter", WebUtility.UrlEncode(filter)));
+                b.AppendFormat("{\"{0}={1}", item.Key, WebUtility.UrlEncode(s));
+                else if (item.Value is Dictionary<string, object> dict)
+                    b.Append(BuildQueryData(dict));
+            }
+
+            output = output + "}"
+
+            //return WebUtility.UrlEncode(output);
+            return b.ToString();
+        }
+
         private string BuildJSON(Dictionary<string, string> param)
         {
             if (param == null)
@@ -78,9 +100,13 @@ namespace BitMEX.Client
             return hex.ToString();
         }
 
+        /// <summary>
+        /// Returns a unix number representaing a date in the future. 
+        /// </summary>
+        /// <returns>A UNIX date (long) in the future.</returns>
         private long GetExpires()
         {
-            return ToUnixTimeSeconds(DateTimeOffset.UtcNow) + 3600; // set expires one hour in the future
+            return ToUnixTimeSeconds(DateTimeOffset.UtcNow) + 3600; // 
         }
 
         private static long ToUnixTimeSeconds(DateTimeOffset dateTimeOffset)
@@ -98,25 +124,17 @@ namespace BitMEX.Client
             }
         }
 
-        /*
-         * method: HTTP method > GET ¦ PUT ¦ POST ¦ DELETE
-         * function: HTTP suffix e.g. /order, /order/all, /position, etc...
-         * refreshLimitInfo (optional): Unused parameter for later implementation of rate limit info querying...
-         * param (optional): Dictionary of key - value pairs that contain parameters to be passed with the request
-         * auth (optional)
-         * json (optional)
-         */
         /// <summary>
-        /// 
+        /// Query prepares and sends the Http call to the REST API of BitMEX.
         /// </summary>
-        /// <param name="method"></param>
-        /// <param name="function"></param>
-        /// <param name="refreshLimitInfo"></param>
-        /// <param name="param"></param>
-        /// <param name="auth"></param>
-        /// <param name="json"></param>
+        /// <param name="method">Http method used for the call: GET ¦ PUT ¦ POST ¦ DELETE</param>
+        /// <param name="function">Uri part that specifies the function of the call.</param>
+        /// <param name="refreshLimitInfo">Unused parameter for later implementation of rate limit info querying. (optional)</param>
+        /// <param name="param">A dictionary of Key-Value pairs as parameters to be sent along with the call.</param>
+        /// <param name="auth">Specify whether the call needs authentication or not. (optional)</param>
+        /// <param name="json">Specifiy the format or the call (optional)</param>
         /// <param name="filter"></param>
-        /// <returns></returns>
+        /// <returns>ApiResponse object that can be various types.</returns>
         private ApiResponse Query(string method, string function, bool refreshLimitInfo = false, Dictionary<string, string> param = null, bool auth = false, bool json = false, string filter = null)
         {
             string f = (String.IsNullOrEmpty(filter)) ? "" : filter;
@@ -187,6 +205,7 @@ namespace BitMEX.Client
                 return new ApiResponse(400, new Dictionary<string, string>(), "{ \"error\": { \"message\": \"" + exc.ToString() + "\", \"name\": \"BadWebResponse\" } }", log);
             }
         }
+        
         #endregion
 
         /* XXXX GENERAL INFO XXXX
@@ -252,13 +271,15 @@ namespace BitMEX.Client
         /// <summary>
         /// Get all the orders for a given ClOrdId.
         /// Filter example: "filter": {"timestamp.time":"12:00", "timestamp.ww":6}
+        /// Code example: "{\"clOrdID\":\"" + ClOrdId + "\",\"ordStatus\":\"Filled\"}"
         /// TODO: Create a bulk GetOrdersForId's method.
+        /// TODO: create a method to compose sub-hierarchies
         /// </summary>
         /// <param name="ClOrdId">The client side order ID used for the search.</param>
         /// <returns></returns>
         public object GetFilledOrdersForId(string ClOrdId)
         {
-            string filter = "{\"clOrdID\":\"" + ClOrdId + "\",\"OrdStatus\":\"Filled\"}";
+            string filter = "{\"clOrdID\":\"" + ClOrdId + "\",\"ordStatus\":\"Filled\"}";
             var param = new Dictionary<string, string>();
             param["reverse"] = true.ToString();
             ApiResponse res = Query("GET", "/order", false, param, true, false, filter);
@@ -266,26 +287,26 @@ namespace BitMEX.Client
             // Deserialize JSON result
             return res.ApiResponseProcessor();
         }
-
+        
         #endregion
 
         #region PUT /order
-        /* XXXX AmendOrder XXXX
-         * origClOrdID: A uniqueidentifier that identifies each order, as given with the POST order.
-         * orderQty:    Number of contracts
-         * price:       Optional limit price for 'Limit', 'StopLimit', and 'LimitIfTouched' orders.
-         * 
-         * Send an orderID or origClOrdID to identify the order you wish to amend. 
-         * Both order quantity and price can be amended. Only one qty field can be used to amend.
-         * Use the leavesQty field to specify how much of the order you wish to remain open. This 
-         * can be useful if you want to adjust your position's delta by a certain amount, 
-         * regardless of how much of the order has already filled.
-         * > A leavesQty can be used to make a "Filled" order live again, if it is received within 
-         * 60 seconds of the fill. 
-         * Like order placement, amending can be done in bulk. Simply send a request to PUT 
-         * /api/v1/order/bulk with a JSON body of the shape: {"orders": [{...}, {...}]}, each 
-         * object containing the fields used in this endpoint.
-         */
+
+        /// <summary>
+        /// Send an orderID or origClOrdID to identify the order you wish to amend. Both order quantity and price can 
+        /// be amended. Only one qty field can be used to amend. Use the leavesQty field to specify how much of the 
+        /// order you wish to remain open. This can be useful if you want to adjust your position's delta by a certain 
+        /// amount, regardless of how much of the order has already filled.
+        /// > A leavesQty can be used to make a "Filled" order live again, if it is received within 60 seconds of the 
+        /// fill. Like order placement, amending can be done in bulk. Simply send a request to PUT /api/v1/order/bulk 
+        /// with a JSON body of the shape: {"orders": [{...}, {...}]}, each object containing the fields used in this 
+        /// endpoint.
+        /// </summary>
+        /// <param name="origClOrdID">A uniqueidentifier that identifies each order, as given with the POST order.</param>
+        /// <param name="orderQty">Number of contracts</param>
+        /// <param name="price">Optional limit price for 'Limit', 'StopLimit', and 'LimitIfTouched' orders.</param>
+        /// <param name="stopPx">Stop price</param>
+        /// <returns></returns>
         public object AmendOrder(string origClOrdID, int orderQty, double price, double stopPx = 0.0)
         {
             var param = new Dictionary<string, string>();
@@ -307,11 +328,14 @@ namespace BitMEX.Client
         #endregion
 
         #region POST /order
-        /* XXXX MarketOrder XXXX
-         * symbol:      The symbol for which an order is placed e.g. XBTUSD
-         * orderQty:    Number of contracts to trade e.g. 10
-         * clOrdID:     Locally generated ID is passed as the unique reference to this specific order.
-         */
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="symbol">The symbol for which an order is placed e.g. XBTUSD</param>
+        /// <param name="clOrdID">Locally generated ID is passed as the unique reference to this specific order.</param>
+        /// <param name="orderQty">Number of contracts to trade e.g. 10</param>
+        /// <returns></returns>
         public object MarketOrder(string symbol, string clOrdID, int orderQty)
         {
             var param = new Dictionary<string, string>();
@@ -326,11 +350,14 @@ namespace BitMEX.Client
             return res.ApiResponseProcessor();
         }
 
-        /* XXXX StopOrder XXXX
-         * symbol:      The symbol for which an order is placed e.g. XBTUSD
-         * clOrdID:     Locally generated ID is passed as the unique reference to this specific order.
-         * orderQty:    Number of contracts to trade e.g. 10
-         */
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="symbol">The symbol for which an order is placed e.g. XBTUSD</param>
+        /// <param name="orderQty">Number of contracts to trade e.g. 10</param>
+        /// <param name="stopPx">The stop price</param>
+        /// <param name="clOrdID">Locally generated ID is passed as the unique reference to this specific order.</param>
+        /// <returns></returns>
         public object StopOrder(string symbol, int orderQty, double stopPx, string clOrdID)
         {
             var param = new Dictionary<string, string>();
@@ -347,28 +374,16 @@ namespace BitMEX.Client
             return res.ApiResponseProcessor();
         }
 
-        /* XXXX LimitOrder XXXX
-         * Symbol:      The symbol for which an order is placed e.g. XBTUSD
-         * < orderQty >   Number of contracts to trade e.g. 10
-         * < price >      Optional limit price for 'Limit', 'StopLimit', and 'LimitIfTouched' orders.
-
-         * < execInst >
-         * Optional execution instructions. Valid options: 
-         * - ParticipateDoNotInitiate: Post-only orders. Puts a volume in the orderbook only if it is not immediately executed.
-         *      Possible with Limit Order, Stop Limit Order or Take Profit Limit Order
-         * - AllOrNone: Either the whole order is filled or not at all.
-         * - MarkPrice: 
-         *      Possible with Stop, StopLimit, MarketIfTouched, and LimitIfTouched
-         * - IndexPrice 
-         * - LastPrice 
-         * - Close: 
-         * - ReduceOnly 
-         * - Fixed. 
-         * 'AllOrNone' instruction requires displayQty to be 0. 'MarkPrice', 'IndexPrice' or 'LastPrice' instruction 
-         * valid for 'Stop', 'StopLimit', 'MarketIfTouched', and 'LimitIfTouched' 
-         * orders.
-         * 
-         */
+        /// <summary>
+        /// Puts a Buy order lower than the current price or Sell order above the current price in the orderbook. It is
+        /// also known as a resting order.
+        /// </summary>
+        /// <param name="symbol">The symbol for which an order is placed e.g. XBTUSD</param>
+        /// <param name="orderQty">Number of contracts to trade e.g. 10</param>
+        /// <param name="price">Optional limit price for 'Limit', 'StopLimit', and 'LimitIfTouched' orders.</param>
+        /// <param name="clOrdID">Locally generated ID is passed as the unique reference to this specific order.</param>
+        /// <param name="options"></param>
+        /// <returns></returns>
         public object LimitOrder(string symbol, int orderQty, double price, string clOrdID, string options = "")
         {
             var param = new Dictionary<string, string>();
@@ -399,10 +414,13 @@ namespace BitMEX.Client
         #endregion
 
         #region DELETE /order
-        /* XXXX CancelOrder XXXX
-         * clOrdID: OrderID of the order that needs to be canceled
-         * message: Informational message to be saved with the cancelation
-         */
+
+        /// <summary>
+        /// Cancels a resting order.
+        /// </summary>
+        /// <param name="clOrdID">OrderID of the order that needs to be canceled</param>
+        /// <param name="message">Informational message to be saved with the cancelation</param>
+        /// <returns></returns>
         public object CancelOrder(string clOrdID, string message = "Cancel order...")
         {
             var param = new Dictionary<string, string>();
