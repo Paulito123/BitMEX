@@ -134,6 +134,7 @@ namespace BitMEX.TestForm
                             log.Error("Unknown return type [" + outcome.GetType().ToString() + "]");
                             //MessageBox.Show("Unknown return type [" + outcome.GetType().ToString() + "]");
                         }
+                        TBClOrdId.Text = guid;
                         guid = MordoR.generateGUID();
                         log.Info("Guid changed to " + guid);
                     }
@@ -434,6 +435,69 @@ namespace BitMEX.TestForm
         }
 
         private void Form1_FormClosed(object sender, FormClosedEventArgs e)
+        {
+
+        }
+
+        private void btnAmend_Click(object sender, EventArgs e)
+        {
+            log.Info("btnLimitOrder_Click Clicked!");
+
+            // Local environment checks...
+            if ((NUDMarketOrderQuantity.Value >= 1 || NUDMarketOrderQuantity.Value <= -1))
+            {
+                lock (guid)
+                {
+                    // Catch API and connection errors
+                    try
+                    {
+                        OrderResponse orderResp = new OrderResponse();
+                        BaseError orderErr = new BaseError();
+
+                        object outcome = mconn.LimitOrder(
+                            TBMarketOrder.Text.ToString(),
+                            Decimal.ToInt32((decimal)NUDMarketOrderQuantity.Value),
+                            Decimal.ToInt32((decimal)NUDPrice.Value),
+                            guid);
+
+                        log.Info("Limit order sent: Price = " + NUDPrice.Value.ToString() + " & = Qty = " + NUDMarketOrderQuantity.Value.ToString());
+
+                        if (outcome.GetType() == orderResp.GetType())
+                        {
+                            // Successful API call with successful result...
+                            log.Info((OrderResponse)outcome);
+                            //orderResp = (OrderResponse)outcome;
+                            //MessageBox.Show("Order success: " + clOrdID + "=" + orderResp.ClOrdId.ToString());
+                        }
+                        else if (outcome.GetType() == orderErr.GetType())
+                        {
+                            // Successful API call with error as result...
+                            log.Error((BaseError)outcome);
+                            //orderErr = (BaseError)outcome;
+                            //MessageBox.Show("BitMEX API Error [" + orderErr.Error.Message.ToString() + "]");
+                        }
+                        else
+                        {
+                            // Should never happen...
+                            log.Error("Unknown return type [" + outcome.GetType().ToString() + "]");
+                            //MessageBox.Show("Unknown return type [" + outcome.GetType().ToString() + "]");
+                        }
+                        TBClOrdId.Text = guid;
+                        guid = MordoR.generateGUID();
+                        log.Info("Guid changed to " + guid);
+                    }
+                    catch (Exception exc)
+                    {
+                        // Catch all external exceptions like connection issues etc.
+                        log.Error("Exception[" + exc.Message.ToString() + "]");
+                        //MessageBox.Show("Exception[" + exc.Message.ToString() + "]");
+                    }
+                }
+            }
+            log.Info("btnLimitOrder_Click End!");
+        }
+
+        private void btnClose_Click(object sender, EventArgs e)
         {
 
         }

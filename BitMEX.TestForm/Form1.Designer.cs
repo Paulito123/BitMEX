@@ -41,8 +41,10 @@
             this.label2 = new System.Windows.Forms.Label();
             this.label3 = new System.Windows.Forms.Label();
             this.OutputLabel = new System.Windows.Forms.Label();
-            this.TBClOrdId = new System.Windows.Forms.TextBox();
             this.lblClOrdId = new System.Windows.Forms.Label();
+            this.TBClOrdId = new System.Windows.Forms.TextBox();
+            this.btnAmend = new System.Windows.Forms.Button();
+            this.btnClose = new System.Windows.Forms.Button();
             this.tableLayoutPanel1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.NUDMarketOrderQuantity)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.NUDPrice)).BeginInit();
@@ -71,6 +73,8 @@
             this.tableLayoutPanel1.Controls.Add(this.OutputLabel, 0, 8);
             this.tableLayoutPanel1.Controls.Add(this.lblClOrdId, 1, 4);
             this.tableLayoutPanel1.Controls.Add(this.TBClOrdId, 2, 4);
+            this.tableLayoutPanel1.Controls.Add(this.btnAmend, 0, 5);
+            this.tableLayoutPanel1.Controls.Add(this.btnClose, 0, 6);
             this.tableLayoutPanel1.Location = new System.Drawing.Point(12, 12);
             this.tableLayoutPanel1.Name = "tableLayoutPanel1";
             this.tableLayoutPanel1.RowCount = 10;
@@ -228,13 +232,6 @@
             this.OutputLabel.TabIndex = 9;
             this.OutputLabel.Text = "OUTPUT";
             // 
-            // TBClOrdId
-            // 
-            this.TBClOrdId.Location = new System.Drawing.Point(261, 171);
-            this.TBClOrdId.Name = "TBClOrdId";
-            this.TBClOrdId.Size = new System.Drawing.Size(123, 20);
-            this.TBClOrdId.TabIndex = 14;
-            // 
             // lblClOrdId
             // 
             this.lblClOrdId.AutoSize = true;
@@ -244,6 +241,33 @@
             this.lblClOrdId.Size = new System.Drawing.Size(75, 17);
             this.lblClOrdId.TabIndex = 13;
             this.lblClOrdId.Text = "ClOrdId >>";
+            // 
+            // TBClOrdId
+            // 
+            this.TBClOrdId.Location = new System.Drawing.Point(261, 171);
+            this.TBClOrdId.Name = "TBClOrdId";
+            this.TBClOrdId.Size = new System.Drawing.Size(123, 20);
+            this.TBClOrdId.TabIndex = 14;
+            // 
+            // btnAmend
+            // 
+            this.btnAmend.Location = new System.Drawing.Point(3, 213);
+            this.btnAmend.Name = "btnAmend";
+            this.btnAmend.Size = new System.Drawing.Size(123, 23);
+            this.btnAmend.TabIndex = 15;
+            this.btnAmend.Text = "AmendOrder";
+            this.btnAmend.UseVisualStyleBackColor = true;
+            this.btnAmend.Click += new System.EventHandler(this.btnAmend_Click);
+            // 
+            // btnClose
+            // 
+            this.btnClose.Location = new System.Drawing.Point(3, 255);
+            this.btnClose.Name = "btnClose";
+            this.btnClose.Size = new System.Drawing.Size(123, 23);
+            this.btnClose.TabIndex = 16;
+            this.btnClose.Text = "Close";
+            this.btnClose.UseVisualStyleBackColor = true;
+            this.btnClose.Click += new System.EventHandler(this.btnClose_Click);
             // 
             // Form1
             // 
@@ -280,6 +304,8 @@
         private System.Windows.Forms.Label label3;
         private System.Windows.Forms.TextBox TBClOrdId;
         private System.Windows.Forms.Label lblClOrdId;
+        private System.Windows.Forms.Button btnAmend;
+        private System.Windows.Forms.Button btnClose;
     }
 }
 

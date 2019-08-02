@@ -58,27 +58,35 @@ namespace BitMEX.Client
             }
         }
 
-        private static string CreateSubHierarchy(string mainKey, Dictionary<string, object> param)
-        {
-            if (param == null)
-                return "";
+        ///// <summary>
+        ///// ***Currently not used***
+        ///// Should create output like: "{\"clOrdID\":\"" + ClOrdId + "\",\"ordStatus\":\"Filled\"}"
+        ///// </summary>
+        ///// <param name="mainKey"></param>
+        ///// <param name="param"></param>
+        ///// <returns></returns>
+        //private static string CreateSubHierarchy(Dictionary<string, string> param)
+        //{
+        //    if (param == null)
+        //        return "";
 
-            string output = "&" + mainKey + "={";
+        //    StringBuilder b = new StringBuilder();
+        //    b.Append("{");
 
-            foreach (var item in param)
-            {
-                if (item.Value is string s)
-                    string.Format("&{0}={1}", "filter", WebUtility.UrlEncode(filter)));
-                b.AppendFormat("{\"{0}={1}", item.Key, WebUtility.UrlEncode(s));
-                else if (item.Value is Dictionary<string, object> dict)
-                    b.Append(BuildQueryData(dict));
-            }
+        //    foreach (var item in param)
+        //    {
+        //        if (item.Value is string s)
+        //            b.AppendFormat("{\"{0}\":\"{1}\"", item.Key, WebUtility.UrlEncode(s));
+        //        else 
+        //            return null;
+        //    }
 
-            output = output + "}"
-
-            //return WebUtility.UrlEncode(output);
-            return b.ToString();
-        }
+        //    //Remove the last character'
+        //    b.Length--;
+        //    b.Append("}");
+            
+        //    return b.ToString();
+        //}
 
         private string BuildJSON(Dictionary<string, string> param)
         {
@@ -287,7 +295,7 @@ namespace BitMEX.Client
             // Deserialize JSON result
             return res.ApiResponseProcessor();
         }
-        
+
         #endregion
 
         #region PUT /order
@@ -303,14 +311,25 @@ namespace BitMEX.Client
         /// endpoint.
         /// </summary>
         /// <param name="origClOrdID">A uniqueidentifier that identifies each order, as given with the POST order.</param>
-        /// <param name="orderQty">Number of contracts</param>
         /// <param name="price">Optional limit price for 'Limit', 'StopLimit', and 'LimitIfTouched' orders.</param>
+        /// <param name="orderQty">Number of contracts</param>
+        /// <param name="leavesQty"></param>
         /// <param name="stopPx">Stop price</param>
         /// <returns></returns>
-        public object AmendOrder(string origClOrdID, int orderQty, double price, double stopPx = 0.0)
+        public object AmendOrder(string origClOrdID, double price = 0.0, double orderQty = 0.0, double leavesQty = 0.0, double stopPx = 0.0)
         {
             var param = new Dictionary<string, string>();
             param["origClOrdID"] = origClOrdID;
+
+            // Amend only the price
+            if(price > 0 && orderQty == 0 && leavesQty == 00 && stopPx ==0)
+            {
+
+            } // Amend 
+            else if(price > 0 && orderQty != 0)
+            {
+
+            }
 
             param["orderQty"] = orderQty.ToString();
             //param["leavesQty"] = "";
@@ -443,6 +462,10 @@ namespace BitMEX.Client
 
         #region Helpers
 
+        /// <summary>
+        /// Generate a unique GUID
+        /// </summary>
+        /// <returns>returns a unique hash string</returns>
         public static string generateGUID()
         {
             return Guid.NewGuid().ToString("N");
