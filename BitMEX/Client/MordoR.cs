@@ -322,39 +322,53 @@ namespace BitMEX.Client
             param["origClOrdID"] = origClOrdID;
 
             // Amend only the price
-            if(price > 0 && orderQty == 0 && leavesQty == 00 && stopPx ==0)
+            if(price > 0 && orderQty == 0 && leavesQty == 00)
             {
-
+                param["price"] = price.ToString();
             } // Amend 
-            else if(price > 0 && orderQty != 0)
+            else if(price == 0 && orderQty != 0)
             {
-
+                param["orderQty"] = orderQty.ToString();
+            }
+            else if (price > 0 && orderQty != 0)
+            {
+                param["price"] = price.ToString();
+                param["orderQty"] = orderQty.ToString();
+            }
+            else if (price == 0 && leavesQty != 0)
+            {
+                param["leavesQty"] = leavesQty.ToString();
+            }
+            else if (price > 0 && leavesQty != 0)
+            {
+                param["price"] = price.ToString();
+                param["leavesQty"] = leavesQty.ToString();
             }
 
-            param["orderQty"] = orderQty.ToString();
-            //param["leavesQty"] = "";
-            param["price"] = price.ToString();
+            //if(stopPx != 0.0)
+            //{
+            //    param["stopPx"] = stopPx.ToString();
+            //}
 
-            if(stopPx != 0.0)
+            if (param.Count > 1)
             {
-                param["stopPx"] = stopPx.ToString();
+                ApiResponse res = Query("PUT", "/order", false, param, true);
+                return res.ApiResponseProcessor();
             }
-            
-            ApiResponse res = Query("PUT", "/order", false, param, true);
-            // Deserialize JSON result
-            return res.ApiResponseProcessor();
+            else
+                return null;
         }
         #endregion
 
         #region POST /order
 
         /// <summary>
-        /// 
+        /// Enter the market at the best available price.
         /// </summary>
         /// <param name="symbol">The symbol for which an order is placed e.g. XBTUSD</param>
         /// <param name="clOrdID">Locally generated ID is passed as the unique reference to this specific order.</param>
         /// <param name="orderQty">Number of contracts to trade e.g. 10</param>
-        /// <returns></returns>
+        /// <returns>Object containing the response of the order.</returns>
         public object MarketOrder(string symbol, string clOrdID, int orderQty)
         {
             var param = new Dictionary<string, string>();
@@ -370,26 +384,26 @@ namespace BitMEX.Client
         }
 
         /// <summary>
-        /// 
+        /// Like a Stop Market, but enters a Limit order instead of a Market order. Specify an orderQty, stopPx, and price.
         /// </summary>
         /// <param name="symbol">The symbol for which an order is placed e.g. XBTUSD</param>
+        /// <param name="clOrdID">Locally generated ID is passed as the unique reference to this specific order.</param>
         /// <param name="orderQty">Number of contracts to trade e.g. 10</param>
         /// <param name="stopPx">The stop price</param>
-        /// <param name="clOrdID">Locally generated ID is passed as the unique reference to this specific order.</param>
-        /// <returns></returns>
-        public object StopOrder(string symbol, int orderQty, double stopPx, string clOrdID)
+        /// <param name="price">When specified, StopLimit order is placed.</param>
+        /// <returns>Object containing the response of the order.</returns>
+        public object StopLimitOrder(string symbol, string clOrdID, int orderQty, double price, double stopPx)
         {
             var param = new Dictionary<string, string>();
             param["symbol"] = symbol;
             param["side"] = (orderQty >= 0) ? "Buy" : "Sell";
-            param["orderQty"] = orderQty.ToString();
             param["clOrdID"] = clOrdID;
             param["stopPx"] = stopPx.ToString();
-            param["ordType"] = "Stop";
-            param["execInst"] = "MarkPrice"; // Close, [ MarkPrice OR LastPrice OR IndexPrice ]
+            param["orderQty"] = orderQty.ToString();
+            param["price"] = price.ToString();
+            
             ApiResponse res = Query("POST", "/order", false, param, true);
-
-            // Deserialize JSON result
+            
             return res.ApiResponseProcessor();
         }
 
@@ -402,8 +416,8 @@ namespace BitMEX.Client
         /// <param name="price">Optional limit price for 'Limit', 'StopLimit', and 'LimitIfTouched' orders.</param>
         /// <param name="clOrdID">Locally generated ID is passed as the unique reference to this specific order.</param>
         /// <param name="options"></param>
-        /// <returns></returns>
-        public object LimitOrder(string symbol, int orderQty, double price, string clOrdID, string options = "")
+        /// <returns>Object containing the response of the order.</returns>
+        public object LimitOrder(string symbol, string clOrdID, int orderQty, double price, string options = "")
         {
             var param = new Dictionary<string, string>();
             param["symbol"] = symbol;
