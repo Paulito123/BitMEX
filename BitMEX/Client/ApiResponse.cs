@@ -47,14 +47,12 @@ namespace BitMEX.Client
                 switch (this.StatusCode)
                 {
                     case 200:
-                        // json is some model type
                         o = this.ApiResponseDispatcher();
                         break;
                     case 400:
                     case 401:
                     case 403:
                     case 404:
-                        // json is ougth to be error type
                         o = BaseError.FromJson(this.Json);
                         break;
                     default:
@@ -65,7 +63,7 @@ namespace BitMEX.Client
                         o = bErr;
                         break;
                 }
-
+                log.Info("ApiResponse statuscode [" + StatusCode + "] for uri [" + Uri + "]");
                 return o;
             }
             catch (Exception exc)
@@ -73,7 +71,7 @@ namespace BitMEX.Client
                 o = new BaseError();
                 ((BaseError)o).Error.Name = "ApiResponseError";
                 ((BaseError)o).Error.Message = exc.ToString();
-                log.Error(exc.ToString());
+                log.Error("ApiResponse error [" + exc.ToString() + "]");
                 return o;
             }
         }

@@ -260,7 +260,7 @@ namespace BitMEX.Client
         #region GET /order
 
         /// <summary>
-        /// Return all orders that are resting in the ordrbook.
+        /// Return all orders that are resting in the ordrbook.4
         /// </summary>
         /// <param name="symbol">The symbol for which an order is placed e.g. XBTUSD</param>
         /// <returns></returns>
@@ -444,6 +444,36 @@ namespace BitMEX.Client
             // Deserialize JSON result
             return res.ApiResponseProcessor();
         }
+
+        ///// <summary>
+        ///// 
+        ///// </summary>
+        ///// <param name="symbol"></param>
+        ///// <param name="price"></param>
+        ///// <param name="side"></param>
+        ///// <param name="orderQty"></param>
+        ///// <param name="options"></param>
+        ///// <returns></returns>
+        //public object ClosePostion(string symbol, double price, string side, double? orderQty = null, string options = null)
+        //{
+        //    var param = new Dictionary<string, string>();
+        //    string safeSide = (side.ToLower() == "buy") ? "Buy" : "Sell";
+        //    param["side"] = safeSide;
+        //    param["symbol"] = symbol;
+        //    //param["price"] = price.ToString();
+        //    param["stopPx"] = price.ToString();
+        //    if(orderQty != 0)
+        //        param["ordType"] = "Stop";
+        //    param["text"] = "Position closed";
+        //    param["execInst"] = "Close";
+        //    if (orderQty != null)
+        //        param["orderQty"] = Math.Abs((double)orderQty).ToString();
+        //    ApiResponse res = Query("POST", "/order", false, param, true);
+
+        //    // Deserialize JSON result
+        //    return res.ApiResponseProcessor();
+        //}
+
         #endregion
 
         #region DELETE /order
@@ -464,6 +494,7 @@ namespace BitMEX.Client
             // Deserialize JSON result
             return res.ApiResponseProcessor();
         }
+
         #endregion
 
         #region /user/wallet

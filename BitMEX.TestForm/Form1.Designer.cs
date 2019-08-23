@@ -48,6 +48,8 @@
             this.lblStopOrder = new System.Windows.Forms.Label();
             this.NUDStopOrder = new System.Windows.Forms.NumericUpDown();
             this.btnCancel = new System.Windows.Forms.Button();
+            this.RBBuy = new System.Windows.Forms.RadioButton();
+            this.RBSell = new System.Windows.Forms.RadioButton();
             this.tableLayoutPanel1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.NUDPrice)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.NUDMarketOrderQuantity)).BeginInit();
@@ -82,6 +84,8 @@
             this.tableLayoutPanel1.Controls.Add(this.lblStopOrder, 1, 1);
             this.tableLayoutPanel1.Controls.Add(this.NUDStopOrder, 2, 1);
             this.tableLayoutPanel1.Controls.Add(this.btnCancel, 0, 7);
+            this.tableLayoutPanel1.Controls.Add(this.RBBuy, 1, 5);
+            this.tableLayoutPanel1.Controls.Add(this.RBSell, 2, 5);
             this.tableLayoutPanel1.Location = new System.Drawing.Point(12, 12);
             this.tableLayoutPanel1.Name = "tableLayoutPanel1";
             this.tableLayoutPanel1.RowCount = 10;
@@ -303,6 +307,28 @@
             this.btnCancel.UseVisualStyleBackColor = true;
             this.btnCancel.Click += new System.EventHandler(this.btnCancel_Click);
             // 
+            // RBBuy
+            // 
+            this.RBBuy.AutoSize = true;
+            this.RBBuy.Location = new System.Drawing.Point(132, 213);
+            this.RBBuy.Name = "RBBuy";
+            this.RBBuy.Size = new System.Drawing.Size(43, 17);
+            this.RBBuy.TabIndex = 17;
+            this.RBBuy.TabStop = true;
+            this.RBBuy.Text = "Buy";
+            this.RBBuy.UseVisualStyleBackColor = true;
+            // 
+            // RBSell
+            // 
+            this.RBSell.AutoSize = true;
+            this.RBSell.Location = new System.Drawing.Point(261, 213);
+            this.RBSell.Name = "RBSell";
+            this.RBSell.Size = new System.Drawing.Size(42, 17);
+            this.RBSell.TabIndex = 17;
+            this.RBSell.TabStop = true;
+            this.RBSell.Text = "Sell";
+            this.RBSell.UseVisualStyleBackColor = true;
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -344,6 +370,8 @@
         private System.Windows.Forms.Label lblStopOrder;
         private System.Windows.Forms.NumericUpDown NUDStopOrder;
         private System.Windows.Forms.Button btnCancel;
+        private System.Windows.Forms.RadioButton RBBuy;
+        private System.Windows.Forms.RadioButton RBSell;
     }
 }
 

@@ -397,15 +397,7 @@ namespace BitMEX.TestForm
 
         #endregion HELPERS
         
-        private void Form1_Load(object sender, EventArgs e)
-        {
-
-        }
-
-        private void Form1_FormClosed(object sender, FormClosedEventArgs e)
-        {
-
-        }
+        
 
         private void btnAmend_Click(object sender, EventArgs e)
         {
@@ -449,7 +441,37 @@ namespace BitMEX.TestForm
 
         private void btnClose_Click(object sender, EventArgs e)
         {
+            //log.Info("btnClose_Click Clicked!");
 
+            //try
+            //{
+            //    OrderResponse orderResp = new OrderResponse();
+            //    BaseError orderErr = new BaseError();
+
+            //    string IDInput = TBClOrdId.Text;
+            //    object outcome = mconn.ClosePostion(
+            //                    TBMarketOrder.Text,
+            //                    (double)NUDPrice.Value,
+            //                    RBBuy.Checked ? "Buy" : "Sell",
+            //                    (double)NUDMarketOrderQuantity.Value
+            //                    );
+
+            //    log.Info("Cancel order [" + IDInput + "].");
+
+            //    if (outcome.GetType() == orderResp.GetType())
+            //        log.Info((OrderResponse)outcome);
+            //    else if (outcome.GetType() == orderErr.GetType())
+            //        log.Error((BaseError)outcome);
+            //    else
+            //        log.Error("Unknown return type [" + outcome.GetType().ToString() + "]");
+
+            //}
+            //catch (Exception exc)
+            //{
+            //    log.Error("Exception[" + exc.Message.ToString() + "]");
+            //}
+
+            //log.Info("btnClose_Click End!");
         }
 
         private void btnCancel_Click(object sender, EventArgs e)
@@ -483,6 +505,16 @@ namespace BitMEX.TestForm
             }
 
             log.Info("btnCancel_Click End!");
+        }
+
+        private void Form1_Load(object sender, EventArgs e)
+        {
+
+        }
+
+        private void Form1_FormClosed(object sender, FormClosedEventArgs e)
+        {
+
         }
     }
 }
