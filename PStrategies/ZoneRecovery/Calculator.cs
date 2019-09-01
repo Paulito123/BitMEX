@@ -11,6 +11,16 @@ namespace PStrategies.ZoneRecovery
     {
         #region Variables
 
+        ///// <summary>
+        ///// The guid for which the calculator needs to listen for take profit action
+        ///// </summary>
+        //private string nextGuidTP;
+
+        ///// <summary>
+        ///// The guid for which the calculator needs to listen for take reverse action
+        ///// </summary>
+        //private string nextGuidReverse;
+
         /// <summary>
         /// Object used to lock a piece of code to prevent it from being executed multiple times within one instance of the calculator class.
         /// </summary>
@@ -101,10 +111,8 @@ namespace PStrategies.ZoneRecovery
         #region Constructor(s)
         /// <summary>
         /// Initializes the Zone Recovery Calculator.
-        /// TODO: InitialPrice and its derived calculations should be recalculated when the first order is filled. Zone is 
-        ///       determined relative to the price of the first position.
+        /// 
         /// </summary>
-        /// <param name="initialPrice">The price at the time the class is initialized</param>
         /// <param name="maxExposure">Percentage of the maximum market exposure when completely wound</param>
         /// <param name="totalBalance">Most recent total balance</param>
         /// <param name="leverage">Leverage used to calculate other parameters</param>
@@ -112,11 +120,12 @@ namespace PStrategies.ZoneRecovery
         /// <param name="maxDepthIndex">Maximum dept allowed in the Zone Recovery system</param>
         /// <param name="zoneSize">The size of the zone in nr of pips</param>
         /// <param name="minPrftPerc">Minimum required profit margin</param>
-        public Calculator(double initialPrice, double maxExposurePerc, double totalBalance, double leverage, double pipSize, int maxDepthIndex, int zoneSize, double minPrftPerc)
+        /// <param name="initOrder">The first order response in the ZR strategy</param>
+        public Calculator(double initPrice, double maxExposurePerc, double totalBalance, double leverage, double pipSize, int maxDepthIndex, int zoneSize, double minPrftPerc)
         {
             CurrentStatus = ZoneRecoveryStatus.Winding;
             OpenPositions = new List<ZoneRecoveryPosition>();
-            InitialPrice = initialPrice;
+            InitialPrice = initPrice;
             MaxExposurePerc = maxExposurePerc;
             TotalBalance = totalBalance;
             Leverage = leverage;
@@ -154,11 +163,12 @@ namespace PStrategies.ZoneRecovery
         /// <summary>
         /// For a given InitialPrice, Balance, MaxExposurePerc and Leverage, this function returns the calculated maximum unit size. 
         /// This unit size multiplied with the factors in FactorArray will give the unit size of each order.
+        /// In other words, the value returned is the Volume by unit in the FactorArray.
         /// </summary>
         private double GetRelativeUnitSize()
         {
             double totalDepthMaxExposure = (double)this.GetTotalDepthMaxExposure();
-            return Math.Round((double)(InitialPrice * Leverage * TotalBalance * MaxExposurePerc / totalDepthMaxExposure) * (1 / (double)PipSize), MidpointRounding.AwayFromZero) / (1 / (double)PipSize);
+            return Math.Round(InitialPrice * Leverage * TotalBalance * MaxExposurePerc / totalDepthMaxExposure, MidpointRounding.ToEven);
         }
 
         /// <summary>
@@ -180,7 +190,7 @@ namespace PStrategies.ZoneRecovery
         }
 
         /// <summary>
-        /// Calculate the difference in price relative to the InitialPrice.
+        /// Calculate the profit difference based on the profit percentage and the initial price
         /// </summary>
         private double CalculateProfitPriceDifference()
         {
@@ -198,6 +208,7 @@ namespace PStrategies.ZoneRecovery
             double v_denominator = 0.0;
             double o = 0.0;
 
+            // Calculate the break even price
             foreach(ZoneRecoveryPosition zp in OpenPositions)
             {
                 v_numerator = v_numerator + (zp.TotalQty * zp.AVGPrice);
@@ -241,59 +252,38 @@ namespace PStrategies.ZoneRecovery
                 return zrp.AVGPrice + ((firstDir * -1) * PipSize * ZoneSize);
         }
 
+        /// <summary>
+        /// Turning the wheel, advance one step further in the ZR winding process...
+        /// </summary>
+        private void TakeStepForward()
+        {
+            if (CurrentStatus == ZoneRecoveryStatus.Winding)
+            {
+                CurrentZRPosition++;
+
+                // Zone Recovery logic is reversed
+                if (CurrentZRPosition == MaxDepthIndex)
+                    CurrentStatus = ZoneRecoveryStatus.Unwinding;
+            }
+            else if (CurrentStatus == ZoneRecoveryStatus.Unwinding) // Unwinding...
+                CurrentZRPosition--;
+            else
+                CurrentZRPosition = 0; // Should not happen...
+        }
+
         #endregion Private methods
 
         #region Public methods
 
         /// <summary>
-        /// SetNewPosition should be called when a new position is taken on the exchange. The Zone Recovery
-        /// strategy proceeds one step in its logic. The List of OrderResponses passed should be the 
-        /// OrderResponses returned for one specific order.
-        /// Example:
-        ///     MaxDepthIndex = 4
-        ///     CurrentZRPosition >  0   1   2   3   4   3   2   1   0   X
-        ///     Position L/S      >  -   L   S   L   S   L4  S3  L2  S1  X
-        ///     (Un)Winding       >  W   W   W   W   U   U   U   U   U   X
-        /// 
-        /// When the TP is reached at the exchange, a new position should not be set. The current Calculator 
-        /// instance should be disposed.
-        /// 
-        /// TODO: Check how WebSocket returns updates on resting orders. This function makes the assumption 
-        /// that a list of OrderResponses is returned.
+        /// TODO TEST THIS FUNCTION
         /// </summary>
-        /// <param name="orderResp">The List object with all the OrderResponses for one order returned by the Exchange.</param>
-        public void SetNewPosition(List<BitMEX.Model.OrderResponse> orderResp)
+        /// <returns></returns>
+        public double GetInitialVolume()
         {
-            lock(_Lock)
-            {
-                // Create a new position object for the calculation of the average position size
-                ZoneRecoveryPosition newPos = new ZoneRecoveryPosition(orderResp[1].OrderId, (double)PipSize, OpenPositions.Count + 1);
-
-                // Loop all the OrderResponse objects related to a specific filled previously resting or market order.
-                foreach (BitMEX.Model.OrderResponse resp in orderResp)
-                {
-                    // TODO: Check if assumption is correct that AvgPx is the average price for the filled OrderQty...
-                    newPos.AddToPosition((double)resp.AvgPx, (double)resp.OrderQty);
-                }
-
-                // Add the new averaged position to the positions collection
-                this.OpenPositions.Add(newPos);
-
-                if (CurrentStatus == ZoneRecoveryStatus.Winding)
-                {
-                    CurrentZRPosition++;
-
-                    // Zone Recovery logic is reversed
-                    if (CurrentZRPosition == MaxDepthIndex)
-                        CurrentStatus = ZoneRecoveryStatus.Unwinding;
-                }
-                else if (CurrentStatus == ZoneRecoveryStatus.Unwinding) // Unwinding...
-                    CurrentZRPosition--;
-                else
-                    CurrentZRPosition = 0; // Should not happen...
-            }
+            return GetRelativeUnitSize();
         }
-
+        
         /// <summary>
         /// Calculates the parameters for the next orders, TP & Reverse > InitialPrice & Volume and returns it as a ZoneRecoveryAction.
         /// Zone calculation strategy = "Stick with initial zone". This means when a new position diverts from the planned order price,
@@ -320,25 +310,25 @@ namespace PStrategies.ZoneRecovery
                     if (CurrentZRPosition > 0)
                     {
                         // Calculate the next take profit price
-                        zra.TPPrice = CalculateTPPrice();
-                        zra.TPVolumeSell = CalculateOpenQtyForDirection(1);
-                        zra.TPVolumeBuy = CalculateOpenQtyForDirection(-1);
-                        zra.ReverseVolume = MaximumUnitSize * FactorArray[OpenPositions.Count];
-                        zra.ReversePrice = CalculateNextReversePrice();
+                        zra.TPPrice         = CalculateTPPrice();
+                        zra.TPVolumeSell    = CalculateOpenQtyForDirection(1);
+                        zra.TPVolumeBuy     = CalculateOpenQtyForDirection(-1);
+                        zra.ReverseVolume   = MaximumUnitSize * FactorArray[OpenPositions.Count];
+                        zra.ReversePrice    = CalculateNextReversePrice();
                         return zra;
                     }
                     else
-                        //Should never happen because GetNextStep is called only after the first position is taken...
+                        // Happens when no initial position has been taken
                         return null;
                 }
                 else if (CurrentStatus == ZoneRecoveryStatus.Unwinding) // Unwinding
                 {
                     // Calculate the next take profit price
-                    zra.TPPrice = CalculateTPPrice();
-                    zra.TPVolumeSell = CalculateOpenQtyForDirection(1);
-                    zra.TPVolumeBuy = CalculateOpenQtyForDirection(-1);
-                    zra.ReverseVolume = -OpenPositions.Single(s => s.PositionIndex == (CurrentZRPosition + 1)).TotalQty;
-                    zra.ReversePrice = CalculateNextReversePrice();
+                    zra.TPPrice         = CalculateTPPrice();
+                    zra.TPVolumeSell    = CalculateOpenQtyForDirection(1);
+                    zra.TPVolumeBuy     = CalculateOpenQtyForDirection(-1);
+                    zra.ReverseVolume   = -OpenPositions.Single(s => s.PositionIndex == (CurrentZRPosition + 1)).TotalQty;
+                    zra.ReversePrice    = CalculateNextReversePrice();
                     return zra;
                 }
                 else

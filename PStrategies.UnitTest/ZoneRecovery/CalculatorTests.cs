@@ -3,6 +3,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PStrategies.ZoneRecovery;
 using System.Collections.Generic;
 using BitMEX.Model;
+using BitMEX.Client;
 
 namespace PStrategies.UnitTest.ZoneRecovery
 {
@@ -12,26 +13,23 @@ namespace PStrategies.UnitTest.ZoneRecovery
         [TestMethod]
         public void CalculatorTests_LifeCycleTest2Windings_ReturnsCorrectTPInProfit()
         {
-            var calcBox = new Calculator(1000, 0.05, 1, 10, 0.5, 4, 100, 0.01);
+            // Create a calculator instance
+            var calcBox = new Calculator(10000, 0.05, 1, 30, 0.5, 4, 50, 0.01);
 
-            #region Set new position 1
-            var orderResponseList = new List<BitMEX.Model.OrderResponse>();
-            
-            var orderResponse = new BitMEX.Model.OrderResponse()
+            // Create an initial OrderResponse that reflects the first position in the strategy
+            var orderResponse = new OrderResponse()
             {
-                OrderId = "a758f23f-f767-739c-891f-3dff5e6d4558",
-                ClOrdId = "a758f23f-f767-739c-891f-3dff5e6d4558",
-                OrderQty = 1000,
-                Price = 9103.5,
+                OrderId = "1234HoedjeVanPapier",
+                ClOrdId = MordoR.generateGUID(),
+                OrderQty = (int)calcBox.GetInitialVolume(),
+                Price = 10000,
                 LeavesQty = 0,
                 CumQty = 1000,
-                AvgPx = 9103.5,
-
+                AvgPx = 10000,
                 OrdType = "Limit",
                 OrdStatus = "Filled",
                 ExecInst = "",
                 TimeInForce = "ImmediateOrCancel",
-
                 Account = 51091,
                 Symbol = "XBTUSD",
                 Side = "Buy",
@@ -46,23 +44,30 @@ namespace PStrategies.UnitTest.ZoneRecovery
                 TransactTime = new DateTime(2019, 7, 7, 1, 1, 1, 1),
                 Timestamp = new DateTime(2019, 7, 7, 1, 1, 1, 1)
             };
-            orderResponseList.Add(orderResponse);
+            
+            // Create the expected next action
+            var nextAction1 = new ZoneRecoveryAction(1);
+            nextAction1.ReverseVolume = 180 * 2;
+            nextAction1.ReversePrice = 9950;
+            nextAction1.TPVolumeBuy = 
+            nextAction1.TPVolumeSell = 
+            nextAction1.TPPrice = 
 
-            orderResponse = new BitMEX.Model.OrderResponse()
+            Assert.AreEqual(1, nextStep.PositionIndex);
+
+            orderResponse = new OrderResponse()
             {
-                OrderId = "a758f23f-f767-739c-891f-3dff5e6d4558",
-                ClOrdId = "a758f23f-f767-739c-891f-3dff5e6d4558",
+                OrderId = "5678WaHaddeNaVerwacht",
+                ClOrdId = MordoR.generateGUID(),
                 OrderQty = 1000,
                 Price = 1000,
                 LeavesQty = 0,
                 CumQty = 1000,
                 AvgPx = 9103.5,
-
                 OrdType = "Limit",
                 OrdStatus = "Filled",
                 ExecInst = "",
                 TimeInForce = "ImmediateOrCancel",
-
                 Account = 51091,
                 Symbol = "XBTUSD",
                 Side = "Buy",
@@ -112,7 +117,7 @@ namespace PStrategies.UnitTest.ZoneRecovery
 
             calcBox.SetNewPosition(orderResponseList);
 
-            #endregion Set new position 1
+            
 
             // Get next step and assert...
             var nextStep = calcBox.GetNextAction();

@@ -21,13 +21,24 @@ namespace BitMEX.Client
         private string apiSecret;
         ILog log;
 
-        public MordoR(string bitmexKey = "rTAFXRKn2dLARuG_t1dDOtgI", string bitmexSecret = "K2LmL6aTbj8eW_LVj7OLa7iA6eZa8TJMllh3sjCynV4fpnMr", string bitmexDomain = "https://testnet.bitmex.com")
+        public MordoR(ILog l = null,
+                      string bitmexKey = "rTAFXRKn2dLARuG_t1dDOtgI", 
+                      string bitmexSecret = "K2LmL6aTbj8eW_LVj7OLa7iA6eZa8TJMllh3sjCynV4fpnMr", 
+                      string bitmexDomain = "https://testnet.bitmex.com")
         {
             this.apiKey = bitmexKey;
             this.apiSecret = bitmexSecret;
             this.domain = bitmexDomain;
-            log4net.Config.XmlConfigurator.Configure();
-            log = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+
+            if (l == null)
+            {
+                log4net.Config.XmlConfigurator.Configure();
+                log = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+            }
+            else
+                log = l;
+
+            log.Info(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType + " instantiated.");
         }
 
         #region API Connector - Helpers
@@ -514,6 +525,15 @@ namespace BitMEX.Client
         public static string generateGUID()
         {
             return Guid.NewGuid().ToString("N");
+        }
+
+        /// <summary>
+        /// The idea is to test the logger from outside MordoR...
+        /// </summary>
+        /// <param name="message">Message to be logged.</param>
+        public void LogInfoMessage(string message)
+        {
+            log.Info(message);
         }
         
         #endregion
