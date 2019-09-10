@@ -55,7 +55,6 @@
     <Compile Include="Client\MordoR.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Utilities\DatabaseUtil.cs" />
-    <Compile Include="Utilities\SharedLogger.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config">
