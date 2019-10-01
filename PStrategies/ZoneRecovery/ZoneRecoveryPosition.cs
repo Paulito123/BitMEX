@@ -15,9 +15,29 @@ namespace PStrategies.ZoneRecovery
     /// </summary>
     public class ZoneRecoveryPosition
     {
+        /// <summary>
+        /// Unique identifier of the position, as it is know on the exchange.
+        /// </summary>
         public string OrderID { get; set; }
+
+        /// <summary>
+        /// The identifier of the account on which the position is known.
+        /// </summary>
+        public long? AccountID { get; set; }
+
+        /// <summary>
+        /// The average price of the position.
+        /// </summary>
         public double AVGPrice { get; set; } = 0.0;
+
+        /// <summary>
+        /// The total quantity of the position.
+        /// </summary>
         public double TotalQty { get; set; } = 0.0;
+
+        /// <summary>
+        /// The minimum pipsize of the exchange.
+        /// </summary>
         public double PipSize { get; set; }
 
         /// <summary>
@@ -26,13 +46,14 @@ namespace PStrategies.ZoneRecovery
         /// </summary>
         public int PositionIndex { get; set; }
 
-        public ZoneRecoveryPosition(string ordID, double pipSize, int posIndex, double? avgPrice = null, double? totalQty = null)
+        public ZoneRecoveryPosition(string ordID, long? accountID, double pipSize, int posIndex, double? avgPrice = null, double? totalQty = null)
         {
             this.OrderID = ordID;
             this.PipSize = pipSize;
             this.PositionIndex = posIndex;
+            this.AccountID = accountID;
 
-            if(avgPrice != null && totalQty != null)
+            if (avgPrice != null && totalQty != null)
             {
                 this.AVGPrice = (double)avgPrice;
                 this.TotalQty = (double)totalQty;
