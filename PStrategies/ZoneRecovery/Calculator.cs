@@ -54,7 +54,8 @@ namespace PStrategies.ZoneRecovery
 
         /// <summary>
         /// When the mathematical break even price has been reached, this percentage defines how far in profit
-        /// the strategy needs to be before closing all related positions.
+        /// the strategy needs to be before closing all related positions. 
+        /// Should be a decimal between 0 and 1!!!
         /// </summary>
         private double MinimumProfitPercentage;
 
@@ -216,7 +217,79 @@ namespace PStrategies.ZoneRecovery
                 return true;
         }
 
+        /// <summary>
+        /// Calculate the theoretical price at which closing all open positions results in a break even. 
+        /// Returns 0 when there are no open positions.
+        /// </summary>
+        /// <returns>The theoretical break even price</returns>
+        private double CalculateBreakEvenPrice()
+        {
+            if(OpenPositions.Count > 0)
+            {
+                double v_numerator = 0.0;
+                double v_denominator = 0.0;
+                double bePrice = 0.0;
 
+                // Calculate the break even price
+                foreach (ZoneRecoveryPosition zp in OpenPositions)
+                {
+                    v_numerator = v_numerator + (zp.TotalQty * zp.AVGPrice);
+                    v_denominator = v_denominator + (zp.TotalQty);
+                }
+
+                bePrice = v_numerator / v_denominator;
+
+                return RoundToPipsize(bePrice);
+            }
+            else
+            {
+                return 0.0;
+            }
+        }
+
+        /// <summary>
+        /// Calculate the total exposure of the open positions. This is the sum of all absolute quantities of all open positions.
+        /// </summary>
+        /// <returns>The total exposure </returns>
+        private double CalculateTotalOpenExposure()
+        {
+            if (OpenPositions.Count > 0)
+            {
+                double e = 0;
+
+                // Sum absolute values of all open quantities
+                foreach (ZoneRecoveryPosition zp in OpenPositions)
+                {
+                    e = e + Math.Abs(zp.TotalQty);
+                }
+                return e;
+            }
+            else
+            {
+                return 0.0;
+            }
+        }
+
+        /// <summary>
+        /// Calculates the profit price for the currently open positions. When all open positions are closed at this price,
+        /// a minimum theoretical profit has been made as defined in the MinimumProfitPercentage parameter.
+        /// </summary>
+        /// <returns>The profit price</returns>
+        private double CalculateTakeProfitPrice()
+        {
+            double breakEvenPrice = this.CalculateBreakEvenPrice();
+            double direction = -this.GetNextDirection();
+            double totalExposure = this.CalculateTotalOpenExposure();
+
+            if (breakEvenPrice > 0 && direction != 0 && totalExposure != 0)
+            {
+                return breakEvenPrice + (direction * (totalExposure * MinimumProfitPercentage) );
+            }
+            else
+            {
+                return 0.0;
+            }
+        }
 
         /// <summary>
         /// Returns the direction of the next trade in this instance of the Zone Recovery strategy.
@@ -235,33 +308,7 @@ namespace PStrategies.ZoneRecovery
             else
                 return 0;
         }
-
-        /// <summary>
-        /// Returns the price at which profit should be taken to be mathematically "Break Even". Commissions are not yet taken into account.
-        /// TODO: Extend the calculation to take into account commissions and real profit using the MinimumProfitPercentage variable.
-        /// </summary>
-        /// <returns></returns>
-        private double CalculateTPPrice()
-        {
-            double v_numerator = 0.0;
-            double v_denominator = 0.0;
-            double o = 0.0;
-
-            // Calculate the break even price
-            foreach (ZoneRecoveryPosition zp in OpenPositions)
-            {
-                v_numerator = v_numerator + (zp.TotalQty * zp.AVGPrice);
-                v_denominator = v_denominator + (zp.TotalQty);
-            }
-
-            o = v_numerator / v_denominator * (1 / PipSize);
-
-            // Add the calculated minimum profit margin
-            //o = o + (-this.GetNextDirection() * CalculateProfitPriceDifference());
-
-            return RoundToPipsize(o);
-        }
-
+        
         /// <summary>
         /// Calculates the total Qty of all the open positions for a given direction
         /// </summary>
@@ -290,7 +337,6 @@ namespace PStrategies.ZoneRecovery
             else
                 return zrp.AVGPrice + ((firstDir * -1) * PipSize * ZoneSize);
         }
-
         
         #endregion Private methods
 
@@ -396,40 +442,42 @@ namespace PStrategies.ZoneRecovery
         /// <returns>ZoneRecoveryAction</returns>
         public ZoneRecoveryAction GetNextAction()
         {
-            // TODO: Not sure if the lock is still relevant here...
-            lock (_Lock)
-            {
-                ZoneRecoveryAction zra = new ZoneRecoveryAction(OpenPositions.Count + 1);
+            // TODO: Add account to ZoneRecoveryAction
 
-                if (CurrentStatus == ZoneRecoveryStatus.Winding)
-                {
-                    if (CurrentZRPosition > 0)
-                    {
-                        // Calculate the next take profit price
-                        zra.TPPrice = CalculateTPPrice();
-                        zra.TPVolumeSell = CalculateOpenQtyForDirection(1);
-                        zra.TPVolumeBuy = CalculateOpenQtyForDirection(-1);
-                        zra.ReverseVolume = MaximumUnitSize * FactorArray[OpenPositions.Count];
-                        zra.ReversePrice = CalculateNextReversePrice();
-                        return zra;
-                    }
-                    else
-                        // Happens when no initial position has been taken
-                        return null;
-                }
-                else if (CurrentStatus == ZoneRecoveryStatus.Unwinding) // Unwinding
+            ZoneRecoveryAction zra = new ZoneRecoveryAction(OpenPositions.Count + 1);
+
+            if (CurrentStatus == ZoneRecoveryStatus.Winding)
+            {
+                if (CurrentZRPosition > 0)
                 {
                     // Calculate the next take profit price
-                    zra.TPPrice = CalculateTPPrice();
+                    zra.TPPrice = CalculateTakeProfitPrice();
                     zra.TPVolumeSell = CalculateOpenQtyForDirection(1);
                     zra.TPVolumeBuy = CalculateOpenQtyForDirection(-1);
-                    zra.ReverseVolume = -OpenPositions.Single(s => s.PositionIndex == (CurrentZRPosition + 1)).TotalQty;
+                    
+                    // Calculate the next reverse price
+                    zra.ReverseVolume = GetUnitSize() * FactorArray[OpenPositions.Count];
                     zra.ReversePrice = CalculateNextReversePrice();
                     return zra;
                 }
                 else
+                    // Happens when no initial position has been taken
                     return null;
             }
+            else if (CurrentStatus == ZoneRecoveryStatus.Unwinding) // Unwinding
+            {
+                // Calculate the next take profit price
+                zra.TPPrice = CalculateTakeProfitPrice();
+                zra.TPVolumeSell = CalculateOpenQtyForDirection(1);
+                zra.TPVolumeBuy = CalculateOpenQtyForDirection(-1);
+
+                // Calculate the next reverse price
+                zra.ReverseVolume = -OpenPositions.Single(s => s.PositionIndex == (CurrentZRPosition + 1)).TotalQty;
+                zra.ReversePrice = CalculateNextReversePrice();
+                return zra;
+            }
+            else
+                return null;
         }
 
         #endregion Public methods
