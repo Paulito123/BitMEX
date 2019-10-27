@@ -30,7 +30,7 @@ namespace BitMEX.TestForm
         public Form1()
         {
             InitializeComponent();
-            guid = MordoR.generateGUID();
+            guid = MordoR.GenerateGUID();
             mconn = new MordoR();
             TBMarketOrder.Text = "XBTUSD";
 
@@ -77,7 +77,7 @@ namespace BitMEX.TestForm
                             log.Error("Outcome is null");
                             //MessageBox.Show("Outcome is null");
                         }
-                        guid = MordoR.generateGUID();
+                        guid = MordoR.GenerateGUID();
                         log.Info("Guid changed to " + guid);
                     }
                     catch (Exception exc)
@@ -121,7 +121,7 @@ namespace BitMEX.TestForm
                         else
                             log.Error("Unknown return type [" + outcome.GetType().ToString() + "]");
                         TBClOrdId.Text = guid;
-                        guid = MordoR.generateGUID();
+                        guid = MordoR.GenerateGUID();
                         log.Info("Guid changed to " + guid);
                     }
                     catch (Exception exc)
@@ -216,7 +216,7 @@ namespace BitMEX.TestForm
                         log.Error("Unknown return type [" + outcome.GetType().ToString() + "]");
 
                     TBClOrdId.Text = guid;
-                    guid = MordoR.generateGUID();
+                    guid = MordoR.GenerateGUID();
                     log.Info("Guid changed to " + guid);
                 }
                 catch (Exception exc)

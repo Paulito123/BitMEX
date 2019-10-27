@@ -14,7 +14,7 @@ namespace PStrategies.UnitTest.ZoneRecovery
         public void CalculatorTests_LifeCycleTest2Windings_ReturnsCorrectTPInProfit()
         {
             // Create a calculator instance
-            var calcBox = new Calculator(10000, 0.05, 1, 30, 0.5, 4, 50, 0.01);
+            var calcBox = new Calculator(0.10, 1, 30, 0.5, 4, 25, 0.05);
 
             // Create an initial OrderResponse that reflects the first position in the strategy
             var orderResponse = new OrderResponse()

@@ -522,7 +522,7 @@ namespace BitMEX.Client
         /// Generate a unique GUID
         /// </summary>
         /// <returns>returns a unique hash string</returns>
-        public static string generateGUID()
+        public static string GenerateGUID()
         {
             return Guid.NewGuid().ToString("N");
         }

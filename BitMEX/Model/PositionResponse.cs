@@ -1,4 +1,4 @@
-﻿namespace BitMEX.Model.PositionResponse
+﻿namespace BitMEX.Model
 {
     using System;
     using System.Collections.Generic;
@@ -7,11 +7,25 @@
     using Newtonsoft.Json;
     using Newtonsoft.Json.Converters;
 
-    public partial class Position
+    /// <summary>
+    /// Info on all the fields:
+    ///     https://www.onixs.biz/fix-dictionary/5.0.SP2/fields_by_name.html
+    /// </summary>
+    public partial class PositionResponse
     {
+        /// <summary>
+        /// Account mnemonic as agreed between buy and sell sides, e.g. broker and institution or investor/intermediary and fund 
+        /// manager.
+        /// Account <1> field
+        /// </summary>
         [JsonProperty("account", NullValueHandling = NullValueHandling.Ignore)]
-        public long? Account { get; set; }
+        public long Account { get; set; }
 
+        /// <summary>
+        /// Ticker symbol. Common, "human understood" representation of the security. SecurityID (48) value can be specified if no symbol exists (e.g. non-exchange traded Collective Investment Vehicles)
+        /// Use "[N/A]" for products which do not have a symbol.
+        /// Symbol <55> field
+        /// </summary>
         [JsonProperty("symbol", NullValueHandling = NullValueHandling.Ignore)]
         public string Symbol { get; set; }
 
@@ -36,6 +50,9 @@
         [JsonProperty("riskLimit", NullValueHandling = NullValueHandling.Ignore)]
         public long? RiskLimit { get; set; }
 
+        /// <summary>
+        /// The active leverage on a position for a specific currency.
+        /// </summary>
         [JsonProperty("leverage", NullValueHandling = NullValueHandling.Ignore)]
         public long? Leverage { get; set; }
 
@@ -60,6 +77,9 @@
         [JsonProperty("openingTimestamp", NullValueHandling = NullValueHandling.Ignore)]
         public DateTimeOffset? OpeningTimestamp { get; set; }
 
+        /// <summary>
+        /// The very first quantity of the first order that made the current position.
+        /// </summary>
         [JsonProperty("openingQty", NullValueHandling = NullValueHandling.Ignore)]
         public long? OpeningQty { get; set; }
 
@@ -69,39 +89,75 @@
         [JsonProperty("openingComm", NullValueHandling = NullValueHandling.Ignore)]
         public long? OpeningComm { get; set; }
 
+        /// <summary>
+        /// The sum of all quantities of all the resting buy orders for the respective currency. 
+        /// </summary>
         [JsonProperty("openOrderBuyQty", NullValueHandling = NullValueHandling.Ignore)]
         public long? OpenOrderBuyQty { get; set; }
 
+        /// <summary>
+        /// The sum of the cost of all the resting buy orders for the respective currency. 
+        /// </summary>
         [JsonProperty("openOrderBuyCost", NullValueHandling = NullValueHandling.Ignore)]
         public long? OpenOrderBuyCost { get; set; }
 
+        /// <summary>
+        /// The sum of the premiums of all the resting buy orders for the respective currency. 
+        /// </summary>
         [JsonProperty("openOrderBuyPremium", NullValueHandling = NullValueHandling.Ignore)]
         public long? OpenOrderBuyPremium { get; set; }
 
+        /// <summary>
+        /// The sum of all quantities of all the resting sell orders for the respective currency. 
+        /// </summary>
         [JsonProperty("openOrderSellQty", NullValueHandling = NullValueHandling.Ignore)]
         public long? OpenOrderSellQty { get; set; }
 
+        /// <summary>
+        /// The sum of the cost of all the resting sell orders for the respective currency. 
+        /// </summary>
         [JsonProperty("openOrderSellCost", NullValueHandling = NullValueHandling.Ignore)]
         public long? OpenOrderSellCost { get; set; }
 
+        /// <summary>
+        /// The sum of the premiums of all the resting sell orders for the respective currency. 
+        /// </summary>
         [JsonProperty("openOrderSellPremium", NullValueHandling = NullValueHandling.Ignore)]
         public long? OpenOrderSellPremium { get; set; }
 
+        /// <summary>
+        /// The last buy order quantity that has been added to the current position.
+        /// </summary>
         [JsonProperty("execBuyQty", NullValueHandling = NullValueHandling.Ignore)]
         public long? ExecBuyQty { get; set; }
 
+        /// <summary>
+        /// The cost of the last buy order that has been added to the current position.
+        /// </summary>
         [JsonProperty("execBuyCost", NullValueHandling = NullValueHandling.Ignore)]
         public long? ExecBuyCost { get; set; }
 
+        /// <summary>
+        /// The last sell order quantity that has been added to the current position.
+        /// </summary>
         [JsonProperty("execSellQty", NullValueHandling = NullValueHandling.Ignore)]
         public long? ExecSellQty { get; set; }
 
+        /// <summary>
+        /// The cost of the last sell order that has been added to the current position.
+        /// </summary>
         [JsonProperty("execSellCost", NullValueHandling = NullValueHandling.Ignore)]
         public long? ExecSellCost { get; set; }
 
+        /// <summary>
+        /// The last order quantity that has been added to the current position.
+        /// </summary>
         [JsonProperty("execQty", NullValueHandling = NullValueHandling.Ignore)]
         public long? ExecQty { get; set; }
 
+        /// <summary>
+        /// The cost of the last order that has been added to the current position.
+        /// </summary>
         [JsonProperty("execCost", NullValueHandling = NullValueHandling.Ignore)]
         public long? ExecCost { get; set; }
 
@@ -111,12 +167,22 @@
         [JsonProperty("currentTimestamp", NullValueHandling = NullValueHandling.Ignore)]
         public DateTimeOffset? CurrentTimestamp { get; set; }
 
+        /// <summary>
+        /// The total quantity of the current position. 
+        /// When currentQty = 0, the entire position for the given currency is closed. At this point we are not in the market.
+        /// </summary>
         [JsonProperty("currentQty", NullValueHandling = NullValueHandling.Ignore)]
-        public long? CurrentQty { get; set; }
+        public long CurrentQty { get; set; }
 
+        /// <summary>
+        /// The total cost of the current position.
+        /// </summary>
         [JsonProperty("currentCost", NullValueHandling = NullValueHandling.Ignore)]
-        public long? CurrentCost { get; set; }
+        public long CurrentCost { get; set; }
 
+        /// <summary>
+        /// The total commission of the current position.
+        /// </summary>
         [JsonProperty("currentComm", NullValueHandling = NullValueHandling.Ignore)]
         public long? CurrentComm { get; set; }
 
@@ -135,11 +201,18 @@
         [JsonProperty("grossExecCost", NullValueHandling = NullValueHandling.Ignore)]
         public long? GrossExecCost { get; set; }
 
+        /// <summary>
+        /// Reflects whether the current position is in the market or not. 
+        /// When isOpen = false, the currentQty = 0.
+        /// </summary>
         [JsonProperty("isOpen", NullValueHandling = NullValueHandling.Ignore)]
-        public bool? IsOpen { get; set; }
+        public bool IsOpen { get; set; }
 
+        /// <summary>
+        /// The weighted average price of the current open position. When the currentQty is 0, the markPrice is null.
+        /// </summary>
         [JsonProperty("markPrice", NullValueHandling = NullValueHandling.Ignore)]
-        public double? MarkPrice { get; set; }
+        public double MarkPrice { get; set; }
 
         [JsonProperty("markValue", NullValueHandling = NullValueHandling.Ignore)]
         public long? MarkValue { get; set; }
@@ -386,15 +459,23 @@
         }
     }
 
-    public partial class Position
+    public partial class PositionResponse
     {
-        public static List<Position> FromJson(string json)
+        public static List<PositionResponse> FromJson(string json)
         {
-            return JsonConvert.DeserializeObject<List<Position>>(json, BitMEX.Model.PositionResponse.Converter.Settings);
+            return JsonConvert.DeserializeObject<List<PositionResponse>>(json, PositionConverter.Settings);
         }
     }
 
-    internal static class Converter
+    public partial class PositionsResponse
+    {
+        public static List<PositionResponse> FromJson(string json)
+        {
+            return JsonConvert.DeserializeObject<List<PositionResponse>>(json, PositionConverter.Settings);
+        }
+    }
+
+    internal static class PositionConverter
     {
         public static readonly JsonSerializerSettings Settings = new JsonSerializerSettings
         {

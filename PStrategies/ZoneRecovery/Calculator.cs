@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BitMEX.Model;
+using BitMEX.Client;
 
 namespace PStrategies.ZoneRecovery
 {
@@ -15,6 +16,15 @@ namespace PStrategies.ZoneRecovery
         /// An array of factors used to calculate the size of each winding.
         /// </summary>
         private static double[] FactorArray = new double[] { 1, 2, 3, 6, 12, 24, 48, 96 };
+
+        /// <summary>
+        /// The minimum unit size of each order. The result of the UnitSize multiplied by a value of the FactorArray 
+        /// results in the quantity of a respective order.
+        /// </summary>
+        private double UnitSize;
+
+        private long AccountLong;
+        private long AccountShort;
 
         /// <summary>
         /// An enumeration used for expressing in which part of the Zone Recovery algorithm the class is at a given moment.
@@ -68,12 +78,22 @@ namespace PStrategies.ZoneRecovery
         /// The value of the current ZoneRecoveryStatus
         /// </summary>
         private ZoneRecoveryStatus CurrentStatus;
+        
+        /// <summary>
+        /// The last known long position.
+        /// </summary>
+        private PositionResponse LongPosition;
 
         /// <summary>
-        /// A list of ZoneRecoveryPositions that are taken in the lifecycle of this instance of the Calculator class.
-        /// Idea: Use Stack<T> here
+        /// The last known short position.
         /// </summary>
-        private List<ZoneRecoveryPosition> OpenPositions;
+        private PositionResponse ShortPosition;
+
+        /// <summary>
+        /// A list of OrderResponse objects from all the resting orders. This list should at any tine only contain maiximum 2 objects.
+        /// One LONG and one SHORT order, meaning there is one TAKE PROFIT and one REVERSE order.
+        /// </summary>
+        private List<OrderResponse> OpenOrders;
 
         /// <summary>
         /// CurrentZRPosition reflects the position withing the Zone Recovery strategy.
@@ -91,7 +111,7 @@ namespace PStrategies.ZoneRecovery
         /// position, represents the MaximumUnitSize.
         /// </summary>
         //private double MaximumUnitSize;
-        
+
         #endregion Private variables
 
         #region Constructor(s)
@@ -106,9 +126,12 @@ namespace PStrategies.ZoneRecovery
         /// <param name="maxDepthIndex">Maximum dept allowed in the Zone Recovery system</param>
         /// <param name="zoneSize">The size of the zone in nr of pips</param>
         /// <param name="minPrftPerc">Minimum required profit margin</param>
-        public Calculator(double maxExposurePerc, double totalBalance, double leverage, double pipSize, int maxDepthIndex, int zoneSize, double minPrftPerc)
+        public Calculator(double maxExposurePerc, double totalBalance, double leverage, double pipSize, int maxDepthIndex, int zoneSize, double minPrftPerc
+                          , PositionResponse longPos, PositionResponse shortPos, long accountLong, long accountShort)
         {
             // Initialize main variables
+            AccountLong = accountLong;
+            AccountShort = accountShort;
             MaxExposurePerc = maxExposurePerc;
             TotalBalance = totalBalance;
             Leverage = leverage;
@@ -116,6 +139,8 @@ namespace PStrategies.ZoneRecovery
             MaxDepthIndex = maxDepthIndex;
             ZoneSize = zoneSize;
             MinimumProfitPercentage = minPrftPerc;
+            LongPosition = longPos;
+            ShortPosition = shortPos;
 
             // Initialize calculation variables
             InitializeCalculator();
@@ -130,7 +155,7 @@ namespace PStrategies.ZoneRecovery
         private void InitializeCalculator()
         {
             CurrentStatus = ZoneRecoveryStatus.Init;
-            OpenPositions = new List<ZoneRecoveryPosition>();
+            OpenOrders = new List<OrderResponse>();
             CurrentZRPosition = 0;
         }
 
@@ -188,33 +213,8 @@ namespace PStrategies.ZoneRecovery
             else if (CurrentStatus == ZoneRecoveryStatus.Init) // Winding...
             {
                 CurrentStatus = ZoneRecoveryStatus.Winding;
-                CurrentZRPosition++;
+                CurrentZRPosition = 1;
             }
-        }
-
-        /// <summary>
-        /// Return the actual unit size. (= volume of the first position)
-        /// This only work with the assumptions: 
-        ///   - that the first PositionIndex of the open positions = 1  !!
-        ///   - that the first value in the FactorArray = 1             !!
-        /// </summary>
-        /// <returns></returns>
-        private double GetUnitSize()
-        {
-            return OpenPositions.Single(s => s.PositionIndex == 1).TotalQty;
-        }
-
-        /// <summary>
-        /// Check if a clOrdID already exists among the historic positions taken.
-        /// </summary>
-        /// <param name="ordID">The orderID to be checked in the open positions</param>
-        /// <returns></returns>
-        private bool CheckClOrdIdExists(string ordID)
-        {
-            if (OpenPositions.Where(s => s.OrderID.Equals(ordID)).Count() == 0)
-                return false;
-            else
-                return true;
         }
 
         /// <summary>
@@ -224,19 +224,12 @@ namespace PStrategies.ZoneRecovery
         /// <returns>The theoretical break even price</returns>
         private double CalculateBreakEvenPrice()
         {
-            if(OpenPositions.Count > 0)
+            if(LongPosition.IsOpen || ShortPosition.IsOpen)
             {
-                double v_numerator = 0.0;
-                double v_denominator = 0.0;
+                double v_numerator = (LongPosition.CurrentQty * LongPosition.MarkPrice) + (ShortPosition.CurrentQty * ShortPosition.MarkPrice);
+                double v_denominator = LongPosition.CurrentQty + ShortPosition.CurrentQty;
                 double bePrice = 0.0;
-
-                // Calculate the break even price
-                foreach (ZoneRecoveryPosition zp in OpenPositions)
-                {
-                    v_numerator = v_numerator + (zp.TotalQty * zp.AVGPrice);
-                    v_denominator = v_denominator + (zp.TotalQty);
-                }
-
+                
                 bePrice = v_numerator / v_denominator;
 
                 return RoundToPipsize(bePrice);
@@ -251,22 +244,15 @@ namespace PStrategies.ZoneRecovery
         /// Calculate the total exposure of the open positions. This is the sum of all absolute quantities of all open positions.
         /// </summary>
         /// <returns>The total exposure </returns>
-        private double CalculateTotalOpenExposure()
+        private long CalculateTotalOpenExposure()
         {
-            if (OpenPositions.Count > 0)
+            if (LongPosition.IsOpen || ShortPosition.IsOpen)
             {
-                double e = 0;
-
-                // Sum absolute values of all open quantities
-                foreach (ZoneRecoveryPosition zp in OpenPositions)
-                {
-                    e = e + Math.Abs(zp.TotalQty);
-                }
-                return e;
+                return LongPosition.CurrentQty + ShortPosition.CurrentQty;
             }
             else
             {
-                return 0.0;
+                return 0;
             }
         }
 
@@ -297,13 +283,12 @@ namespace PStrategies.ZoneRecovery
         /// <returns>1 = LONG, -1 = SHORT, 0 = UNDEFINED</returns>
         private int GetNextDirection()
         {
-            if (OpenPositions.Count > 0)
+            if (LongPosition.IsOpen || ShortPosition.IsOpen)
             {
-                // Determine the direction of next step relative to the first position
-                if (OpenPositions.Single(s => s.PositionIndex == 1).TotalQty > 0) // First position = LONG position
-                    return (OpenPositions.Count % 2 == 1) ? -1 : 1;
-                else                                                                 // First position = SHORT position
-                    return (OpenPositions.Count % 2 == 1) ? 1 : -1;
+                if (LongPosition.CurrentQty > ShortPosition.CurrentQty)
+                    return -1;
+                else
+                    return 1;
             }
             else
                 return 0;
@@ -314,14 +299,14 @@ namespace PStrategies.ZoneRecovery
         /// </summary>
         /// <param name="direction">The direction for which the total Qty needs to be summed</param>
         /// <returns></returns>
-        private double CalculateOpenQtyForDirection(int direction)
+        private long CalculateOpenQtyForDirection(int direction)
         {
-            double outp = 0;
-            foreach (ZoneRecoveryPosition zrp in OpenPositions)
-            {
-                outp = outp + ((zrp.TotalQty / Math.Abs(zrp.TotalQty) == direction) ? zrp.TotalQty : 0);
-            }
-            return outp;
+            if (direction == 1)
+                return LongPosition.CurrentQty;
+            else if (direction == -1)
+                return ShortPosition.CurrentQty;
+            else
+                return 0;
         }
 
         /// <summary>
@@ -330,14 +315,16 @@ namespace PStrategies.ZoneRecovery
         /// <returns>The next reverse price</returns>
         private double CalculateNextReversePrice()
         {
-            ZoneRecoveryPosition zrp = OpenPositions.Single(s => s.PositionIndex == 1);
-            int firstDir = (int)(zrp.TotalQty / Math.Abs(zrp.TotalQty));
-            if (GetNextDirection() == firstDir)
-                return zrp.AVGPrice;
+            if (LongPosition.IsOpen && ShortPosition.IsOpen)
+                return RoundToPipsize((GetNextDirection()== 1) ? LongPosition.MarkPrice : ShortPosition.MarkPrice);
+            else if (LongPosition.IsOpen)
+                return RoundToPipsize(LongPosition.MarkPrice - ZoneSize);
+            else if (ShortPosition.IsOpen)
+                return RoundToPipsize(ShortPosition.MarkPrice + ZoneSize);
             else
-                return zrp.AVGPrice + ((firstDir * -1) * PipSize * ZoneSize);
+                return 0;
         }
-        
+
         #endregion Private methods
 
         #region Public methods
@@ -360,54 +347,54 @@ namespace PStrategies.ZoneRecovery
                 return 0;
         }
 
+        // TODO
+        //  Clearly define what is an open Order and what is an open Position
+        //  GUIDs of positions should always be stored in the OpenPositions array.
+        //  Where do we store GUIDs of live orders?
+        //  How to manage the very first Order / Position?
+        //  The application should generate internal ID's before the first order is placed,
+        //  Like this, it knows for which ID's it should listen. When at least one ID 
+        //  matches && the status = 'Filled', next action is to be generated and executed
+        //  by the caller.
+        //  Extra check to be performed to see if there are any open orders or positions 
+        //  on the Exchange that are not in sync with what is know in the application.
+
         /// <summary>
-        /// SetNewPosition should be called when a new position is taken on the exchange. The Zone Recovery
-        /// strategy proceeds one step in its logic. The List of OrderResponses passed should be the 
-        /// OrderResponses returned for one specific order.
-        /// Example:
-        ///     MaxDepthIndex = 4
-        ///     CurrentZRPosition >  0   1   2   3   4   3   2   1   0   X
-        ///     Position L/S      >  -   L   S   L   S   L4  S3  L2  S1  X
-        ///     (Un)Winding       >  W   W   W   W   U   U   U   U   U   X
-        /// 
-        /// When the TP is reached at the exchange, a new position should not be set. The current Calculator 
-        /// instance should be disposed.
-        /// 
-        /// TODO: Check how WebSocket returns updates on resting orders. This function makes the assumption 
-        /// that a list of OrderResponses is returned.
-        /// Turning the wheel, advance one step further in the ZR winding process...
+        /// This method initiates the calculator with an initial position. Therefore it can 
+        /// only be used when CurrentStatus == ZoneRecoveryStatus.Init.
         /// </summary>
-        /// <param name="orderResp">The OrderResponse object returned by the Exchange.</param>
-        public bool TryNewPosition(OrderResponse orderResp)
+        /// <param name="startPosition">The first position taken for this instance of the calculator.</param>
+        /// <returns></returns>
+        public List<ZoneRecoveryAction> EvaluateResponse(PositionResponse startPosition)
         {
-            bool isPositionSet = false;
+            // Create a variable used for locking.
             bool acquiredLock = false;
-            
-            if (orderResp.OrdStatus.Equals("Filled"))
+
+            // Test if prerequisites have been met.
+            if (CurrentStatus == ZoneRecoveryStatus.Init && 
+                startPosition.CurrentQty != 0 &&
+                CurrentZRPosition == 0)
             {
                 try
                 {
+                    // Try enter the lock.
                     Monitor.TryEnter(_Lock, 0, ref acquiredLock);
-                    if (acquiredLock && !CheckClOrdIdExists(orderResp.ClOrdId))
-                    {
-                        // The critical section.
-                        int elementID = OpenPositions.Count + 1;
 
-                        // Add the new position to the OpenPositions List
-                        OpenPositions.Add(new ZoneRecoveryPosition(orderResp.ClOrdId, orderResp.Account, this.PipSize, elementID, orderResp.AvgPx, orderResp.OrderQty));
+                    // Test if entering the lock was successful.
+                    if (acquiredLock)
+                    {
+                        // Set the unit size to the size of the very first position taken.
+                        UnitSize = Math.Abs(startPosition.CurrentQty);
+
+                        // Initialize internal positions.
+                        if (startPosition.CurrentQty > 0)
+                            LongPosition = startPosition;
+                        else
+                            ShortPosition = startPosition;
 
                         // Turn the wheel of internal calculation variables
                         this.TakeStepForward();
-
-                        isPositionSet = true;
-
-                        // TODO: The controlling application should call GetNextAction() next.
-                        // IDEA: Let this function already return the next action.
                     }
-                    //else
-                    //{
-                    //    // The lock was not acquired.
-                    //}
                 }
                 finally
                 {
@@ -418,11 +405,12 @@ namespace PStrategies.ZoneRecovery
                         Monitor.Exit(_Lock);
                     }
                 }
-
             }
 
-            // Return [true / false] when [something / nothing] happened
-            return isPositionSet;
+            if (acquiredLock)
+                return this.GetNextAction();
+            else
+                return null;
         }
 
         /// <summary>
@@ -440,9 +428,14 @@ namespace PStrategies.ZoneRecovery
         /// OpenPositions.Single(s => s.PositionIndex == 1).AVGPrice returns the initial reference price (= price of first position)
         /// </summary>
         /// <returns>ZoneRecoveryAction</returns>
-        public ZoneRecoveryAction GetNextAction()
+        public List<ZoneRecoveryAction> GetNextAction()
         {
-            // TODO: Add account to ZoneRecoveryAction
+            // TODO: 
+            // Close the irrelevant open orders
+            // Create 3 actions:
+            //  1. TP: Close current direction
+            //  2. TP: Close previous direction
+            //  3. REV: Add to current direction
 
             ZoneRecoveryAction zra = new ZoneRecoveryAction(OpenPositions.Count + 1);
 
@@ -454,9 +447,9 @@ namespace PStrategies.ZoneRecovery
                     zra.TPPrice = CalculateTakeProfitPrice();
                     zra.TPVolumeSell = CalculateOpenQtyForDirection(1);
                     zra.TPVolumeBuy = CalculateOpenQtyForDirection(-1);
-                    
+
                     // Calculate the next reverse price
-                    zra.ReverseVolume = GetUnitSize() * FactorArray[OpenPositions.Count];
+                    zra.ReverseVolume = UnitSize * FactorArray[OpenPositions.Count];
                     zra.ReversePrice = CalculateNextReversePrice();
                     return zra;
                 }
@@ -480,6 +473,119 @@ namespace PStrategies.ZoneRecovery
                 return null;
         }
 
+        /// <summary>
+        /// SetNewPosition should be called when a new position is taken on the exchange. The Zone Recovery
+        /// strategy proceeds one step in its logic. The List of OrderResponses passed should be the 
+        /// OrderResponses returned for one specific order.
+        /// Example:
+        ///     MaxDepthIndex = 4
+        ///     CurrentZRPosition >  0   1   2   3   4   3   2   1   0   X
+        ///     Position L/S      >  -   L   S   L   S   L4  S3  L2  S1  X
+        ///     (Un)Winding       >  W   W   W   W   U   U   U   U   U   X
+        /// 
+        /// When the TP is reached at the exchange, a new position should not be set. The current Calculator 
+        /// instance should be disposed.
+        /// 
+        /// TODO: Check how WebSocket returns updates on resting orders. This function makes the assumption 
+        /// that a list of OrderResponses is returned.
+        /// Turning the wheel, advance one step further in the ZR winding process...
+        /// </summary>
+        /// <param name="orderResp">The OrderResponse object returned by the Exchange.</param>
+        public List<ZoneRecoveryAction> EvaluateResponse(OrderResponse orderRespLong, OrderResponse orderRespShort)
+        {
+            bool acquiredLock = false;
+            try
+            {
+                Monitor.TryEnter(_Lock, 0, ref acquiredLock);
+                if (acquiredLock) // && !CheckClOrdIdExists(orderResp.ClOrdId)
+                {
+
+                    if (orderRespLong.OrdStatus.Equals("Filled") || orderRespShort.OrdStatus.Equals("Filled"))
+                    {
+
+                    }
+                    else if (orderResp.OrdStatus.Equals("New"))
+                    {
+
+                    }
+
+                    
+
+                    // The critical section.
+                    int elementID = OpenPositions.Count + 1;
+
+                    // Add the new position to the OpenPositions List
+                    OpenPositions.Add(new ZoneRecoveryPosition(orderResp.ClOrdId, orderResp.Account, this.PipSize, elementID, orderResp.AvgPx, orderResp.OrderQty));
+
+                    // Turn the wheel of internal calculation variables
+                    this.TakeStepForward();
+
+                    //isPositionSet = true;
+
+                    // TODO: The controlling application should call GetNextAction() next.
+                    // IDEA: Let this function already return the next action.
+                }
+            }
+            finally
+            {
+                // Ensure that the lock is released.
+                if (acquiredLock)
+                {
+                    // Exit the lock
+                    Monitor.Exit(_Lock);
+                }
+            }
+
+            if (acquiredLock)
+                return this.GetNextAction();
+            else
+                return null;
+        }
+
+        
+        //public bool FeedOrderResponse(OrderResponse orderResp)
+        //{
+        //    bool isPositionSet = false;
+        //    bool acquiredLock = false;
+            
+        //    if (orderResp.OrdStatus.Equals("Filled"))
+        //    {
+        //        try
+        //        {
+        //            Monitor.TryEnter(_Lock, 0, ref acquiredLock);
+        //            if (acquiredLock)
+        //            {
+        //                // The critical section.
+        //                int elementID = OpenPositions.Count + 1;
+
+        //                // Add the new position to the OpenPositions List
+        //                OpenPositions.Add(new ZoneRecoveryPosition(orderResp.ClOrdId, orderResp.Account, this.PipSize, elementID, orderResp.AvgPx, orderResp.OrderQty));
+
+        //                // Turn the wheel of internal calculation variables
+        //                this.TakeStepForward();
+
+        //                isPositionSet = true;
+
+        //                // TODO: The controlling application should call GetNextAction() next.
+        //                // IDEA: Let this function already return the next action.
+        //            }
+        //        }
+        //        finally
+        //        {
+        //            // Ensure that the lock is released.
+        //            if (acquiredLock)
+        //            {
+        //                // Exit the lock
+        //                Monitor.Exit(_Lock);
+        //            }
+        //        }
+
+        //    }
+
+        //    // Return [true / false] when [something / nothing] happened
+        //    return isPositionSet;
+        //}
+        
         #endregion Public methods
     }
 }
