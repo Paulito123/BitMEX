@@ -17,7 +17,7 @@ namespace PStrategies.ZoneRecovery
         public string OrderID { set; get; }
         public double Price { set; get; }
         public long Qty { set; get; }
-        public string Instruction { set; get; }
+        public string Instruction { set; get; } // TP | TL | REV
         
         /// <summary>
         /// Class constructor

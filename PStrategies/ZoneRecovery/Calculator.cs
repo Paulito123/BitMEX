@@ -16,15 +16,37 @@ namespace PStrategies.ZoneRecovery
         /// An array of factors used to calculate the size of each winding.
         /// </summary>
         private static double[] FactorArray = new double[] { 1, 2, 3, 6, 12, 24, 48, 96 };
-
+        
         /// <summary>
         /// The minimum unit size of each order. The result of the UnitSize multiplied by a value of the FactorArray 
         /// results in the quantity of a respective order.
         /// </summary>
         private double UnitSize;
 
+        /// <summary>
+        /// Reflects how deep inside the FactorArray, this instance of the Calculator class, is allowed to go.
+        /// </summary>
+        private int MaxDepthIndex { get; }
+
+        /// <summary>
+        /// The account number of the account used for LONG positions.
+        /// </summary>
         private long AccountLong;
+
+        /// <summary>
+        /// The account number of the account used for SHORT positions.
+        /// </summary>
         private long AccountShort;
+
+        /// <summary>
+        /// The last known long position.
+        /// </summary>
+        private PositionResponse LongPosition;
+
+        /// <summary>
+        /// The last known short position.
+        /// </summary>
+        private PositionResponse ShortPosition;
 
         /// <summary>
         /// An enumeration used for expressing in which part of the Zone Recovery algorithm the class is at a given moment.
@@ -58,11 +80,6 @@ namespace PStrategies.ZoneRecovery
         private int ZoneSize { get; }
 
         /// <summary>
-        /// Reflects how deep inside the FactorArray, this instance of the Calculator class, is allowed to go.
-        /// </summary>
-        private int MaxDepthIndex { get; }
-
-        /// <summary>
         /// When the mathematical break even price has been reached, this percentage defines how far in profit
         /// the strategy needs to be before closing all related positions. 
         /// Should be a decimal between 0 and 1!!!
@@ -78,22 +95,11 @@ namespace PStrategies.ZoneRecovery
         /// The value of the current ZoneRecoveryStatus
         /// </summary>
         private ZoneRecoveryStatus CurrentStatus;
-        
-        /// <summary>
-        /// The last known long position.
-        /// </summary>
-        private PositionResponse LongPosition;
 
         /// <summary>
-        /// The last known short position.
+        /// Keeps track of the previously sent instructions.
         /// </summary>
-        private PositionResponse ShortPosition;
-
-        /// <summary>
-        /// A list of OrderResponse objects from all the resting orders. This list should at any tine only contain maiximum 2 objects.
-        /// One LONG and one SHORT order, meaning there is one TAKE PROFIT and one REVERSE order.
-        /// </summary>
-        private List<OrderResponse> OpenOrders;
+        private List<ZoneRecoveryAction> LastInstructionList = new List<ZoneRecoveryAction>();
 
         /// <summary>
         /// CurrentZRPosition reflects the position withing the Zone Recovery strategy.
@@ -102,16 +108,7 @@ namespace PStrategies.ZoneRecovery
         /// When CurrentZRPosition = MaxDepthIndex > ZoneRecoveryStatus is switched and winding process reversed
         /// </summary>
         private int CurrentZRPosition;
-
-        /// <summary>
-        /// The maximum unit size used for each trade within this instance of the Calculator class. 
-        /// To calculate this measure: InitialPrice * Leverage * TotalBalance * MaxExposurePerc / totalDepthMaxExposure
-        /// Basically it comes down to calculating the maximum amount of exposure you would want for one instance of 
-        /// the Calculator class. The key parameter to adjust the risk is MaxExposurePerc. The volume of the first 
-        /// position, represents the MaximumUnitSize.
-        /// </summary>
-        //private double MaximumUnitSize;
-
+        
         #endregion Private variables
 
         #region Constructor(s)
@@ -155,8 +152,9 @@ namespace PStrategies.ZoneRecovery
         private void InitializeCalculator()
         {
             CurrentStatus = ZoneRecoveryStatus.Init;
-            OpenOrders = new List<OrderResponse>();
+            //OpenOrders = new List<OrderResponse>();
             CurrentZRPosition = 0;
+            //TradeIndex = 0;
         }
 
         /// <summary>
@@ -192,25 +190,33 @@ namespace PStrategies.ZoneRecovery
         /// <summary>
         /// Turning the wheel, advance one step further in the ZR winding process...
         /// </summary>
-        private void TakeStepForward()
+        private void TakeStepForward(List<PositionResponse> pos = null)
         {
             if (CurrentStatus == ZoneRecoveryStatus.Winding)
             {
                 CurrentZRPosition++;
 
+                // Set the new value for the internal positions
+                if(pos != null)
+                    SetPositions(pos);
+
                 // Zone Recovery logic is reversed
                 if (CurrentZRPosition == MaxDepthIndex)
                     CurrentStatus = ZoneRecoveryStatus.Unwinding;
             }
-            else if (CurrentStatus == ZoneRecoveryStatus.Unwinding) // Unwinding...
+            else if (CurrentStatus == ZoneRecoveryStatus.Unwinding)
             {
                 CurrentZRPosition--;
+
+                // Set the new value for the internal positions
+                if (pos != null)
+                    SetPositions(pos);
 
                 // Reset the calculator
                 if (CurrentZRPosition == 0)
                     InitializeCalculator();
             }
-            else if (CurrentStatus == ZoneRecoveryStatus.Init) // Winding...
+            else if (CurrentStatus == ZoneRecoveryStatus.Init)
             {
                 CurrentStatus = ZoneRecoveryStatus.Winding;
                 CurrentZRPosition = 1;
@@ -325,6 +331,20 @@ namespace PStrategies.ZoneRecovery
                 return 0;
         }
 
+        /// <summary>
+        /// Set the internal position from a list of positions. 
+        /// Make sure every account in the list is unique. It will return the first occurrance.
+        /// </summary>
+        /// <param name="pos">A list of position responses.</param>
+        private void SetPositions(List<PositionResponse> pos)
+        {
+            if(pos.First(p => p.Account == AccountLong) != null)
+                this.LongPosition = pos.First(p => p.Account == AccountLong);
+
+            if (pos.First(p => p.Account == AccountShort) != null)
+                this.ShortPosition = pos.First(p => p.Account == AccountShort);
+        }
+
         #endregion Private methods
 
         #region Public methods
@@ -347,25 +367,13 @@ namespace PStrategies.ZoneRecovery
                 return 0;
         }
 
-        // TODO
-        //  Clearly define what is an open Order and what is an open Position
-        //  GUIDs of positions should always be stored in the OpenPositions array.
-        //  Where do we store GUIDs of live orders?
-        //  How to manage the very first Order / Position?
-        //  The application should generate internal ID's before the first order is placed,
-        //  Like this, it knows for which ID's it should listen. When at least one ID 
-        //  matches && the status = 'Filled', next action is to be generated and executed
-        //  by the caller.
-        //  Extra check to be performed to see if there are any open orders or positions 
-        //  on the Exchange that are not in sync with what is know in the application.
-
         /// <summary>
         /// This method initiates the calculator with an initial position. Therefore it can 
         /// only be used when CurrentStatus == ZoneRecoveryStatus.Init.
         /// </summary>
         /// <param name="startPosition">The first position taken for this instance of the calculator.</param>
         /// <returns></returns>
-        public List<ZoneRecoveryAction> EvaluateResponse(PositionResponse startPosition)
+        public List<ZoneRecoveryAction> EvaluatePosition(PositionResponse startPosition)
         {
             // Create a variable used for locking.
             bool acquiredLock = false;
@@ -385,12 +393,11 @@ namespace PStrategies.ZoneRecovery
                     {
                         // Set the unit size to the size of the very first position taken.
                         UnitSize = Math.Abs(startPosition.CurrentQty);
-
+                        
                         // Initialize internal positions.
-                        if (startPosition.CurrentQty > 0)
-                            LongPosition = startPosition;
-                        else
-                            ShortPosition = startPosition;
+                        var pos = new List<PositionResponse>();
+                        pos.Add(startPosition);
+                        SetPositions(pos);
 
                         // Turn the wheel of internal calculation variables
                         this.TakeStepForward();
@@ -426,6 +433,9 @@ namespace PStrategies.ZoneRecovery
         /// at which the volume (3) could get filled was 1025$. Rather than average calculating the next reverse price this step 
         /// calculator will stick to the original plan and try to keep buying at 1000$ and keep selling at 950$.
         /// OpenPositions.Single(s => s.PositionIndex == 1).AVGPrice returns the initial reference price (= price of first position)
+        /// REMARK: This function does not validate the current position. It assumes the next action based on 2 internal variables:
+        /// 1. CurrentStatus
+        /// 2. CurrentZRPosition
         /// </summary>
         /// <returns>ZoneRecoveryAction</returns>
         public List<ZoneRecoveryAction> GetNextAction()
@@ -434,28 +444,40 @@ namespace PStrategies.ZoneRecovery
             // Close the irrelevant open orders
             // Create 3 actions:
             //  1. TP: Close current direction
-            //  2. TP: Close previous direction
+            //  2. TL: Close previous direction
             //  3. REV: Add to current direction
 
-            ZoneRecoveryAction zra = new ZoneRecoveryAction(OpenPositions.Count + 1);
+            //LongPosition;
+            //ShortPosition;
+            //List<ZoneRecoveryAction> instructionList = new List<ZoneRecoveryAction>();
+            //LastInstructionList
+
+            // Determine next Action based on 
+            //  CurrentStatus
+            //  CurrentZRPosition
+
 
             if (CurrentStatus == ZoneRecoveryStatus.Winding)
             {
-                if (CurrentZRPosition > 0)
+                if (CurrentZRPosition < MaxDepthIndex)
                 {
-                    // Calculate the next take profit price
-                    zra.TPPrice = CalculateTakeProfitPrice();
-                    zra.TPVolumeSell = CalculateOpenQtyForDirection(1);
-                    zra.TPVolumeBuy = CalculateOpenQtyForDirection(-1);
 
-                    // Calculate the next reverse price
-                    zra.ReverseVolume = UnitSize * FactorArray[OpenPositions.Count];
-                    zra.ReversePrice = CalculateNextReversePrice();
-                    return zra;
                 }
-                else
-                    // Happens when no initial position has been taken
-                    return null;
+
+
+                ZoneRecoveryAction zraLong = new ZoneRecoveryAction(AccountLong, , );
+                ZoneRecoveryAction zraShort = new ZoneRecoveryAction(AccountShort);
+
+                // Calculate the next take profit price
+                zra.TPPrice = CalculateTakeProfitPrice();
+                zra.TPVolumeSell = CalculateOpenQtyForDirection(1);
+                zra.TPVolumeBuy = CalculateOpenQtyForDirection(-1);
+
+                // Calculate the next reverse price
+                zra.ReverseVolume = UnitSize * FactorArray[OpenPositions.Count];
+                zra.ReversePrice = CalculateNextReversePrice();
+                return zra;
+                
             }
             else if (CurrentStatus == ZoneRecoveryStatus.Unwinding) // Unwinding
             {
@@ -474,72 +496,73 @@ namespace PStrategies.ZoneRecovery
         }
 
         /// <summary>
-        /// SetNewPosition should be called when a new position is taken on the exchange. The Zone Recovery
-        /// strategy proceeds one step in its logic. The List of OrderResponses passed should be the 
-        /// OrderResponses returned for one specific order.
-        /// Example:
-        ///     MaxDepthIndex = 4
-        ///     CurrentZRPosition >  0   1   2   3   4   3   2   1   0   X
-        ///     Position L/S      >  -   L   S   L   S   L4  S3  L2  S1  X
-        ///     (Un)Winding       >  W   W   W   W   U   U   U   U   U   X
         /// 
-        /// When the TP is reached at the exchange, a new position should not be set. The current Calculator 
-        /// instance should be disposed.
-        /// 
-        /// TODO: Check how WebSocket returns updates on resting orders. This function makes the assumption 
-        /// that a list of OrderResponses is returned.
-        /// Turning the wheel, advance one step further in the ZR winding process...
         /// </summary>
-        /// <param name="orderResp">The OrderResponse object returned by the Exchange.</param>
-        public List<ZoneRecoveryAction> EvaluateResponse(OrderResponse orderRespLong, OrderResponse orderRespShort)
+        /// <param name="currentPositions">A list with the positions of both accounts.</param>
+        public List<ZoneRecoveryAction> EvaluatePosition(List<PositionResponse> currentPositions)
         {
-            bool acquiredLock = false;
-            try
+            bool l = currentPositions.Single(p => p.Account == AccountLong).CurrentQty == LongPosition.CurrentQty;
+            bool s = currentPositions.Single(p => p.Account == AccountShort).CurrentQty == ShortPosition.CurrentQty;
+
+            // Check if the CurrentQty changed on the exchange compared to what is know in the application...
+            if (!l || !s)
             {
-                Monitor.TryEnter(_Lock, 0, ref acquiredLock);
-                if (acquiredLock) // && !CheckClOrdIdExists(orderResp.ClOrdId)
+                bool acquiredLock = false;
+                try
                 {
-
-                    if (orderRespLong.OrdStatus.Equals("Filled") || orderRespShort.OrdStatus.Equals("Filled"))
+                    Monitor.TryEnter(_Lock, 0, ref acquiredLock);
+                    if (acquiredLock)
                     {
 
+                        // TODO: log result both positions
+
+                        if (currentPositions.Single(p => p.Account == AccountLong).CurrentQty == 0 && 
+                            currentPositions.Single(p => p.Account == AccountShort).CurrentQty == 0)
+                        {
+                            // TP was reached and both positions were closed.
+                            // CLOSE all open orders that might be a result of this instance of the Calculator
+                            // RESET this instance of the Calculator
+
+                            // CurrentZRPosition
+                        }
+                        else if (CurrentStatus == ZoneRecoveryStatus.Winding)
+                        {
+                            
+                            
+                            // Turn the wheel of internal calculation variables
+                            this.TakeStepForward(currentPositions);
+
+                        }
+                        else if (CurrentStatus == ZoneRecoveryStatus.Unwinding)
+                        {
+
+                            // Turn the wheel of internal calculation variables
+                            this.TakeStepForward(currentPositions);
+                        }
+                        else
+                        {
+
+                        }
                     }
-                    else if (orderResp.OrdStatus.Equals("New"))
-                    {
-
-                    }
-
-                    
-
-                    // The critical section.
-                    int elementID = OpenPositions.Count + 1;
-
-                    // Add the new position to the OpenPositions List
-                    OpenPositions.Add(new ZoneRecoveryPosition(orderResp.ClOrdId, orderResp.Account, this.PipSize, elementID, orderResp.AvgPx, orderResp.OrderQty));
-
-                    // Turn the wheel of internal calculation variables
-                    this.TakeStepForward();
-
-                    //isPositionSet = true;
-
-                    // TODO: The controlling application should call GetNextAction() next.
-                    // IDEA: Let this function already return the next action.
                 }
-            }
-            finally
-            {
-                // Ensure that the lock is released.
+                finally
+                {
+                    // Ensure that the lock is released.
+                    if (acquiredLock)
+                    {
+                        // Exit the lock
+                        Monitor.Exit(_Lock);
+                    }
+                }
+
                 if (acquiredLock)
-                {
-                    // Exit the lock
-                    Monitor.Exit(_Lock);
-                }
+                    return this.GetNextAction();
+                else
+                    return null;
             }
-
-            if (acquiredLock)
-                return this.GetNextAction();
             else
                 return null;
+
         }
 
         
@@ -629,4 +652,24 @@ If it hits 10,100 then you will take your ~1% profit and position will close. Th
 If it hits 9900, then you wlll realize your ~1% loss and position will close. The limit sell order will still be open, but will not execute even if it hits 1100 because "Reduce Only" prevents it from opening a new position
 For Short, do the opposite.
 Is that the right way to do it?
+
+        /// <summary>
+        /// SetNewPosition should be called when a new position is taken on the exchange. The Zone Recovery
+        /// strategy proceeds one step in its logic. The List of OrderResponses passed should be the 
+        /// OrderResponses returned for one specific order.
+        /// Example:
+        ///     MaxDepthIndex = 4
+        ///     CurrentZRPosition >  0   1   2   3   4   3   2   1   0   X
+        ///     Position L/S      >  -   L   S   L   S   L4  S3  L2  S1  X
+        ///     (Un)Winding       >  I   W   W   W   U   U   U   U   U   X
+        /// 
+        /// When the TP is reached at the exchange, a new position should not be set. The current Calculator 
+        /// instance should be disposed.
+        /// 
+        /// TODO: Check how WebSocket returns updates on resting orders. This function makes the assumption 
+        /// that a list of OrderResponses is returned.
+        /// Turning the wheel, advance one step further in the ZR winding process...
+        /// </summary>
+   
+orderResp.OrdStatus.Equals("New")
  */
