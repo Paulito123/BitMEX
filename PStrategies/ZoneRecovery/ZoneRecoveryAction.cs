@@ -1,11 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace PStrategies.ZoneRecovery
+﻿namespace PStrategies.ZoneRecovery
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Linq;
+    using System.Text;
+    using System.Threading.Tasks;
+
     /// <summary>
     /// ZoneRecoveryAction class serves merely the purpose of transporting all the parameters needed for creating the orders in the
     /// application that uses this library. It contains all the instructions for the next move.

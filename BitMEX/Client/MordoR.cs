@@ -4,7 +4,7 @@ using System;
 using System.Collections.Generic;
 //using System.Globalization;
 using System.IO;
-//using System.Linq;
+using System.Linq;
 using System.Net;
 using System.Security.Cryptography;
 using System.Text;
@@ -16,40 +16,92 @@ namespace BitMEX.Client
 {
     public class MordoR
     {
-        private string domain = "https://testnet.bitmex.com";
-        private string apiKey;
-        private string apiSecret;
-        ILog log;
 
-        public MordoR(ILog l = null,
-                      string bitmexKey = "rTAFXRKn2dLARuG_t1dDOtgI", 
+        #region Variables
+
+        private string  Domain = "https://testnet.bitmex.com";
+        private string  ApiKey;
+        private string  ApiSecret;
+        public long Account { get; }
+        //ILog            log;
+
+        #endregion End variables
+
+        #region Constructor
+
+        public MordoR(string bitmexKey = "rTAFXRKn2dLARuG_t1dDOtgI", 
                       string bitmexSecret = "K2LmL6aTbj8eW_LVj7OLa7iA6eZa8TJMllh3sjCynV4fpnMr", 
-                      string bitmexDomain = "https://testnet.bitmex.com")
+                      string bitmexDomain = "https://testnet.bitmex.com",
+                      ILog l = null)
         {
-            this.apiKey = bitmexKey;
-            this.apiSecret = bitmexSecret;
-            this.domain = bitmexDomain;
+            this.ApiKey = bitmexKey;
+            this.ApiSecret = bitmexSecret;
+            this.Domain = bitmexDomain;
+            this.Account = GetAccount();
 
-            if (l == null)
-            {
-                log4net.Config.XmlConfigurator.Configure();
-                log = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
-            }
-            else
-                log = l;
+            //if (l == null)
+            //{
+            //    log4net.Config.XmlConfigurator.Configure();
+            //    log = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+            //}
+            //else
+            //    log = l;
 
-            log.Info(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType + " instantiated.");
+            //log.Info(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType + " instantiated.");
         }
 
+        #endregion Constructor
+
+        #region JSON - Helpers
+
+        /// <summary>
+        /// Build a JSON object, encapsulated by {}
+        /// </summary>
+        /// <param name="param">Dictionary of parameters</param>
+        /// <returns>an encapsulated list of parameters</returns>
+        private string BuildJSONParamList(Dictionary<string, string> param)
+        {
+            if (param == null)
+                return "";
+
+            var entries = new List<string>();
+            foreach (var item in param)
+                entries.Add(string.Format("\"{0}\":\"{1}\"", item.Key, item.Value));
+
+            return "{" + string.Join(",", entries) + "}";
+        }
+
+        /// <summary>
+        /// Transforms an array of elements into a JSON array. 
+        /// Example: Builds the ["XBTUSD","ADAZ19"] part in {"symbol":["XBTUSD","ADAZ19"]} from an array with values XBTUSD,ADAZ19.
+        /// </summary>
+        /// <param name="strArray">An array of elements</param>
+        /// <returns>A JSON array composed of the elements in strArray</returns>
+        private string BuildJSONArray(string[] strArray)
+        {
+            if (strArray != null && strArray.GetUpperBound(0) <= 0)
+                return "";
+
+            var entries = new List<string>();
+            foreach (var item in strArray)
+                entries.Add(string.Format("\"0\"", item.ToString()));
+
+            return "[" + string.Join(",", entries) + "]";
+        }
+
+        #endregion JSON - Helpers
+
         #region API Connector - Helpers
+
         /// <summary>
         /// 
         /// Example for filter "filter": {"timestamp.time":"12:00", "timestamp.ww":6}
+        /// {"symbol":["XBTUSD","ADAZ19"]}
         /// </summary>
         /// <param name="param"></param>
         /// <param name="depth"></param>
         /// <returns></returns>
-        private string BuildQueryData(Dictionary<string, string> param, string filter = null)
+        private string BuildJSONParamListWithFilter(Dictionary<string, string> param, string filterJSONClause = null)
         {
             if (param == null)
                 return "";
@@ -58,59 +110,17 @@ namespace BitMEX.Client
             foreach (var item in param)
                 b.Append(string.Format("&{0}={1}", item.Key, WebUtility.UrlEncode(item.Value)));
 
-            if (!String.IsNullOrEmpty(filter))
-                b.Append(string.Format("&{0}={1}", "filter", WebUtility.UrlEncode(filter)));
+            if (!String.IsNullOrEmpty(filterJSONClause))
+                b.Append(string.Format("&{0}={1}", "filter", WebUtility.UrlEncode(filterJSONClause)));
 
             try { return b.ToString().Substring(1); }
             catch (Exception e)
             {
-                log.Error(e.Message);
+                //log.Error(e.Message);
                 return e.Message;
             }
         }
-
-        ///// <summary>
-        ///// ***Currently not used***
-        ///// Should create output like: "{\"clOrdID\":\"" + ClOrdId + "\",\"ordStatus\":\"Filled\"}"
-        ///// </summary>
-        ///// <param name="mainKey"></param>
-        ///// <param name="param"></param>
-        ///// <returns></returns>
-        //private static string CreateSubHierarchy(Dictionary<string, string> param)
-        //{
-        //    if (param == null)
-        //        return "";
-
-        //    StringBuilder b = new StringBuilder();
-        //    b.Append("{");
-
-        //    foreach (var item in param)
-        //    {
-        //        if (item.Value is string s)
-        //            b.AppendFormat("{\"{0}\":\"{1}\"", item.Key, WebUtility.UrlEncode(s));
-        //        else 
-        //            return null;
-        //    }
-
-        //    //Remove the last character'
-        //    b.Length--;
-        //    b.Append("}");
-            
-        //    return b.ToString();
-        //}
-
-        private string BuildJSON(Dictionary<string, string> param)
-        {
-            if (param == null)
-                return "";
-
-            var entries = new List<string>();
-            foreach (var item in param)
-                entries.Add(string.Format("\"{0}\":\"{1}\"", item.Key, item.Value));
-            
-            return "{" + string.Join(",", entries) + "}";
-        }
-
+        
         public static string ByteArrayToString(byte[] ba)
         {
             StringBuilder hex = new StringBuilder(ba.Length * 2);
@@ -157,22 +167,22 @@ namespace BitMEX.Client
         private ApiResponse Query(string method, string function, bool refreshLimitInfo = false, Dictionary<string, string> param = null, bool auth = false, bool json = false, string filter = null)
         {
             string f = (String.IsNullOrEmpty(filter)) ? "" : filter;
-            string paramData = json ? BuildJSON(param) : BuildQueryData(param, f);
+            string paramData = json ? BuildJSONParamList(param) : BuildJSONParamListWithFilter(param, f);
             string url = "/api/v1" + function + ((method == "GET" && paramData != "") ? "?" + paramData : "");
             string postData = (method != "GET") ? paramData : "";
 
-            HttpWebRequest webRequest = (HttpWebRequest)WebRequest.Create(domain + url);
+            HttpWebRequest webRequest = (HttpWebRequest)WebRequest.Create(Domain + url);
             webRequest.Method = method;
 
             if (auth)
             {
                 string expires = GetExpires().ToString();
                 string message = method + url + expires + postData;
-                byte[] signatureBytes = hmacsha256(Encoding.UTF8.GetBytes(apiSecret), Encoding.UTF8.GetBytes(message));
+                byte[] signatureBytes = hmacsha256(Encoding.UTF8.GetBytes(ApiSecret), Encoding.UTF8.GetBytes(message));
                 string signatureString = ByteArrayToString(signatureBytes);
 
                 webRequest.Headers.Add("api-expires", expires);
-                webRequest.Headers.Add("api-key", apiKey);
+                webRequest.Headers.Add("api-key", ApiKey);
                 webRequest.Headers.Add("api-signature", signatureString);
             }
 
@@ -198,7 +208,7 @@ namespace BitMEX.Client
                     respHeadr.Add("status", webResponse.GetResponseHeader("status"));
 
                     //return sr.ReadToEnd();
-                    return new ApiResponse((int)webResponse.StatusCode, respHeadr, sr.ReadToEnd(), log, webResponse.ResponseUri);
+                    return new ApiResponse((int)webResponse.StatusCode, respHeadr, sr.ReadToEnd(), null, webResponse.ResponseUri);
                 }
             }
             catch (WebException wex)
@@ -206,7 +216,7 @@ namespace BitMEX.Client
                 using (HttpWebResponse webResponse = (HttpWebResponse)wex.Response)
                 {
                     if (webResponse == null)
-                        return new ApiResponse(400, new Dictionary<string, string>(), "{ \"error\": { \"message\": \"WebResponse is NULL\", \"name\": \"NullWebResponse\" } }", log);
+                        return new ApiResponse(400, new Dictionary<string, string>(), "{ \"error\": { \"message\": \"WebResponse is NULL\", \"name\": \"NullWebResponse\" } }");
 
                     using (Stream str = webResponse.GetResponseStream())
                     using (StreamReader sr = new StreamReader(str))
@@ -215,59 +225,18 @@ namespace BitMEX.Client
                         //respHeadr.Add("content-type", webResponse.GetResponseHeader("content-type"));
                         //respHeadr.Add("status", webResponse.GetResponseHeader("status"));
 
-                        return new ApiResponse((int)webResponse.StatusCode, respHeadr, sr.ReadToEnd(), log, webResponse.ResponseUri);
+                        return new ApiResponse((int)webResponse.StatusCode, respHeadr, sr.ReadToEnd(), null, webResponse.ResponseUri);
                     }
                 }
             }
             catch (Exception exc)
             {
-                return new ApiResponse(400, new Dictionary<string, string>(), "{ \"error\": { \"message\": \"" + exc.ToString() + "\", \"name\": \"BadWebResponse\" } }", log);
+                return new ApiResponse(400, new Dictionary<string, string>(), "{ \"error\": { \"message\": \"" + exc.ToString() + "\", \"name\": \"BadWebResponse\" } }");
             }
         }
         
         #endregion
-
-        /* XXXX GENERAL INFO XXXX
-         * Symbol:      The symbol for which an order is placed e.g. XBTUSD
-         * < orderQty >   Number of contracts to trade e.g. 10
-         * < price >      Optional limit price for 'Limit', 'StopLimit', and 'LimitIfTouched' orders.
-         * < OrderType >  The order types > Market ¦ Limit ¦ Stop ¦ StopLimit ¦ MarketIfTouched ¦ LimitIfTouched ¦ Pegged
-         * < execInst >
-         * Optional execution instructions. Valid options: 
-         * - ParticipateDoNotInitiate: Post-only orders. Puts a volume in the orderbook only if it is not immediately executed.
-         *      Possible with Limit Order, Stop Limit Order or Take Profit Limit Order
-         * - AllOrNone 
-         * - MarkPrice 
-         * - IndexPrice 
-         * - LastPrice 
-         * - Close: 
-         * - ReduceOnly 
-         * - Fixed. 
-         * 'AllOrNone' instruction requires displayQty to be 0. 
-         * 'MarkPrice', 'IndexPrice' or 'LastPrice' instruction 
-         * valid for 'Stop', 'StopLimit', 'MarketIfTouched', and 'LimitIfTouched' 
-         * orders.
-         * 
-         * Defaults to 'Limit' when price is specified. 
-         * Defaults to 'Stop' when stopPx is specified. 
-         * Defaults to 'StopLimit' when price and stopPx are specified.
-         * 
-         * Orders:
-         *      Market
-         *      Limit
-         *      Stop
-         *      StopLimit
-         *      MarketIfTouched
-         *      LimitIfTouched
-         *      Pegged
-         *      
-         * XXXX stopPx XXXX
-         * Optional trigger price for 'Stop', 'StopLimit', 'MarketIfTouched', and 'LimitIfTouched' orders. Use a price below 
-         * the current price for stop-sell orders and buy-if-touched orders. Use execInst of 'MarkPrice' or 'LastPrice' to 
-         * define the current price used for triggering.
-         param["stopPx"] = "";
-         */
-
+        
         #region GET /order
 
         /// <summary>
@@ -296,12 +265,52 @@ namespace BitMEX.Client
         /// </summary>
         /// <param name="ClOrdId">The client side order ID used for the search.</param>
         /// <returns></returns>
-        public object GetFilledOrdersForId(string ClOrdId)
+        public object GetFilledOrderForId(string ClOrdId)
         {
             string filter = "{\"clOrdID\":\"" + ClOrdId + "\",\"ordStatus\":\"Filled\"}";
             var param = new Dictionary<string, string>();
             param["reverse"] = true.ToString();
             ApiResponse res = Query("GET", "/order", false, param, true, false, filter);
+
+            // Deserialize JSON result
+            return res.ApiResponseProcessor();
+        }
+
+        /// <summary>
+        /// Get a list of OrderResponses out of a comma separated list of IDs.
+        /// </summary>
+        /// <param name="CSID">Comma separated list of ClOrdIds</param>
+        /// <returns>List<OrderResponse></returns>
+        public object GetOrdersForCSId(string CSID)
+        {
+            string filter = "";
+
+            if (CSID.Count(f => f == ',') == 0)
+                filter = "{\"clOrdID\":\"" + CSID + "\"}";
+            else
+                filter = "{\"clOrdID\":[\"" + CSID.Replace(",","\",\"") + "\"]}";
+            
+            var param = new Dictionary<string, string>();
+            param["reverse"] = true.ToString();
+            ApiResponse res = Query("GET", "/order", false, param, true, false, filter);
+
+            // Deserialize JSON result
+            return res.ApiResponseProcessor();
+        }
+
+        /// <summary>
+        /// Get a list of OrderResponse objects for the ID's passed as arguments.
+        /// </summary>
+        /// <param name="symbol">The symbol</param>
+        /// <param name="clOrdIDs">A list of order ids to fetch on the server</param>
+        /// <returns>A list of OrderResponse objects</returns>
+        public object GetOrderByID(string symbol, string[] clOrdIDs)
+        {
+            var param = new Dictionary<string, string>();
+            param["symbol"] = symbol;
+            param["clOrdID"] = (clOrdIDs.GetUpperBound(0) > 0) ? BuildJSONArray(clOrdIDs) : clOrdIDs[0];
+            
+            ApiResponse res = Query("GET", "/order", false, param, true);
 
             // Deserialize JSON result
             return res.ApiResponseProcessor();
@@ -508,10 +517,70 @@ namespace BitMEX.Client
 
         #endregion
 
-        #region /user/wallet
+        #region /position
+
+        /// <summary>
+        /// Returns the account for this MordoR instance.
+        /// </summary>
+        /// <returns>Account number</returns>
+        private long GetAccount()
+        {
+            var a = new string[] { "XBTUSD" };
+            List<PositionResponse> lijst = (List<PositionResponse>)GetPositionsForSymbols(a);
+
+            if (lijst != null)
+                return lijst[1].Account;
+            else
+                return 0;
+        }
+
+        /// <summary>
+        /// Get the current positions on the exchange for one or more symbols
+        /// </summary>
+        /// <param name="symbol">An array of symbol for whic the position needs to be returned</param>
+        /// <returns>A list of PositionResponse objects, List<PositionResponse></returns>
+        public object GetPositionsForSymbols(string[] symbol)
+        {
+            string filter;
+
+            if (symbol.GetUpperBound(0) <= 0)
+                return null;
+            else if (symbol.GetUpperBound(0) == 1)
+                filter = "{\"symbol\": \"" + symbol + "\"}";
+            else
+                filter = "{\"symbol\":" + BuildJSONArray(symbol) + "}";
+
+            ApiResponse res = Query("GET", "/position", false, null, true, false, filter);
+
+            // Deserialize JSON result
+            return res.ApiResponseProcessor();
+        }
+
+        /// <summary>
+        /// Set the leverage for a symbols position.
+        /// Value of leverage must be an unsigned long between 0.01 and 100. 
+        /// Send 0 to enable cross margin.
+        /// </summary>
+        /// <param name="symbol">Symbol for which the leverage needs to be set.</param>
+        /// <param name="leverage">The value of the leverage to be set.</param>
+        /// <returns></returns>
+        public object SetPositionLeverage(string symbol, double leverage)
+        {
+            var param = new Dictionary<string, string>();
+            param["symbol"] = symbol;
+            param["leverage"] = leverage.ToString();
+            ApiResponse res = Query("PUT", "/position/leverage", false, param, true);
+            return res.ApiResponseProcessor();
+        }
 
         #endregion
-         
+
+        #region /user/wallet
+
+
+
+        #endregion
+
         #region /funding
 
         #endregion
@@ -531,11 +600,52 @@ namespace BitMEX.Client
         /// The idea is to test the logger from outside MordoR...
         /// </summary>
         /// <param name="message">Message to be logged.</param>
-        public void LogInfoMessage(string message)
-        {
-            log.Info(message);
-        }
+        //public void LogInfoMessage(string message)
+        //{
+        //    log.Info(message);
+        //}
         
         #endregion
     }
 }
+
+        /* XXXX GENERAL INFO XXXX
+         * Symbol:      The symbol for which an order is placed e.g. XBTUSD
+         * < orderQty >   Number of contracts to trade e.g. 10
+         * < price >      Optional limit price for 'Limit', 'StopLimit', and 'LimitIfTouched' orders.
+         * < OrderType >  The order types > Market ¦ Limit ¦ Stop ¦ StopLimit ¦ MarketIfTouched ¦ LimitIfTouched ¦ Pegged
+         * < execInst >
+         * Optional execution instructions. Valid options: 
+         * - ParticipateDoNotInitiate: Post-only orders. Puts a volume in the orderbook only if it is not immediately executed.
+         *      Possible with Limit Order, Stop Limit Order or Take Profit Limit Order
+         * - AllOrNone 
+         * - MarkPrice 
+         * - IndexPrice 
+         * - LastPrice 
+         * - Close: 
+         * - ReduceOnly 
+         * - Fixed. 
+         * 'AllOrNone' instruction requires displayQty to be 0. 
+         * 'MarkPrice', 'IndexPrice' or 'LastPrice' instruction 
+         * valid for 'Stop', 'StopLimit', 'MarketIfTouched', and 'LimitIfTouched' 
+         * orders.
+         * 
+         * Defaults to 'Limit' when price is specified. 
+         * Defaults to 'Stop' when stopPx is specified. 
+         * Defaults to 'StopLimit' when price and stopPx are specified.
+         * 
+         * Orders:
+         *      Market
+         *      Limit
+         *      Stop
+         *      StopLimit
+         *      MarketIfTouched
+         *      LimitIfTouched
+         *      Pegged
+         *      
+         * XXXX stopPx XXXX
+         * Optional trigger price for 'Stop', 'StopLimit', 'MarketIfTouched', and 'LimitIfTouched' orders. Use a price below 
+         * the current price for stop-sell orders and buy-if-touched orders. Use execInst of 'MarkPrice' or 'LastPrice' to 
+         * define the current price used for triggering.
+         param["stopPx"] = "";
+         */

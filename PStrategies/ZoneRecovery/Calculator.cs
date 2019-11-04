@@ -1,13 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-using BitMEX.Model;
-using BitMEX.Client;
-
-namespace PStrategies.ZoneRecovery
+﻿namespace PStrategies.ZoneRecovery
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Linq;
+    using System.Threading;
+    using System.Threading.Tasks;
+    using BitMEX.Model;
+    using BitMEX.Client;
+
     public class Calculator
     {
         #region Private variables
@@ -21,7 +21,17 @@ namespace PStrategies.ZoneRecovery
         /// The minimum unit size of each order. The result of the UnitSize multiplied by a value of the FactorArray 
         /// results in the quantity of a respective order.
         /// </summary>
-        private double UnitSize;
+        private double UnitSize { get; set; }
+
+        /// <summary>
+        /// The last timestamp the server was queried.
+        /// </summary>
+        private DateTime NextServerReleaseDateTime;
+
+        /// <summary>
+        /// Minimum number of miliseconds between 2 server queries
+        /// </summary>
+        private long ServerQueryTimeInterval { get; set; } = 1500;
 
         /// <summary>
         /// Reflects how deep inside the FactorArray, this instance of the Calculator class, is allowed to go.
@@ -29,14 +39,14 @@ namespace PStrategies.ZoneRecovery
         private int MaxDepthIndex { get; }
 
         /// <summary>
-        /// The account number of the account used for LONG positions.
+        /// Connection used for all long positions
         /// </summary>
-        private long AccountLong;
+        private MordoR ExchConnLong;
 
         /// <summary>
-        /// The account number of the account used for SHORT positions.
+        /// Connection used for all short positions
         /// </summary>
-        private long AccountShort;
+        private MordoR ExchConnShort;
 
         /// <summary>
         /// The last known long position.
@@ -47,6 +57,10 @@ namespace PStrategies.ZoneRecovery
         /// The last known short position.
         /// </summary>
         private PositionResponse ShortPosition;
+
+        //private List<ZoneRecoveryOrder> LongOrders;
+        //private List<ZoneRecoveryOrder> ShortOrders;
+        private List<ZoneRecoveryOrder> Orders;
 
         /// <summary>
         /// An enumeration used for expressing in which part of the Zone Recovery algorithm the class is at a given moment.
@@ -108,13 +122,12 @@ namespace PStrategies.ZoneRecovery
         /// When CurrentZRPosition = MaxDepthIndex > ZoneRecoveryStatus is switched and winding process reversed
         /// </summary>
         private int CurrentZRPosition;
-        
+
         #endregion Private variables
 
         #region Constructor(s)
         /// <summary>
         /// Initializes the Zone Recovery Calculator.
-        /// 
         /// </summary>
         /// <param name="maxExposure">Percentage of the maximum market exposure when completely wound</param>
         /// <param name="totalBalance">Most recent total balance</param>
@@ -123,12 +136,14 @@ namespace PStrategies.ZoneRecovery
         /// <param name="maxDepthIndex">Maximum dept allowed in the Zone Recovery system</param>
         /// <param name="zoneSize">The size of the zone in nr of pips</param>
         /// <param name="minPrftPerc">Minimum required profit margin</param>
+        /// <param name="connLong">A MordoR connection configured for the Long account</param>
+        /// <param name="connShort">A MordoR connection configured for the Short account</param>
         public Calculator(double maxExposurePerc, double totalBalance, double leverage, double pipSize, int maxDepthIndex, int zoneSize, double minPrftPerc
-                          , PositionResponse longPos, PositionResponse shortPos, long accountLong, long accountShort)
+                          , MordoR connLong, MordoR connShort)
         {
             // Initialize main variables
-            AccountLong = accountLong;
-            AccountShort = accountShort;
+            ExchConnLong = connLong;
+            ExchConnShort = connShort;
             MaxExposurePerc = maxExposurePerc;
             TotalBalance = totalBalance;
             Leverage = leverage;
@@ -136,8 +151,6 @@ namespace PStrategies.ZoneRecovery
             MaxDepthIndex = maxDepthIndex;
             ZoneSize = zoneSize;
             MinimumProfitPercentage = minPrftPerc;
-            LongPosition = longPos;
-            ShortPosition = shortPos;
 
             // Initialize calculation variables
             InitializeCalculator();
@@ -152,9 +165,14 @@ namespace PStrategies.ZoneRecovery
         private void InitializeCalculator()
         {
             CurrentStatus = ZoneRecoveryStatus.Init;
-            //OpenOrders = new List<OrderResponse>();
+            
+            SyncPositionsForSymbol("XBTUSD");
+
             CurrentZRPosition = 0;
-            //TradeIndex = 0;
+
+            //LongOrders = new List<ZoneRecoveryOrder>();
+            //ShortOrders = new List<ZoneRecoveryOrder>();
+            Orders = new List<ZoneRecoveryOrder>();
         }
 
         /// <summary>
@@ -196,10 +214,6 @@ namespace PStrategies.ZoneRecovery
             {
                 CurrentZRPosition++;
 
-                // Set the new value for the internal positions
-                if(pos != null)
-                    SetPositions(pos);
-
                 // Zone Recovery logic is reversed
                 if (CurrentZRPosition == MaxDepthIndex)
                     CurrentStatus = ZoneRecoveryStatus.Unwinding;
@@ -207,11 +221,7 @@ namespace PStrategies.ZoneRecovery
             else if (CurrentStatus == ZoneRecoveryStatus.Unwinding)
             {
                 CurrentZRPosition--;
-
-                // Set the new value for the internal positions
-                if (pos != null)
-                    SetPositions(pos);
-
+                
                 // Reset the calculator
                 if (CurrentZRPosition == 0)
                     InitializeCalculator();
@@ -333,21 +343,130 @@ namespace PStrategies.ZoneRecovery
 
         /// <summary>
         /// Set the internal position from a list of positions. 
-        /// Make sure every account in the list is unique. It will return the first occurrance.
+        /// Make sure every account in the list is unique. The first occurrance of an account 
+        /// is used to set the internal position(s).
         /// </summary>
         /// <param name="pos">A list of position responses.</param>
-        private void SetPositions(List<PositionResponse> pos)
-        {
-            if(pos.First(p => p.Account == AccountLong) != null)
-                this.LongPosition = pos.First(p => p.Account == AccountLong);
+        //private void SetPositions(List<PositionResponse> pos)
+        //{
+        //    if(pos.First(p => p.Account == ExchConnLong.Account) != null)
+        //        this.LongPosition = pos.First(p => p.Account == ExchConnLong.Account);
 
-            if (pos.First(p => p.Account == AccountShort) != null)
-                this.ShortPosition = pos.First(p => p.Account == AccountShort);
+        //    if (pos.First(p => p.Account == ExchConnShort.Account) != null)
+        //        this.ShortPosition = pos.First(p => p.Account == ExchConnShort.Account);
+        //}
+
+        /// <summary>
+        /// Sync the positions known by the application with the positions know on the server.
+        /// </summary>
+        private bool SyncPositionsForSymbol(string symbol)
+        {
+            bool inSync = true;
+            try
+            {
+                List<PositionResponse> lp = (List<PositionResponse>)ExchConnLong.GetPositionsForSymbols(new string[] { symbol });
+                LongPosition = lp[1];
+                List<PositionResponse> sp = (List<PositionResponse>)ExchConnShort.GetPositionsForSymbols(new string[] { symbol });
+                ShortPosition = sp[1];
+            }
+            catch (Exception e)
+            {
+                inSync = false;
+            }
+            return inSync;
         }
 
         #endregion Private methods
 
         #region Public methods
+
+        public List<ZoneRecoveryAction> Evaluate()
+        {
+            // Check if server can be queried
+            if (DateTime.Now >= NextServerReleaseDateTime)
+            {
+                // Create a variable used for locking.
+                bool acquiredLock = false;
+
+                //List<ZoneRecoveryAction> outputList = new List<ZoneRecoveryAction>();
+
+                try
+                {
+                    // Try enter the lock.
+                    Monitor.TryEnter(_Lock, 0, ref acquiredLock);
+
+                    // Test if entering the lock was successful.
+                    if (acquiredLock)
+                    {
+                        
+                        if(Orders.Count > 0)
+                        {
+                            bool eureka = false;
+                            var s = string.Join(",", Orders.Select(p => p.ClOrdId));
+                            List<OrderResponse> LongOrdersServer = (List<OrderResponse>)ExchConnLong.GetOrdersForCSId(s);
+                            List<OrderResponse> ShortOrdersServer = (List<OrderResponse>)ExchConnShort.GetOrdersForCSId(s);
+
+                            if(LongOrdersServer.Where(n => n.OrdStatus == "Filled").Count() > 0 || ShortOrdersServer.Where(n => n.OrdStatus == "Filled").Count() > 0)
+                                eureka = true;
+
+                            switch (LongOrdersServer.Where(n => n.OrdStatus == "Filled").Count()) {
+                                case 1:
+                                    
+                                    // Handle shit for the long account, if needed.
+                                    // Prepare the next action.
+                                    break;
+                                case 0:
+                                    // Exit
+                                    break;
+                                default:
+                                    // Throw error
+                                    break;
+                            }
+
+                            switch (ShortOrdersServer.Where(n => n.OrdStatus == "Filled").Count())
+                            {
+                                case 1:
+                                    
+                                    // Handle shit for the short account, if needed.
+                                    // Prepare the next action.
+                                    break;
+                                case 0:
+                                    // Exit
+                                    break;
+                                default:
+                                    // Throw error
+                                    break;
+                            }
+                            
+                        }
+
+                        
+
+                    }
+                }
+                finally
+                {
+                    // Ensure that the lock is released.
+                    if (acquiredLock)
+                    {
+                        // Reset server query timer
+                        DateTime dt = DateTime.Now;
+                        NextServerReleaseDateTime = dt.AddMilliseconds(ServerQueryTimeInterval);
+                        
+                        // Exit the lock
+                        Monitor.Exit(_Lock);
+                    }
+                }
+
+                if (acquiredLock)
+                    return this.GetNextAction();
+                else
+                    return null;
+            }
+            else return null;
+
+            
+        }
 
         /// <summary>
         /// For a given reference price, Balance, MaxExposurePerc and Leverage, this function returns the calculated maximum unit size. 
@@ -394,10 +513,10 @@ namespace PStrategies.ZoneRecovery
                         // Set the unit size to the size of the very first position taken.
                         UnitSize = Math.Abs(startPosition.CurrentQty);
                         
-                        // Initialize internal positions.
-                        var pos = new List<PositionResponse>();
-                        pos.Add(startPosition);
-                        SetPositions(pos);
+                        //// Initialize internal positions.
+                        //var pos = new List<PositionResponse>();
+                        //pos.Add(startPosition);
+                        //SetPositions(pos);
 
                         // Turn the wheel of internal calculation variables
                         this.TakeStepForward();
@@ -456,6 +575,8 @@ namespace PStrategies.ZoneRecovery
             //  CurrentStatus
             //  CurrentZRPosition
 
+            
+
 
             if (CurrentStatus == ZoneRecoveryStatus.Winding)
             {
@@ -465,34 +586,40 @@ namespace PStrategies.ZoneRecovery
                 }
 
 
-                ZoneRecoveryAction zraLong = new ZoneRecoveryAction(AccountLong, , );
-                ZoneRecoveryAction zraShort = new ZoneRecoveryAction(AccountShort);
+                //ZoneRecoveryAction tpProfit = new ZoneRecoveryAction();
+                //ZoneRecoveryAction tpLoss = new ZoneRecoveryAction();
+                //ZoneRecoveryAction rev = new ZoneRecoveryAction();
+                //positionList.Add(tpProfit);
+                //positionList.Add(tpLoss);
+                //positionList.Add(rev);
 
-                // Calculate the next take profit price
-                zra.TPPrice = CalculateTakeProfitPrice();
-                zra.TPVolumeSell = CalculateOpenQtyForDirection(1);
-                zra.TPVolumeBuy = CalculateOpenQtyForDirection(-1);
+                //// Calculate the next take profit price
+                //zra.TPPrice = CalculateTakeProfitPrice();
+                //zra.TPVolumeSell = CalculateOpenQtyForDirection(1);
+                //zra.TPVolumeBuy = CalculateOpenQtyForDirection(-1);
 
-                // Calculate the next reverse price
-                zra.ReverseVolume = UnitSize * FactorArray[OpenPositions.Count];
-                zra.ReversePrice = CalculateNextReversePrice();
-                return zra;
+                //// Calculate the next reverse price
+                //zra.ReverseVolume = UnitSize * FactorArray[OpenPositions.Count];
+                //zra.ReversePrice = CalculateNextReversePrice();
+                //return zra;
                 
             }
             else if (CurrentStatus == ZoneRecoveryStatus.Unwinding) // Unwinding
             {
-                // Calculate the next take profit price
-                zra.TPPrice = CalculateTakeProfitPrice();
-                zra.TPVolumeSell = CalculateOpenQtyForDirection(1);
-                zra.TPVolumeBuy = CalculateOpenQtyForDirection(-1);
+                //// Calculate the next take profit price
+                //zra.TPPrice = CalculateTakeProfitPrice();
+                //zra.TPVolumeSell = CalculateOpenQtyForDirection(1);
+                //zra.TPVolumeBuy = CalculateOpenQtyForDirection(-1);
 
-                // Calculate the next reverse price
-                zra.ReverseVolume = -OpenPositions.Single(s => s.PositionIndex == (CurrentZRPosition + 1)).TotalQty;
-                zra.ReversePrice = CalculateNextReversePrice();
-                return zra;
+                //// Calculate the next reverse price
+                //zra.ReverseVolume = -OpenPositions.Single(s => s.PositionIndex == (CurrentZRPosition + 1)).TotalQty;
+                //zra.ReversePrice = CalculateNextReversePrice();
+                //return zra;
             }
             else
                 return null;
+
+            return null;
         }
 
         /// <summary>
@@ -501,8 +628,9 @@ namespace PStrategies.ZoneRecovery
         /// <param name="currentPositions">A list with the positions of both accounts.</param>
         public List<ZoneRecoveryAction> EvaluatePosition(List<PositionResponse> currentPositions)
         {
-            bool l = currentPositions.Single(p => p.Account == AccountLong).CurrentQty == LongPosition.CurrentQty;
-            bool s = currentPositions.Single(p => p.Account == AccountShort).CurrentQty == ShortPosition.CurrentQty;
+            bool l = currentPositions.Single(p => p.Account == ExchConnLong.Account).CurrentQty == LongPosition.CurrentQty;
+            bool s = currentPositions.Single(p => p.Account == ExchConnShort.Account).CurrentQty == ShortPosition.CurrentQty;
+            List<ZoneRecoveryAction> positionList;
 
             // Check if the CurrentQty changed on the exchange compared to what is know in the application...
             if (!l || !s)
@@ -513,11 +641,12 @@ namespace PStrategies.ZoneRecovery
                     Monitor.TryEnter(_Lock, 0, ref acquiredLock);
                     if (acquiredLock)
                     {
+                        positionList = new List<ZoneRecoveryAction>();
 
                         // TODO: log result both positions
 
-                        if (currentPositions.Single(p => p.Account == AccountLong).CurrentQty == 0 && 
-                            currentPositions.Single(p => p.Account == AccountShort).CurrentQty == 0)
+                        if (currentPositions.Single(p => p.Account == ExchConnLong.Account).CurrentQty == 0 && 
+                            currentPositions.Single(p => p.Account == ExchConnShort.Account).CurrentQty == 0)
                         {
                             // TP was reached and both positions were closed.
                             // CLOSE all open orders that might be a result of this instance of the Calculator
@@ -525,19 +654,15 @@ namespace PStrategies.ZoneRecovery
 
                             // CurrentZRPosition
                         }
-                        else if (CurrentStatus == ZoneRecoveryStatus.Winding)
+                        else if (CurrentStatus == ZoneRecoveryStatus.Winding || CurrentStatus == ZoneRecoveryStatus.Unwinding)
                         {
                             
-                            
-                            // Turn the wheel of internal calculation variables
-                            this.TakeStepForward(currentPositions);
-
-                        }
-                        else if (CurrentStatus == ZoneRecoveryStatus.Unwinding)
-                        {
 
                             // Turn the wheel of internal calculation variables
                             this.TakeStepForward(currentPositions);
+
+                            
+
                         }
                         else
                         {

@@ -18,7 +18,7 @@
         /// manager.
         /// Account <1> field
         /// </summary>
-        [JsonProperty("account", NullValueHandling = NullValueHandling.Ignore)]
+        [JsonProperty("account")]
         public long Account { get; set; }
 
         /// <summary>
@@ -26,10 +26,10 @@
         /// Use "[N/A]" for products which do not have a symbol.
         /// Symbol <55> field
         /// </summary>
-        [JsonProperty("symbol", NullValueHandling = NullValueHandling.Ignore)]
+        [JsonProperty("symbol")]
         public string Symbol { get; set; }
 
-        [JsonProperty("currency", NullValueHandling = NullValueHandling.Ignore)]
+        [JsonProperty("currency")]
         public string Currency { get; set; }
 
         [JsonProperty("underlying", NullValueHandling = NullValueHandling.Ignore)]
@@ -171,7 +171,7 @@
         /// The total quantity of the current position. 
         /// When currentQty = 0, the entire position for the given currency is closed. At this point we are not in the market.
         /// </summary>
-        [JsonProperty("currentQty", NullValueHandling = NullValueHandling.Ignore)]
+        [JsonProperty("currentQty")]
         public long CurrentQty { get; set; }
 
         /// <summary>
@@ -211,7 +211,7 @@
         /// <summary>
         /// The weighted average price of the current open position. When the currentQty is 0, the markPrice is null.
         /// </summary>
-        [JsonProperty("markPrice", NullValueHandling = NullValueHandling.Ignore)]
+        [JsonProperty("markPrice")]
         public double MarkPrice { get; set; }
 
         [JsonProperty("markValue", NullValueHandling = NullValueHandling.Ignore)]
@@ -313,40 +313,40 @@
         [JsonProperty("unrealisedRoePcnt", NullValueHandling = NullValueHandling.Ignore)]
         public long? UnrealisedRoePcnt { get; set; }
 
-        [JsonProperty("simpleQty")]
+        [JsonProperty("simpleQty", NullValueHandling = NullValueHandling.Ignore)]
         public dynamic SimpleQty { get; set; }
 
-        [JsonProperty("simpleCost")]
+        [JsonProperty("simpleCost", NullValueHandling = NullValueHandling.Ignore)]
         public dynamic SimpleCost { get; set; }
 
-        [JsonProperty("simpleValue")]
+        [JsonProperty("simpleValue", NullValueHandling = NullValueHandling.Ignore)]
         public dynamic SimpleValue { get; set; }
 
-        [JsonProperty("simplePnl")]
+        [JsonProperty("simplePnl", NullValueHandling = NullValueHandling.Ignore)]
         public dynamic SimplePnl { get; set; }
 
-        [JsonProperty("simplePnlPcnt")]
+        [JsonProperty("simplePnlPcnt", NullValueHandling = NullValueHandling.Ignore)]
         public dynamic SimplePnlPcnt { get; set; }
 
-        [JsonProperty("avgCostPrice")]
+        [JsonProperty("avgCostPrice", NullValueHandling = NullValueHandling.Ignore)]
         public dynamic AvgCostPrice { get; set; }
 
-        [JsonProperty("avgEntryPrice")]
+        [JsonProperty("avgEntryPrice", NullValueHandling = NullValueHandling.Ignore)]
         public dynamic AvgEntryPrice { get; set; }
 
-        [JsonProperty("breakEvenPrice")]
+        [JsonProperty("breakEvenPrice", NullValueHandling = NullValueHandling.Ignore)]
         public dynamic BreakEvenPrice { get; set; }
 
-        [JsonProperty("marginCallPrice")]
+        [JsonProperty("marginCallPrice", NullValueHandling = NullValueHandling.Ignore)]
         public dynamic MarginCallPrice { get; set; }
 
         [JsonProperty("liquidationPrice")]
         public dynamic LiquidationPrice { get; set; }
 
-        [JsonProperty("bankruptPrice")]
+        [JsonProperty("bankruptPrice", NullValueHandling = NullValueHandling.Ignore)]
         public dynamic BankruptPrice { get; set; }
 
-        [JsonProperty("timestamp", NullValueHandling = NullValueHandling.Ignore)]
+        [JsonProperty("timestamp")]
         public DateTimeOffset? Timestamp { get; set; }
 
         [JsonProperty("lastPrice", NullValueHandling = NullValueHandling.Ignore)]

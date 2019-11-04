@@ -5,10 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Threading;
-using Bitmex.Client.Websocket.Client;
-using Bitmex.Client.Websocket.Requests;
-using Bitmex.Client.Websocket.Websockets;
-using Serilog;
+//using Serilog;
 using BitMEX.Model;
 using BitMEX.Client;
 using System.Data.SqlClient;
@@ -230,41 +227,41 @@ namespace BitMEX.TestForm
 
         private void btnGetOrdersForId_Click(object sender, EventArgs e)
         {
-            log.Info("btnGetOpenOrders_Click Clicked!");
+            //log.Info("btnGetOpenOrders_Click Clicked!");
 
-            // Local environment checks...
-            if (!String.IsNullOrEmpty(TBClOrdId.Text))
-            {
-                string IDInput = TBClOrdId.Text;
+            //// Local environment checks...
+            //if (!String.IsNullOrEmpty(TBClOrdId.Text))
+            //{
+            //    string IDInput = TBClOrdId.Text;
 
-                try
-                {
-                    object outcome = mconn.GetFilledOrdersForId(IDInput);
+            //    try
+            //    {
+            //        //object outcome = mconn.GetFilledOrdersForId(IDInput);
 
-                    log.Info("Get closed orders for ID:" + IDInput);
+            //        log.Info("Get closed orders for ID:" + IDInput);
 
-                    if (outcome.GetType() == new List<OrderResponse>().GetType())
-                    {
-                        // Successful API call with successful result...
-                        var orderResp = (List<OrderResponse>)outcome;
-                        foreach (var resp in orderResp)
-                            log.Info(resp);
-                    }
-                    else if(outcome.GetType() == new OrderResponse().GetType())
-                        log.Info(outcome);
-                    else if (outcome.GetType() == new BaseError().GetType())
-                        log.Error(outcome);
-                    else
-                        log.Error("Unknown return type [" + outcome.GetType().ToString() + "]");
-                }
+            //        if (outcome.GetType() == new List<OrderResponse>().GetType())
+            //        {
+            //            // Successful API call with successful result...
+            //            var orderResp = (List<OrderResponse>)outcome;
+            //            foreach (var resp in orderResp)
+            //                log.Info(resp);
+            //        }
+            //        else if(outcome.GetType() == new OrderResponse().GetType())
+            //            log.Info(outcome);
+            //        else if (outcome.GetType() == new BaseError().GetType())
+            //            log.Error(outcome);
+            //        else
+            //            log.Error("Unknown return type [" + outcome.GetType().ToString() + "]");
+            //    }
                 
-                catch (Exception exc)
-                {
-                    // Unsuccessful API call
-                    log.Error("Exception [" + exc.Message.ToString() + "]");
-                }
-            }
-            log.Info("btnGetOpenOrders_Click End!");
+            //    catch (Exception exc)
+            //    {
+            //        // Unsuccessful API call
+            //        log.Error("Exception [" + exc.Message.ToString() + "]");
+            //    }
+            //}
+            //log.Info("btnGetOpenOrders_Click End!");
         }
 
         private void DBLogOperation(string operation, object obj)

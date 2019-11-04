@@ -25,7 +25,7 @@ namespace BitMEX.Client
         /// <param name="headers">HTTP headers. Currently not used...</param>
         /// <param name="json">json (parsed HTTP body)</param>
         /// <param name="uri">URI of the response.</param>
-        public ApiResponse(int statusCode, IDictionary<string, string> headers, string json, ILog i, Uri uri = null)
+        public ApiResponse(int statusCode, IDictionary<string, string> headers, string json, ILog i = null, Uri uri = null)
         {
             this.Uri = uri;
             this.StatusCode = statusCode;
@@ -99,7 +99,7 @@ namespace BitMEX.Client
             object o;
 
             // Return the correct type based on the Uri
-            switch (this.Uri.AbsolutePath)
+            switch (this.Uri.AbsolutePath.ToLower())
             {
                 case "/api/v1/order":
                     if(this.Json.Substring(0, 1) == "[")
@@ -115,10 +115,16 @@ namespace BitMEX.Client
                 case "/api/v1/order/bulk":
                     o = OrdersResponse.FromJson(this.Json);
                     break;
-                case "/api/v1/order/closePosition":
+                case "/api/v1/position/leverage":
+                    o = PositionResponse.FromJson(this.Json);
+                    break;
+                case "/api/v1/position":
+                    o = PositionsResponse.FromJson(this.Json);
+                    break;
+                case "/api/v1/order/closeposition":
                     o = OrderResponse.FromJson(this.Json);
                     break;
-                case "/api/v1/order/cancelAllAfter":
+                case "/api/v1/order/cancelallafter":
                 default:
                     o = null;
                     log.Error("Uri unknown. Please add [" + this.Uri.AbsolutePath + "] to the evaluated Uri's.");

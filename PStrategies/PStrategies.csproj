@@ -46,7 +46,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ZoneRecovery\Calculator.cs" />
     <Compile Include="ZoneRecovery\ZoneRecoveryAction.cs" />
-    <Compile Include="ZoneRecovery\ZoneRecoveryPosition.cs" />
+    <Compile Include="ZoneRecovery\ZoneRecoveryOrder.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\BitMEX\BitMEX.csproj">
