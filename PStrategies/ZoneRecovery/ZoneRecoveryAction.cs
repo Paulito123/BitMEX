@@ -17,19 +17,24 @@
         public string OrderID { set; get; }
         public double Price { set; get; }
         public long Qty { set; get; }
-        public string Instruction { set; get; } // TP | TL | REV
-        
+        public ZoneRecoveryOrderType OrderType { set; get; } // TP | TL | REV
+
         /// <summary>
         /// Class constructor
         /// </summary>
-        public ZoneRecoveryAction(long account, List<string> ordersToClose, string orderID, long qty, double price, string instruction)
+        public ZoneRecoveryAction(long account, List<string> ordersToClose, string orderID, long qty, double price, ZoneRecoveryOrderType instruction)
         {
             AccountNumber = account;
             OrdersToClose = ordersToClose;
             OrderID = orderID;
             Qty = qty;
             Price = price;
-            Instruction = instruction;
+            OrderType = instruction;
+        }
+
+        public ZoneRecoveryAction()
+        {
+
         }
     }
 }

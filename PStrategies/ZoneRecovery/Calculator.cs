@@ -57,10 +57,11 @@
         /// The last known short position.
         /// </summary>
         private PositionResponse ShortPosition;
-
-        //private List<ZoneRecoveryOrder> LongOrders;
-        //private List<ZoneRecoveryOrder> ShortOrders;
-        private List<ZoneRecoveryOrder> Orders;
+        
+        /// <summary>
+        /// 
+        /// </summary>
+        private List<ZoneRecoveryOrder> ApplicationOrders;
 
         /// <summary>
         /// An enumeration used for expressing in which part of the Zone Recovery algorithm the class is at a given moment.
@@ -172,7 +173,7 @@
 
             //LongOrders = new List<ZoneRecoveryOrder>();
             //ShortOrders = new List<ZoneRecoveryOrder>();
-            Orders = new List<ZoneRecoveryOrder>();
+            ApplicationOrders = new List<ZoneRecoveryOrder>();
         }
 
         /// <summary>
@@ -380,6 +381,19 @@
 
         #region Public methods
 
+        /// <summary>
+        /// Situations when Winding:
+        /// TP          TL          REV         Description                                         Action
+        /// New         New         New     >   No order was filled                                 None
+        /// Filled      Filled      New     >   The profit is taken and all positions are closed    Cancel the previous REV order
+        /// New         New         Filled  >   The strategy has reversed                           Cancel previous TP and TL order
+        /// Filled      New         New     >   Only the profit account position is closed          Close loss account position and cancel REV order
+        /// New         Filled      New     >   Only the loss account position is closed            Close profit account position and cancel REV order
+        /// New         Filled      Filled  >   Should never happen
+        /// Filled      New         Filled  >   Should never happen
+        /// Filled      Filled      Filled  >   Should never happen
+        /// </summary>
+        /// <returns></returns>
         public List<ZoneRecoveryAction> Evaluate()
         {
             // Check if server can be queried
@@ -399,49 +413,98 @@
                     if (acquiredLock)
                     {
                         
-                        if(Orders.Count > 0)
+                        if(ApplicationOrders.Count > 0)
                         {
-                            bool eureka = false;
-                            var s = string.Join(",", Orders.Select(p => p.ClOrdId));
-                            List<OrderResponse> LongOrdersServer = (List<OrderResponse>)ExchConnLong.GetOrdersForCSId(s);
-                            List<OrderResponse> ShortOrdersServer = (List<OrderResponse>)ExchConnShort.GetOrdersForCSId(s);
-
-                            if(LongOrdersServer.Where(n => n.OrdStatus == "Filled").Count() > 0 || ShortOrdersServer.Where(n => n.OrdStatus == "Filled").Count() > 0)
-                                eureka = true;
-
-                            switch (LongOrdersServer.Where(n => n.OrdStatus == "Filled").Count()) {
-                                case 1:
-                                    
-                                    // Handle shit for the long account, if needed.
-                                    // Prepare the next action.
-                                    break;
-                                case 0:
-                                    // Exit
-                                    break;
-                                default:
-                                    // Throw error
-                                    break;
-                            }
-
-                            switch (ShortOrdersServer.Where(n => n.OrdStatus == "Filled").Count())
+                            // Try getting the order status on the server...
+                            try
                             {
-                                case 1:
-                                    
-                                    // Handle shit for the short account, if needed.
-                                    // Prepare the next action.
-                                    break;
-                                case 0:
-                                    // Exit
-                                    break;
-                                default:
-                                    // Throw error
-                                    break;
+                                var s = string.Join(",", ApplicationOrders.Select(p => p.ClOrdId));
+                                List<OrderResponse> ServerOrders = new List<OrderResponse>();
+                                //List<OrderResponse> LongOrdersServer = (List<OrderResponse>)ExchConnLong.GetOrdersForCSId(s);
+                                //List<OrderResponse> ShortOrdersServer = (List<OrderResponse>)ExchConnShort.GetOrdersForCSId(s);
+                                ServerOrders.AddRange((List<OrderResponse>)ExchConnLong.GetOrdersForCSId(s));
+                                ServerOrders.AddRange((List<OrderResponse>)ExchConnShort.GetOrdersForCSId(s));
+
+                                if(ServerOrders.Where(o => o.OrdStatus == "Filled").Count() > 0)
+                                {
+                                    // Match the orders on the server with the orders known in the application
+                                    foreach (ZoneRecoveryOrder ao in ApplicationOrders)
+                                    {
+                                        ao.ServerResponse = ServerOrders.Where(n => n.ClOrdId == ao.ClOrdId).Single();
+                                    }
+
+                                    string REVStatus = ApplicationOrders.Where(o => o.OrderType == ZoneRecoveryOrderType.REV).Select(o => o.ServerResponse.OrdStatus).Single();
+                                    string TPStatus = ApplicationOrders.Where(o => o.OrderType == ZoneRecoveryOrderType.TP).Select(o => o.ServerResponse.OrdStatus).Single();
+                                    string TLStatus = ApplicationOrders.Where(o => o.OrderType == ZoneRecoveryOrderType.TL).Select(o => o.ServerResponse.OrdStatus).Single();
+                                    long REVAccount = ApplicationOrders.Where(o => o.OrderType == ZoneRecoveryOrderType.REV).Select(o => o.ServerResponse.Account).Single();
+                                    long TPAccount = ApplicationOrders.Where(o => o.OrderType == ZoneRecoveryOrderType.TP).Select(o => o.ServerResponse.Account).Single();
+                                    long TLAccount = ApplicationOrders.Where(o => o.OrderType == ZoneRecoveryOrderType.TL).Select(o => o.ServerResponse.Account).Single();
+
+                                    // Check all possible cases + response to the case
+                                    if (TPStatus == "New" && TLStatus == "New" && REVStatus == "Filled")            // Reverse
+                                    {
+                                        // Close the remaining TP and TL order.
+
+                                        // Go one step forward in the Calculator status.
+
+                                        // Create new Application Orders
+
+                                        // Execute the newly created Application Orders
+
+                                        // Double check if the orders are live
+                                    }
+                                    else if (TPStatus == "Filled" && TLStatus == "Filled" && REVStatus == "New")    // TP and TL
+                                    {
+                                        // Close the remaining REV order.
+                                        if (REVAccount == ExchConnLong.Account)
+                                            ExchConnLong.CancelOrders(new string[] {
+                                                ApplicationOrders.Where(o => o.OrderType == ZoneRecoveryOrderType.REV).Select(o => o.ServerResponse.ClOrdId).Single() });
+                                        else
+                                            ExchConnShort.CancelOrders(new string[] {
+                                                ApplicationOrders.Where(o => o.OrderType == ZoneRecoveryOrderType.REV).Select(o => o.ServerResponse.ClOrdId).Single() });
+
+                                        // Reset the Calculator internal variables
+
+                                    }
+                                    else if (TPStatus == "Filled" && TLStatus == "New" && REVStatus == "New")       // Profit side take without loss side
+                                    {
+                                        
+
+                                    }
+                                    else if (TPStatus == "New" && TLStatus == "Filled" && REVStatus == "New")       // Profit side take without loss side
+                                    {
+                                        
+
+                                    }
+                                    else if (TPStatus == "Filled" && TLStatus == "New" && REVStatus == "Filled")    // Profit side take without loss side
+                                    {
+                                        
+
+                                    }
+                                    else if (TPStatus == "New" && TLStatus == "Filled" && REVStatus == "Filled")    // Profit side take without loss side
+                                    {
+                                        
+
+                                    }
+                                    else if (TPStatus == "New" && TLStatus == "Filled" && REVStatus == "Filled")    // Profit side take without loss side
+                                    {
+                                        
+
+                                    }
+                                    else if (TPStatus == "Filled" && TLStatus == "Filled" && REVStatus == "Filled") // Profit side take without loss side
+                                    {
+                                        
+
+                                    }
+
+                                }
+                                
                             }
-                            
+                            catch(Exception e)
+                            {
+
+                            }  
                         }
-
-                        
-
                     }
                 }
                 finally
@@ -464,8 +527,6 @@
                     return null;
             }
             else return null;
-
-            
         }
 
         /// <summary>

@@ -48,7 +48,7 @@
         /// Account <1> field
         /// </summary>
         [JsonProperty("account", NullValueHandling = NullValueHandling.Ignore)]
-        public long? Account { get; set; }
+        public long Account { get; set; }
 
         /// <summary>
         /// Ticker symbol. Common, "human understood" representation of the security. SecurityID (48) value can be specified if no symbol exists (e.g. non-exchange traded Collective Investment Vehicles)

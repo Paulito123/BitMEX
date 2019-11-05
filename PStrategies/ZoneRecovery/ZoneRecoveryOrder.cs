@@ -14,7 +14,7 @@
     /// TL  = Take Loss
     /// REV = Reverse
     /// </summary>
-    public enum ZoneRecoveryOrderType { TP, TL, REV }
+    public enum ZoneRecoveryOrderType { TP, TL, REV, Cancel }
     
     /// <summary>
     /// Class that represents an order sent to the exchange. 
@@ -29,29 +29,34 @@
         public string ClOrdId { get; set; }
 
         /// <summary>
+        /// The Order response coming from the Exchange
+        /// </summary>
+        public OrderResponse ServerResponse { get; set; }
+
+        /// <summary>
         /// The symbol of the asset.
         /// </summary>
-        private string Symbol { get; set; }
+        public string Symbol { get; set; }
 
         /// <summary>
         /// The identifier of the account on which the position is known.
         /// </summary>
-        private long Account { get; set; }
+        public long Account { get; set; }
 
         /// <summary>
         /// The average price of the position.
         /// </summary>
-        private double Price { get; set; }
+        public double Price { get; set; }
 
         /// <summary>
         /// The total quantity of the position.
         /// </summary>
-        private long Qty { get; set; }
+        public long Qty { get; set; }
 
         /// <summary>
         /// The type of order.
         /// </summary>
-        private ZoneRecoveryOrderType OrderType;
+        public ZoneRecoveryOrderType OrderType { get; set; }
 
         /// <summary>
         /// Constructor of the class ZoneRecoveryOrder
@@ -69,6 +74,11 @@
             Price = price;
             Qty = qty;
             OrderType = orderType;
+        }
+
+        public ZoneRecoveryOrder()
+        {
+
         }
     }
 }

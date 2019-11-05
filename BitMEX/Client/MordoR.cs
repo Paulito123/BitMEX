@@ -501,13 +501,13 @@ namespace BitMEX.Client
         /// <summary>
         /// Cancels a resting order.
         /// </summary>
-        /// <param name="clOrdID">OrderID of the order that needs to be canceled</param>
+        /// <param name="clOrdIDs">Collection of client order IDs to close</param>
         /// <param name="message">Informational message to be saved with the cancelation</param>
         /// <returns></returns>
-        public object CancelOrder(string clOrdID, string message = "Cancel order...")
+        public object CancelOrders(string[] clOrdIDs, string message = "Cancel order...")
         {
             var param = new Dictionary<string, string>();
-            param["clOrdID"] = clOrdID;
+            param["clOrdID"] = BuildJSONArray(clOrdIDs);
             param["text"] = message;
             ApiResponse res = Query("DELETE", "/order", false, param, true, true);
 
