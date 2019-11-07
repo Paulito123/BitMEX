@@ -11,17 +11,22 @@
     public class Calculator
     {
         #region Private variables
+
+        /// <summary>
+        /// The trading symbol for this instance of the Calculator.
+        /// </summary>
+        private string Symbol;
         
         /// <summary>
         /// An array of factors used to calculate the size of each winding.
         /// </summary>
-        private static double[] FactorArray = new double[] { 1, 2, 3, 6, 12, 24, 48, 96 };
+        private static long[] FactorArray = new long[] { 1, 2, 3, 6, 12, 24, 48, 96 };
         
         /// <summary>
         /// The minimum unit size of each order. The result of the UnitSize multiplied by a value of the FactorArray 
         /// results in the quantity of a respective order.
         /// </summary>
-        private double UnitSize { get; set; }
+        private long UnitSize { get; set; }
 
         /// <summary>
         /// The last timestamp the server was queried.
@@ -31,7 +36,7 @@
         /// <summary>
         /// Minimum number of miliseconds between 2 server queries
         /// </summary>
-        private long ServerQueryTimeInterval { get; set; } = 1500;
+        private long StandardTimeOut { get; set; }
 
         /// <summary>
         /// Reflects how deep inside the FactorArray, this instance of the Calculator class, is allowed to go.
@@ -39,14 +44,19 @@
         private int MaxDepthIndex { get; }
 
         /// <summary>
-        /// Connection used for all long positions
+        /// The list of available connections.
         /// </summary>
-        private MordoR ExchConnLong;
+        private Dictionary<long, MordoR> Connections;
 
         /// <summary>
-        /// Connection used for all short positions
+        /// The account used for LONG transactions.
         /// </summary>
-        private MordoR ExchConnShort;
+        private long AccountLong;
+
+        /// <summary>
+        /// The account used for SHORT transactions.
+        /// </summary>
+        private long AccountShort;
 
         /// <summary>
         /// The last known long position.
@@ -59,7 +69,7 @@
         private PositionResponse ShortPosition;
         
         /// <summary>
-        /// 
+        /// The orders that are known in the application and are suposed to be resting on the server.
         /// </summary>
         private List<ZoneRecoveryOrder> ApplicationOrders;
 
@@ -139,12 +149,16 @@
         /// <param name="minPrftPerc">Minimum required profit margin</param>
         /// <param name="connLong">A MordoR connection configured for the Long account</param>
         /// <param name="connShort">A MordoR connection configured for the Short account</param>
-        public Calculator(double maxExposurePerc, double totalBalance, double leverage, double pipSize, int maxDepthIndex, int zoneSize, double minPrftPerc
-                          , MordoR connLong, MordoR connShort)
+        public Calculator(string symbol, double maxExposurePerc, double totalBalance, double leverage, double pipSize, int maxDepthIndex, int zoneSize, double minPrftPerc
+                          , MordoR connA, MordoR connB)
         {
             // Initialize main variables
-            ExchConnLong = connLong;
-            ExchConnShort = connShort;
+            Symbol = symbol;
+            Connections = new Dictionary<long, MordoR>();
+            AccountLong = connA.Account;
+            AccountShort = connB.Account;
+            Connections.Add(connA.Account, connA);
+            Connections.Add(connB.Account, connB);
             MaxExposurePerc = maxExposurePerc;
             TotalBalance = totalBalance;
             Leverage = leverage;
@@ -152,6 +166,7 @@
             MaxDepthIndex = maxDepthIndex;
             ZoneSize = zoneSize;
             MinimumProfitPercentage = minPrftPerc;
+            StandardTimeOut = 1500;
 
             // Initialize calculation variables
             InitializeCalculator();
@@ -166,13 +181,9 @@
         private void InitializeCalculator()
         {
             CurrentStatus = ZoneRecoveryStatus.Init;
-            
-            SyncPositionsForSymbol("XBTUSD");
-
+            SyncPositions();
             CurrentZRPosition = 0;
-
-            //LongOrders = new List<ZoneRecoveryOrder>();
-            //ShortOrders = new List<ZoneRecoveryOrder>();
+            UnitSize = 0;
             ApplicationOrders = new List<ZoneRecoveryOrder>();
         }
 
@@ -209,7 +220,7 @@
         /// <summary>
         /// Turning the wheel, advance one step further in the ZR winding process...
         /// </summary>
-        private void TakeStepForward(List<PositionResponse> pos = null)
+        private void TakeStepForward()
         {
             if (CurrentStatus == ZoneRecoveryStatus.Winding)
             {
@@ -222,15 +233,15 @@
             else if (CurrentStatus == ZoneRecoveryStatus.Unwinding)
             {
                 CurrentZRPosition--;
-                
+
                 // Reset the calculator
                 if (CurrentZRPosition == 0)
-                    InitializeCalculator();
+                    CurrentStatus = ZoneRecoveryStatus.Init;
             }
             else if (CurrentStatus == ZoneRecoveryStatus.Init)
             {
                 CurrentStatus = ZoneRecoveryStatus.Winding;
-                CurrentZRPosition = 1;
+                CurrentZRPosition++;
             }
         }
 
@@ -302,7 +313,7 @@
         {
             if (LongPosition.IsOpen || ShortPosition.IsOpen)
             {
-                if (LongPosition.CurrentQty > ShortPosition.CurrentQty)
+                if (Math.Abs(LongPosition.CurrentQty) > Math.Abs(ShortPosition.CurrentQty))
                     return -1;
                 else
                     return 1;
@@ -327,6 +338,35 @@
         }
 
         /// <summary>
+        /// Calculate the Qty for the next orders by ZoneRecoveryOrderType.
+        /// </summary>
+        /// <param name="ot">ZoneRecoveryOrderType</param>
+        /// <returns>Qty by ZoneRecoveryOrderType.</returns>
+        private long CalculateQtyForOrderType(ZoneRecoveryOrderType ot)
+        {
+            if(GetNextDirection() == 0)
+                return 0;
+
+            switch (ot)
+            {
+                case ZoneRecoveryOrderType.TP:
+                    if (GetNextDirection() == 1)
+                        return Math.Abs(ShortPosition.CurrentQty);
+                    else
+                        return -LongPosition.CurrentQty;
+                case ZoneRecoveryOrderType.TL:
+                    if (GetNextDirection() == 1)
+                        return -LongPosition.CurrentQty; 
+                    else
+                        return Math.Abs(ShortPosition.CurrentQty);
+                case ZoneRecoveryOrderType.REV:
+                    return GetNextDirection() * UnitSize * FactorArray[CurrentZRPosition];
+                default:
+                    return 0;
+            }
+        }
+
+        /// <summary>
         /// Calculate the next price at which a reverse order should be placed.
         /// </summary>
         /// <returns>The next reverse price</returns>
@@ -343,31 +383,16 @@
         }
 
         /// <summary>
-        /// Set the internal position from a list of positions. 
-        /// Make sure every account in the list is unique. The first occurrance of an account 
-        /// is used to set the internal position(s).
-        /// </summary>
-        /// <param name="pos">A list of position responses.</param>
-        //private void SetPositions(List<PositionResponse> pos)
-        //{
-        //    if(pos.First(p => p.Account == ExchConnLong.Account) != null)
-        //        this.LongPosition = pos.First(p => p.Account == ExchConnLong.Account);
-
-        //    if (pos.First(p => p.Account == ExchConnShort.Account) != null)
-        //        this.ShortPosition = pos.First(p => p.Account == ExchConnShort.Account);
-        //}
-
-        /// <summary>
         /// Sync the positions known by the application with the positions know on the server.
         /// </summary>
-        private bool SyncPositionsForSymbol(string symbol)
+        private bool SyncPositions()
         {
             bool inSync = true;
             try
             {
-                List<PositionResponse> lp = (List<PositionResponse>)ExchConnLong.GetPositionsForSymbols(new string[] { symbol });
+                List<PositionResponse> lp = (List<PositionResponse>)Connections[AccountLong].GetPositionsForSymbols(new string[] { Symbol });
                 LongPosition = lp[1];
-                List<PositionResponse> sp = (List<PositionResponse>)ExchConnShort.GetPositionsForSymbols(new string[] { symbol });
+                List<PositionResponse> sp = (List<PositionResponse>)Connections[AccountShort].GetPositionsForSymbols(new string[] { Symbol });
                 ShortPosition = sp[1];
             }
             catch (Exception e)
@@ -382,28 +407,19 @@
         #region Public methods
 
         /// <summary>
-        /// Situations when Winding:
-        /// TP          TL          REV         Description                                         Action
-        /// New         New         New     >   No order was filled                                 None
-        /// Filled      Filled      New     >   The profit is taken and all positions are closed    Cancel the previous REV order
-        /// New         New         Filled  >   The strategy has reversed                           Cancel previous TP and TL order
-        /// Filled      New         New     >   Only the profit account position is closed          Close loss account position and cancel REV order
-        /// New         Filled      New     >   Only the loss account position is closed            Close profit account position and cancel REV order
-        /// New         Filled      Filled  >   Should never happen
-        /// Filled      New         Filled  >   Should never happen
-        /// Filled      Filled      Filled  >   Should never happen
+        /// Evaluates the current situation on the server. When something changed compared with the known situation in 
+        /// the application, the appropriate action is taken.
         /// </summary>
-        /// <returns></returns>
-        public List<ZoneRecoveryAction> Evaluate()
+        /// <returns>TODO: Let it return information needed to draw an action on the plot of NinjaTrader.</returns>
+        public bool Evaluate()
         {
             // Check if server can be queried
             if (DateTime.Now >= NextServerReleaseDateTime)
             {
                 // Create a variable used for locking.
                 bool acquiredLock = false;
-
-                //List<ZoneRecoveryAction> outputList = new List<ZoneRecoveryAction>();
-
+                long timeOutMS = 0;
+                
                 try
                 {
                     // Try enter the lock.
@@ -418,70 +434,123 @@
                             // Try getting the order status on the server...
                             try
                             {
-                                var s = string.Join(",", ApplicationOrders.Select(p => p.ClOrdId));
+                                
                                 List<OrderResponse> ServerOrders = new List<OrderResponse>();
-                                //List<OrderResponse> LongOrdersServer = (List<OrderResponse>)ExchConnLong.GetOrdersForCSId(s);
-                                //List<OrderResponse> ShortOrdersServer = (List<OrderResponse>)ExchConnShort.GetOrdersForCSId(s);
-                                ServerOrders.AddRange((List<OrderResponse>)ExchConnLong.GetOrdersForCSId(s));
-                                ServerOrders.AddRange((List<OrderResponse>)ExchConnShort.GetOrdersForCSId(s));
+
+                                var l = string.Join(",", ApplicationOrders.Where(p => p.Account == AccountLong).Select(p => p.ClOrdId));
+                                var s = string.Join(",", ApplicationOrders.Where(p => p.Account == AccountShort).Select(p => p.ClOrdId));
+
+                                ServerOrders.AddRange((List<OrderResponse>)Connections[AccountLong].GetOrdersForCSId(l));
+                                ServerOrders.AddRange((List<OrderResponse>)Connections[AccountShort].GetOrdersForCSId(s));
 
                                 if(ServerOrders.Where(o => o.OrdStatus == "Filled").Count() > 0)
                                 {
+                                    timeOutMS = 5000;
+
+                                    // Synchronize the internal positions
+                                    SyncPositions();
+
                                     // Match the orders on the server with the orders known in the application
                                     foreach (ZoneRecoveryOrder ao in ApplicationOrders)
                                     {
                                         ao.ServerResponse = ServerOrders.Where(n => n.ClOrdId == ao.ClOrdId).Single();
                                     }
-
+                                    
                                     string REVStatus = ApplicationOrders.Where(o => o.OrderType == ZoneRecoveryOrderType.REV).Select(o => o.ServerResponse.OrdStatus).Single();
                                     string TPStatus = ApplicationOrders.Where(o => o.OrderType == ZoneRecoveryOrderType.TP).Select(o => o.ServerResponse.OrdStatus).Single();
-                                    string TLStatus = ApplicationOrders.Where(o => o.OrderType == ZoneRecoveryOrderType.TL).Select(o => o.ServerResponse.OrdStatus).Single();
+                                    string TLStatus;
+                                    if (ApplicationOrders.Where(o => o.OrderType == ZoneRecoveryOrderType.TL).Select(o => o.ServerResponse.OrdStatus).Count() == 1)
+                                        TLStatus = ApplicationOrders.Where(o => o.OrderType == ZoneRecoveryOrderType.TL).Select(o => o.ServerResponse.OrdStatus).Single();
+                                    else
+                                        TLStatus = "N/A";
+
                                     long REVAccount = ApplicationOrders.Where(o => o.OrderType == ZoneRecoveryOrderType.REV).Select(o => o.ServerResponse.Account).Single();
                                     long TPAccount = ApplicationOrders.Where(o => o.OrderType == ZoneRecoveryOrderType.TP).Select(o => o.ServerResponse.Account).Single();
-                                    long TLAccount = ApplicationOrders.Where(o => o.OrderType == ZoneRecoveryOrderType.TL).Select(o => o.ServerResponse.Account).Single();
-
+                                    long TLAccount;
+                                    if (ApplicationOrders.Where(o => o.OrderType == ZoneRecoveryOrderType.TL).Select(o => o.ServerResponse.OrdStatus).Count() == 1)
+                                        TLAccount = ApplicationOrders.Where(o => o.OrderType == ZoneRecoveryOrderType.TL).Select(o => o.ServerResponse.Account).Single();
+                                    else
+                                        TLAccount = 0;
+                                    
                                     // Check all possible cases + response to the case
-                                    if (TPStatus == "New" && TLStatus == "New" && REVStatus == "Filled")            // Reverse
+                                    if (TPStatus == "New" && (TLStatus == "New" || TLStatus == "N/A") && REVStatus == "Filled")            // Reversed
                                     {
-                                        // Close the remaining TP and TL order.
+                                        List<ZoneRecoveryOrder> cancelTP;
+                                        List<ZoneRecoveryOrder> cancelTL;
 
+                                        // Close the remaining TP order.
+                                        cancelTP = (List<ZoneRecoveryOrder>)Connections[TPAccount].CancelOrders(new string[] {
+                                            ApplicationOrders.Where(o => o.OrderType == ZoneRecoveryOrderType.TP).Select(o => o.ServerResponse.ClOrdId).Single() });
+
+                                        // Close the remaining TL order.
+                                        if (TLStatus != "N/A")
+                                            cancelTL = (List<ZoneRecoveryOrder>)Connections[TLAccount].CancelOrders(new string[] {
+                                                ApplicationOrders.Where(o => o.OrderType == ZoneRecoveryOrderType.TL).Select(o => o.ServerResponse.ClOrdId).Single() });
+
+                                        // TODO check if all orders are closed
+                                        
                                         // Go one step forward in the Calculator status.
+                                        TakeStepForward();
 
-                                        // Create new Application Orders
+                                        // Check if orders still need to be placed.
+                                        if(CurrentZRPosition > 0)
+                                        {
+                                            // Create new Application Orders
+                                            ApplicationOrders = new List<ZoneRecoveryOrder>();
+                                            ApplicationOrders.Add(new ZoneRecoveryOrder(
+                                                MordoR.GenerateGUID(), 
+                                                Symbol, 
+                                                Connections[REVAccount].Account, 
+                                                CalculateTakeProfitPrice(),
+                                                CalculateQtyForOrderType(ZoneRecoveryOrderType.TP), 
+                                                ZoneRecoveryOrderType.TP));
+                                            ApplicationOrders.Add(new ZoneRecoveryOrder(
+                                                MordoR.GenerateGUID(), 
+                                                Symbol, 
+                                                Connections[TPAccount].Account, 
+                                                CalculateTakeProfitPrice(),
+                                                CalculateQtyForOrderType(ZoneRecoveryOrderType.TL),
+                                                ZoneRecoveryOrderType.TL));
+                                            ApplicationOrders.Add(new ZoneRecoveryOrder(
+                                                MordoR.GenerateGUID(), 
+                                                Symbol, 
+                                                Connections[TPAccount].Account,
+                                                CalculateNextReversePrice(),
+                                                CalculateQtyForOrderType(ZoneRecoveryOrderType.REV), 
+                                                ZoneRecoveryOrderType.REV));
 
-                                        // Execute the newly created Application Orders
+                                            // Send the orders to the server
+                                            foreach(ZoneRecoveryOrder zorro in ApplicationOrders)
+                                            {
+                                                var resp = (OrderResponse)zorro.SendOrderToServer(Connections[zorro.Account]);
 
-                                        // Double check if the orders are live
+                                                // TODO Double check if the orders are live
+                                            }
+                                        }
+                                        
                                     }
-                                    else if (TPStatus == "Filled" && TLStatus == "Filled" && REVStatus == "New")    // TP and TL
+                                    else if (TPStatus == "Filled" && (TLStatus == "Filled" || TLStatus == "N/A") && REVStatus == "New")    // TP and TL
                                     {
+                                        List<ZoneRecoveryOrder> cancelREV;
+
                                         // Close the remaining REV order.
-                                        if (REVAccount == ExchConnLong.Account)
-                                            ExchConnLong.CancelOrders(new string[] {
-                                                ApplicationOrders.Where(o => o.OrderType == ZoneRecoveryOrderType.REV).Select(o => o.ServerResponse.ClOrdId).Single() });
-                                        else
-                                            ExchConnShort.CancelOrders(new string[] {
-                                                ApplicationOrders.Where(o => o.OrderType == ZoneRecoveryOrderType.REV).Select(o => o.ServerResponse.ClOrdId).Single() });
+                                        cancelREV = (List<ZoneRecoveryOrder>)Connections[REVAccount].CancelOrders(new string[] {
+                                            ApplicationOrders.Where(o => o.OrderType == ZoneRecoveryOrderType.REV).Select(o => o.ServerResponse.ClOrdId).Single() });
 
                                         // Reset the Calculator internal variables
-
+                                        InitializeCalculator();
                                     }
-                                    else if (TPStatus == "Filled" && TLStatus == "New" && REVStatus == "New")       // Profit side take without loss side
+                                    else if (TPStatus == "Filled" && TLStatus == "New" && REVStatus == "New")       // Profit side taken without loss side
                                     {
                                         
 
                                     }
-                                    else if (TPStatus == "New" && TLStatus == "Filled" && REVStatus == "New")       // Profit side take without loss side
+                                    else if (TPStatus == "New" && TLStatus == "Filled" && REVStatus == "New")       // Loss side taken without profit side
                                     {
                                         
 
                                     }
-                                    else if (TPStatus == "Filled" && TLStatus == "New" && REVStatus == "Filled")    // Profit side take without loss side
-                                    {
-                                        
-
-                                    }
-                                    else if (TPStatus == "New" && TLStatus == "Filled" && REVStatus == "Filled")    // Profit side take without loss side
+                                    else if (TPStatus == "Filled" && (TLStatus == "New" || TLStatus == "N/A") && REVStatus == "Filled")    // Profit and reverse side taken without loss side
                                     {
                                         
 
@@ -514,19 +583,15 @@
                     {
                         // Reset server query timer
                         DateTime dt = DateTime.Now;
-                        NextServerReleaseDateTime = dt.AddMilliseconds(ServerQueryTimeInterval);
+                        NextServerReleaseDateTime = dt.AddMilliseconds((timeOutMS > 0) ? timeOutMS : StandardTimeOut);
                         
                         // Exit the lock
                         Monitor.Exit(_Lock);
                     }
                 }
-
-                if (acquiredLock)
-                    return this.GetNextAction();
-                else
-                    return null;
+                return true;
             }
-            else return null;
+            else return false;
         }
 
         /// <summary>
@@ -536,263 +601,100 @@
         /// </summary>
         /// <param name="refPrice">reference price used for unit size calculation</param>
         /// <returns>The absolute minimum unit size for the given parameters</returns>
-        public double GetUnitSizeForPrice(double refPrice)
+        public long GetUnitSizeForPrice(double refPrice)
         {
             if (refPrice > 0)
             {
                 double totalDepthMaxExposure = (double)this.GetMaximumDepth();
-                return Math.Round(refPrice * Leverage * TotalBalance * MaxExposurePerc / totalDepthMaxExposure, MidpointRounding.ToEven);
+                return (long)Math.Round(refPrice * Leverage * TotalBalance * MaxExposurePerc / totalDepthMaxExposure, MidpointRounding.ToEven);
             }
             else
                 return 0;
         }
 
-        /// <summary>
-        /// This method initiates the calculator with an initial position. Therefore it can 
-        /// only be used when CurrentStatus == ZoneRecoveryStatus.Init.
-        /// </summary>
-        /// <param name="startPosition">The first position taken for this instance of the calculator.</param>
-        /// <returns></returns>
-        public List<ZoneRecoveryAction> EvaluatePosition(PositionResponse startPosition)
-        {
-            // Create a variable used for locking.
-            bool acquiredLock = false;
-
-            // Test if prerequisites have been met.
-            if (CurrentStatus == ZoneRecoveryStatus.Init && 
-                startPosition.CurrentQty != 0 &&
-                CurrentZRPosition == 0)
-            {
-                try
-                {
-                    // Try enter the lock.
-                    Monitor.TryEnter(_Lock, 0, ref acquiredLock);
-
-                    // Test if entering the lock was successful.
-                    if (acquiredLock)
-                    {
-                        // Set the unit size to the size of the very first position taken.
-                        UnitSize = Math.Abs(startPosition.CurrentQty);
-                        
-                        //// Initialize internal positions.
-                        //var pos = new List<PositionResponse>();
-                        //pos.Add(startPosition);
-                        //SetPositions(pos);
-
-                        // Turn the wheel of internal calculation variables
-                        this.TakeStepForward();
-                    }
-                }
-                finally
-                {
-                    // Ensure that the lock is released.
-                    if (acquiredLock)
-                    {
-                        // Exit the lock
-                        Monitor.Exit(_Lock);
-                    }
-                }
-            }
-
-            if (acquiredLock)
-                return this.GetNextAction();
-            else
-                return null;
-        }
-
-        /// <summary>
-        /// Calculates the parameters for the next orders, TP & Reverse > InitialPrice & Volume and returns it as a ZoneRecoveryAction.
-        /// Zone calculation strategy = "Stick with initial zone". This means when a new position diverts from the planned order price,
-        /// the next order price is still set at a price calculated relative to the initial price. 
-        /// Example for PipSize = 1 and ZoneSize = 50:
-        ///     Buy     1   at  1000$
-        ///     Sell    2   at   950$
-        ///     Buy     3   at  1025$   > DISCREPANCY between planned vs actual price
-        ///     
-        /// According to the "plan", the Buy price here should have been 1000$ but due to extreme market volatility, the first price 
-        /// at which the volume (3) could get filled was 1025$. Rather than average calculating the next reverse price this step 
-        /// calculator will stick to the original plan and try to keep buying at 1000$ and keep selling at 950$.
-        /// OpenPositions.Single(s => s.PositionIndex == 1).AVGPrice returns the initial reference price (= price of first position)
-        /// REMARK: This function does not validate the current position. It assumes the next action based on 2 internal variables:
-        /// 1. CurrentStatus
-        /// 2. CurrentZRPosition
-        /// </summary>
-        /// <returns>ZoneRecoveryAction</returns>
-        public List<ZoneRecoveryAction> GetNextAction()
-        {
-            // TODO: 
-            // Close the irrelevant open orders
-            // Create 3 actions:
-            //  1. TP: Close current direction
-            //  2. TL: Close previous direction
-            //  3. REV: Add to current direction
-
-            //LongPosition;
-            //ShortPosition;
-            //List<ZoneRecoveryAction> instructionList = new List<ZoneRecoveryAction>();
-            //LastInstructionList
-
-            // Determine next Action based on 
-            //  CurrentStatus
-            //  CurrentZRPosition
-
-            
-
-
-            if (CurrentStatus == ZoneRecoveryStatus.Winding)
-            {
-                if (CurrentZRPosition < MaxDepthIndex)
-                {
-
-                }
-
-
-                //ZoneRecoveryAction tpProfit = new ZoneRecoveryAction();
-                //ZoneRecoveryAction tpLoss = new ZoneRecoveryAction();
-                //ZoneRecoveryAction rev = new ZoneRecoveryAction();
-                //positionList.Add(tpProfit);
-                //positionList.Add(tpLoss);
-                //positionList.Add(rev);
-
-                //// Calculate the next take profit price
-                //zra.TPPrice = CalculateTakeProfitPrice();
-                //zra.TPVolumeSell = CalculateOpenQtyForDirection(1);
-                //zra.TPVolumeBuy = CalculateOpenQtyForDirection(-1);
-
-                //// Calculate the next reverse price
-                //zra.ReverseVolume = UnitSize * FactorArray[OpenPositions.Count];
-                //zra.ReversePrice = CalculateNextReversePrice();
-                //return zra;
-                
-            }
-            else if (CurrentStatus == ZoneRecoveryStatus.Unwinding) // Unwinding
-            {
-                //// Calculate the next take profit price
-                //zra.TPPrice = CalculateTakeProfitPrice();
-                //zra.TPVolumeSell = CalculateOpenQtyForDirection(1);
-                //zra.TPVolumeBuy = CalculateOpenQtyForDirection(-1);
-
-                //// Calculate the next reverse price
-                //zra.ReverseVolume = -OpenPositions.Single(s => s.PositionIndex == (CurrentZRPosition + 1)).TotalQty;
-                //zra.ReversePrice = CalculateNextReversePrice();
-                //return zra;
-            }
-            else
-                return null;
-
-            return null;
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="currentPositions">A list with the positions of both accounts.</param>
-        public List<ZoneRecoveryAction> EvaluatePosition(List<PositionResponse> currentPositions)
-        {
-            bool l = currentPositions.Single(p => p.Account == ExchConnLong.Account).CurrentQty == LongPosition.CurrentQty;
-            bool s = currentPositions.Single(p => p.Account == ExchConnShort.Account).CurrentQty == ShortPosition.CurrentQty;
-            List<ZoneRecoveryAction> positionList;
-
-            // Check if the CurrentQty changed on the exchange compared to what is know in the application...
-            if (!l || !s)
-            {
-                bool acquiredLock = false;
-                try
-                {
-                    Monitor.TryEnter(_Lock, 0, ref acquiredLock);
-                    if (acquiredLock)
-                    {
-                        positionList = new List<ZoneRecoveryAction>();
-
-                        // TODO: log result both positions
-
-                        if (currentPositions.Single(p => p.Account == ExchConnLong.Account).CurrentQty == 0 && 
-                            currentPositions.Single(p => p.Account == ExchConnShort.Account).CurrentQty == 0)
-                        {
-                            // TP was reached and both positions were closed.
-                            // CLOSE all open orders that might be a result of this instance of the Calculator
-                            // RESET this instance of the Calculator
-
-                            // CurrentZRPosition
-                        }
-                        else if (CurrentStatus == ZoneRecoveryStatus.Winding || CurrentStatus == ZoneRecoveryStatus.Unwinding)
-                        {
-                            
-
-                            // Turn the wheel of internal calculation variables
-                            this.TakeStepForward(currentPositions);
-
-                            
-
-                        }
-                        else
-                        {
-
-                        }
-                    }
-                }
-                finally
-                {
-                    // Ensure that the lock is released.
-                    if (acquiredLock)
-                    {
-                        // Exit the lock
-                        Monitor.Exit(_Lock);
-                    }
-                }
-
-                if (acquiredLock)
-                    return this.GetNextAction();
-                else
-                    return null;
-            }
-            else
-                return null;
-
-        }
-
         
-        //public bool FeedOrderResponse(OrderResponse orderResp)
+
+        ///// <summary>
+        ///// Calculates the parameters for the next orders, TP & Reverse > InitialPrice & Volume and returns it as a ZoneRecoveryAction.
+        ///// Zone calculation strategy = "Stick with initial zone". This means when a new position diverts from the planned order price,
+        ///// the next order price is still set at a price calculated relative to the initial price. 
+        ///// Example for PipSize = 1 and ZoneSize = 50:
+        /////     Buy     1   at  1000$
+        /////     Sell    2   at   950$
+        /////     Buy     3   at  1025$   > DISCREPANCY between planned vs actual price
+        /////     
+        ///// According to the "plan", the Buy price here should have been 1000$ but due to extreme market volatility, the first price 
+        ///// at which the volume (3) could get filled was 1025$. Rather than average calculating the next reverse price this step 
+        ///// calculator will stick to the original plan and try to keep buying at 1000$ and keep selling at 950$.
+        ///// OpenPositions.Single(s => s.PositionIndex == 1).AVGPrice returns the initial reference price (= price of first position)
+        ///// REMARK: This function does not validate the current position. It assumes the next action based on 2 internal variables:
+        ///// 1. CurrentStatus
+        ///// 2. CurrentZRPosition
+        ///// </summary>
+        ///// <returns>ZoneRecoveryAction</returns>
+        //public List<ZoneRecoveryAction> GetNextAction()
         //{
-        //    bool isPositionSet = false;
-        //    bool acquiredLock = false;
+        //    // TODO: 
+        //    // Close the irrelevant open orders
+        //    // Create 3 actions:
+        //    //  1. TP: Close current direction
+        //    //  2. TL: Close previous direction
+        //    //  3. REV: Add to current direction
+
+        //    //LongPosition;
+        //    //ShortPosition;
+        //    //List<ZoneRecoveryAction> instructionList = new List<ZoneRecoveryAction>();
+        //    //LastInstructionList
+
+        //    // Determine next Action based on 
+        //    //  CurrentStatus
+        //    //  CurrentZRPosition
+
             
-        //    if (orderResp.OrdStatus.Equals("Filled"))
+
+
+        //    if (CurrentStatus == ZoneRecoveryStatus.Winding)
         //    {
-        //        try
+        //        if (CurrentZRPosition < MaxDepthIndex)
         //        {
-        //            Monitor.TryEnter(_Lock, 0, ref acquiredLock);
-        //            if (acquiredLock)
-        //            {
-        //                // The critical section.
-        //                int elementID = OpenPositions.Count + 1;
 
-        //                // Add the new position to the OpenPositions List
-        //                OpenPositions.Add(new ZoneRecoveryPosition(orderResp.ClOrdId, orderResp.Account, this.PipSize, elementID, orderResp.AvgPx, orderResp.OrderQty));
-
-        //                // Turn the wheel of internal calculation variables
-        //                this.TakeStepForward();
-
-        //                isPositionSet = true;
-
-        //                // TODO: The controlling application should call GetNextAction() next.
-        //                // IDEA: Let this function already return the next action.
-        //            }
-        //        }
-        //        finally
-        //        {
-        //            // Ensure that the lock is released.
-        //            if (acquiredLock)
-        //            {
-        //                // Exit the lock
-        //                Monitor.Exit(_Lock);
-        //            }
         //        }
 
+
+        //        //ZoneRecoveryAction tpProfit = new ZoneRecoveryAction();
+        //        //ZoneRecoveryAction tpLoss = new ZoneRecoveryAction();
+        //        //ZoneRecoveryAction rev = new ZoneRecoveryAction();
+        //        //positionList.Add(tpProfit);
+        //        //positionList.Add(tpLoss);
+        //        //positionList.Add(rev);
+
+        //        //// Calculate the next take profit price
+        //        //zra.TPPrice = CalculateTakeProfitPrice();
+        //        //zra.TPVolumeSell = CalculateOpenQtyForDirection(1);
+        //        //zra.TPVolumeBuy = CalculateOpenQtyForDirection(-1);
+
+        //        //// Calculate the next reverse price
+        //        //zra.ReverseVolume = UnitSize * FactorArray[OpenPositions.Count];
+        //        //zra.ReversePrice = CalculateNextReversePrice();
+        //        //return zra;
+                
         //    }
+        //    else if (CurrentStatus == ZoneRecoveryStatus.Unwinding) // Unwinding
+        //    {
+        //        //// Calculate the next take profit price
+        //        //zra.TPPrice = CalculateTakeProfitPrice();
+        //        //zra.TPVolumeSell = CalculateOpenQtyForDirection(1);
+        //        //zra.TPVolumeBuy = CalculateOpenQtyForDirection(-1);
 
-        //    // Return [true / false] when [something / nothing] happened
-        //    return isPositionSet;
+        //        //// Calculate the next reverse price
+        //        //zra.ReverseVolume = -OpenPositions.Single(s => s.PositionIndex == (CurrentZRPosition + 1)).TotalQty;
+        //        //zra.ReversePrice = CalculateNextReversePrice();
+        //        //return zra;
+        //    }
+        //    else
+        //        return null;
+
+        //    return null;
         //}
         
         #endregion Public methods

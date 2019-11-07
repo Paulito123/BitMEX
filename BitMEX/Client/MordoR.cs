@@ -31,8 +31,7 @@ namespace BitMEX.Client
 
         public MordoR(string bitmexKey = "rTAFXRKn2dLARuG_t1dDOtgI", 
                       string bitmexSecret = "K2LmL6aTbj8eW_LVj7OLa7iA6eZa8TJMllh3sjCynV4fpnMr", 
-                      string bitmexDomain = "https://testnet.bitmex.com",
-                      ILog l = null)
+                      string bitmexDomain = "https://testnet.bitmex.com")
         {
             this.ApiKey = bitmexKey;
             this.ApiSecret = bitmexSecret;
@@ -389,7 +388,7 @@ namespace BitMEX.Client
         /// <param name="clOrdID">Locally generated ID is passed as the unique reference to this specific order.</param>
         /// <param name="orderQty">Number of contracts to trade e.g. 10</param>
         /// <returns>Object containing the response of the order.</returns>
-        public object MarketOrder(string symbol, string clOrdID, int orderQty)
+        public object MarketOrder(string symbol, string clOrdID, long orderQty)
         {
             var param = new Dictionary<string, string>();
             param["symbol"] = symbol;
@@ -412,7 +411,7 @@ namespace BitMEX.Client
         /// <param name="stopPx">The stop price</param>
         /// <param name="price">When specified, StopLimit order is placed.</param>
         /// <returns>Object containing the response of the order.</returns>
-        public object StopLimitOrder(string symbol, string clOrdID, int orderQty, double price, double stopPx)
+        public object StopLimitOrder(string symbol, string clOrdID, long orderQty, double price, double stopPx)
         {
             var param = new Dictionary<string, string>();
             param["symbol"] = symbol;
@@ -437,7 +436,7 @@ namespace BitMEX.Client
         /// <param name="clOrdID">Locally generated ID is passed as the unique reference to this specific order.</param>
         /// <param name="options"></param>
         /// <returns>Object containing the response of the order.</returns>
-        public object LimitOrder(string symbol, string clOrdID, int orderQty, double price, string options = "")
+        public object LimitOrder(string symbol, string clOrdID, long orderQty, double price, string options = "")
         {
             var param = new Dictionary<string, string>();
             param["symbol"] = symbol;
@@ -458,6 +457,37 @@ namespace BitMEX.Client
             //param["execInst"] = ""; // ParticipateDoNotInitiate (=Post-only)  | ReduceOnly | Close
 
             param["text"] = "Some text";
+
+            ApiResponse res = Query("POST", "/order", false, param, true);
+
+            // Deserialize JSON result
+            return res.ApiResponseProcessor();
+        }
+
+        /// <summary>
+        /// Because LONG orders cannot rest above the current price in the order book and SHORT orders cannot rest under 
+        /// the current price in the order book, StopMarketOrders are placed on the server to fulfill just that purpose.
+        /// The order then does not rest in the order book, but is known on the server and will be triggered once the
+        /// stopPx is reached. It will then act as a MarketOrder.
+        /// </summary>
+        /// <param name="symbol"></param>
+        /// <param name="clOrdID"></param>
+        /// <param name="orderQty"></param>
+        /// <param name="stopPx"></param>
+        /// <param name="text"></param>
+        /// <returns></returns>
+        public object StopMarketOrder(string symbol, string clOrdID, long orderQty, double stopPx, string text = "Standard StopMarket")
+        {
+            var param = new Dictionary<string, string>();
+            param["symbol"] = symbol;
+            param["side"] = (orderQty >= 0) ? "Buy" : "Sell";
+            param["stopPx"] = stopPx.ToString();
+            param["orderQty"] = orderQty.ToString();
+            param["clOrdID"] = clOrdID;
+            param["timeInForce"] = "ImmediateOrCancel";
+            param["ordType"] = "Stop";
+            param["execInst"] = "LastPrice";
+            param["text"] = text;
 
             ApiResponse res = Query("POST", "/order", false, param, true);
 

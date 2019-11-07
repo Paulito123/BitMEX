@@ -76,9 +76,29 @@
             OrderType = orderType;
         }
 
-        public ZoneRecoveryOrder()
+        public OrderResponse SendOrderToServer(MordoR conn)
         {
+            if (Account != conn.Account)
+                return null;
 
+            switch(OrderType)
+            {
+                case ZoneRecoveryOrderType.TP: // Limit order > Tegenovergestelde van open position
+                    return (OrderResponse)conn.LimitOrder(Symbol, ClOrdId, Qty, Price);
+                case ZoneRecoveryOrderType.TL: // Speciaal order
+                    return (OrderResponse)conn.StopMarketOrder(Symbol, ClOrdId, Qty, Price, "TL");
+                case ZoneRecoveryOrderType.REV:// Speciaal order
+                    return (OrderResponse)conn.StopMarketOrder(Symbol, ClOrdId, Qty, Price, "REV");
+                case ZoneRecoveryOrderType.Cancel:
+                    return ((List<OrderResponse>)conn.CancelOrders(new string[] { ClOrdId })).First();
+                default:
+                    return null;
+            }
         }
+
+        //public ZoneRecoveryOrder()
+        //{
+
+        //}
     }
 }
