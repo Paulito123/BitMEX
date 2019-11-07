@@ -481,8 +481,8 @@ namespace BitMEX.TestForm
                 BaseError orderErr = new BaseError();
 
                 string IDInput = TBClOrdId.Text;
-                object outcome = mconn.CancelOrder(
-                                IDInput,
+                object outcome = mconn.CancelOrders(
+                                new string[] { IDInput },
                                 "Schliessen die handel!"
                                 );
 
