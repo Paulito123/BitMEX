@@ -322,21 +322,6 @@
                 return 0;
         }
         
-        ///// <summary>
-        ///// Calculates the total Qty of all the open positions for a given direction
-        ///// </summary>
-        ///// <param name="direction">The direction for which the total Qty needs to be summed</param>
-        ///// <returns></returns>
-        //private long CalculateOpenQtyForDirection(int direction)
-        //{
-        //    if (direction == 1)
-        //        return LongPosition.CurrentQty;
-        //    else if (direction == -1)
-        //        return ShortPosition.CurrentQty;
-        //    else
-        //        return 0;
-        //}
-
         /// <summary>
         /// Calculate the Qty for the next orders by ZoneRecoveryOrderType.
         /// </summary>
@@ -372,15 +357,26 @@
         /// <returns>The next reverse price</returns>
         private double CalculateNextReversePrice()
         {
-            // TODO Return an equalized Reverse price to optimize risk
-            if (LongPosition.IsOpen && ShortPosition.IsOpen)
-                return RoundToPipsize((GetNextDirection()== 1) ? LongPosition.MarkPrice : ShortPosition.MarkPrice);
-            else if (LongPosition.IsOpen)
-                return RoundToPipsize(LongPosition.MarkPrice - ZoneSize);
-            else if (ShortPosition.IsOpen)
-                return RoundToPipsize(ShortPosition.MarkPrice + ZoneSize);
+            // TODO Test the equalized Reverse price for optimal risk
+            if (GetNextDirection() == 1)
+            {
+                return RoundToPipsize(((LongPosition.MarkPrice + (ZoneSize * GetNextDirection())) * (ShortPosition.CurrentQty + (FactorArray[CurrentZRPosition] * GetNextDirection())) - (ShortPosition.MarkPrice * ShortPosition.CurrentQty)) / FactorArray[CurrentZRPosition]);
+            }
+            else if (GetNextDirection() == -1)
+            {
+                return RoundToPipsize(((ShortPosition.MarkPrice + (ZoneSize * GetNextDirection())) * (LongPosition.CurrentQty + (FactorArray[CurrentZRPosition] * GetNextDirection())) - (LongPosition.MarkPrice * LongPosition.CurrentQty)) / FactorArray[CurrentZRPosition]);                
+            }
             else
                 return 0;
+
+            //if (LongPosition.IsOpen && ShortPosition.IsOpen)
+            //    return RoundToPipsize((GetNextDirection()== 1) ? LongPosition.MarkPrice : ShortPosition.MarkPrice);
+            //else if (LongPosition.IsOpen)
+            //    return RoundToPipsize(LongPosition.MarkPrice - ZoneSize);
+            //else if (ShortPosition.IsOpen)
+            //    return RoundToPipsize(ShortPosition.MarkPrice + ZoneSize);
+            //else
+            //    return 0;
         }
 
         /// <summary>
