@@ -12,6 +12,7 @@ namespace BitMEX.Model
     using System.Collections.Generic;
 
     using System.Globalization;
+    using System.Text;
     using Newtonsoft.Json;
     using Newtonsoft.Json.Converters;
 
@@ -91,8 +92,45 @@ namespace BitMEX.Model
 
         [JsonProperty("withdrawalLock")]
         public List<object> WithdrawalLock { get; set; }
-    }
 
+        /// <summary>
+        /// Returns the string presentation of the object
+        /// </summary>
+        /// <returns>String presentation of the object</returns>
+        public override string ToString()
+        {
+            var sb = new StringBuilder();
+            sb.Append("class Wallet {\n");
+            sb.Append("  Account: ").Append(Account).Append("\n");
+            sb.Append("  Currency: ").Append(Currency).Append("\n");
+            sb.Append("  PrevDeposited: ").Append(PrevDeposited).Append("\n");
+            sb.Append("  PrevWithdrawn: ").Append(PrevWithdrawn).Append("\n");
+            sb.Append("  PrevTransferIn: ").Append(PrevTransferIn).Append("\n");
+            sb.Append("  PrevTransferOut: ").Append(PrevTransferOut).Append("\n");
+            sb.Append("  PrevAmount: ").Append(PrevAmount).Append("\n");
+            sb.Append("  PrevTimestamp: ").Append(PrevTimestamp).Append("\n");
+            sb.Append("  DeltaDeposited: ").Append(DeltaDeposited).Append("\n");
+            sb.Append("  DeltaWithdrawn: ").Append(DeltaWithdrawn).Append("\n");
+            sb.Append("  DeltaTransferIn: ").Append(DeltaTransferIn).Append("\n");
+            sb.Append("  DeltaTransferOut: ").Append(DeltaTransferOut).Append("\n");
+            sb.Append("  DeltaAmount: ").Append(DeltaAmount).Append("\n");
+            sb.Append("  Deposited: ").Append(Deposited).Append("\n");
+            sb.Append("  Withdrawn: ").Append(Withdrawn).Append("\n");
+            sb.Append("  TransferIn: ").Append(TransferIn).Append("\n");
+            sb.Append("  TransferOut: ").Append(TransferOut).Append("\n");
+            sb.Append("  Amount: ").Append(Amount).Append("\n");
+            sb.Append("  PendingCredit: ").Append(PendingCredit).Append("\n");
+            sb.Append("  PendingDebit: ").Append(PendingDebit).Append("\n");
+            sb.Append("  ConfirmedDebit: ").Append(ConfirmedDebit).Append("\n");
+            sb.Append("  Timestamp: ").Append(Timestamp).Append("\n");
+            sb.Append("  Addr: ").Append(Addr).Append("\n");
+            sb.Append("  Script: ").Append(Script).Append("\n");
+            sb.Append("  WithdrawalLock: ").Append(WithdrawalLock).Append("\n");
+            sb.Append("}\n");
+            return sb.ToString();
+        }
+    }
+    
     public partial class WalletResponse
     {
         public static WalletResponse FromJson(string json)

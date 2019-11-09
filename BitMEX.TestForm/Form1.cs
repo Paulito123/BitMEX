@@ -527,13 +527,15 @@ namespace BitMEX.TestForm
         private void buttonTest_Click(object sender, EventArgs e)
         {
             buttonTest.Text = "calc.Evaluate()";
-            OutputLabel.Text = "";
+
             //MessageBox.Show(calc.GetUnitSizeForPrice(8839).ToString());
 
-            //MessageBox.Show((calc.GetWalletInfoForConnection(connLong).Amount/100000000.0).ToString());
+            MessageBox.Show(calc.GetWalletInfoForConnection(connLong).ToString());
             //calc.Evaluate();
+            //MessageBox.Show(calc.GetPositionForConnection(connLong).ToString());
 
-            OutputLabel.Text = calc.Evaluate().ToString() + Environment.NewLine + OutputLabel.Text;
+            //OutputLabel.Text = "";
+            //OutputLabel.Text = calc.Evaluate().ToString() + Environment.NewLine + OutputLabel.Text;
 
             //MessageBox.Show(mconn.Account.ToString());
 

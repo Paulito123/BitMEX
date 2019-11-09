@@ -440,11 +440,11 @@
             sb.Append("  UnrealisedPnl: ").Append(UnrealisedPnl.ToString()).Append("\n");
             sb.Append("  UnrealisedPnlPcnt: ").Append(UnrealisedPnlPcnt.ToString()).Append("\n");
             sb.Append("  UnrealisedRoePcnt: ").Append(UnrealisedRoePcnt.ToString()).Append("\n");
-            sb.Append("  SimpleQty: ").Append(SimpleQty.ToString()).Append("\n");
-            sb.Append("  SimpleCost: ").Append(SimpleCost.ToString()).Append("\n");
-            sb.Append("  SimpleValue: ").Append(SimpleValue.ToString()).Append("\n");
-            sb.Append("  SimplePnl: ").Append(SimplePnl.ToString()).Append("\n");
-            sb.Append("  SimplePnlPcnt: ").Append(SimplePnlPcnt.ToString()).Append("\n");
+            //sb.Append("  SimpleQty: ").Append(SimpleQty.ToString()).Append("\n");
+            //sb.Append("  SimpleCost: ").Append(SimpleCost.ToString()).Append("\n");
+            //sb.Append("  SimpleValue: ").Append(SimpleValue.ToString()).Append("\n");
+            //sb.Append("  SimplePnl: ").Append(SimplePnl.ToString()).Append("\n");
+            //sb.Append("  SimplePnlPcnt: ").Append(SimplePnlPcnt.ToString()).Append("\n");
             sb.Append("  AvgCostPrice: ").Append(AvgCostPrice.ToString()).Append("\n");
             sb.Append("  AvgEntryPrice: ").Append(AvgEntryPrice.ToString()).Append("\n");
             sb.Append("  BreakEvenPrice: ").Append(BreakEvenPrice.ToString()).Append("\n");

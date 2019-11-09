@@ -56,6 +56,11 @@
         private Dictionary<long, WalletResponse> Wallets;
 
         /// <summary>
+        /// List of last known positions by AccountNumber.
+        /// </summary>
+        private Dictionary<long, PositionResponse> Positions;
+
+        /// <summary>
         /// The account used for LONG transactions.
         /// </summary>
         private long AccountLong;
@@ -65,15 +70,15 @@
         /// </summary>
         private long AccountShort;
 
-        /// <summary>
-        /// The last known long position.
-        /// </summary>
-        private PositionResponse LongPosition;
+        ///// <summary>
+        ///// The last known long position.
+        ///// </summary>
+        //private PositionResponse LongPosition;
 
-        /// <summary>
-        /// The last known short position.
-        /// </summary>
-        private PositionResponse ShortPosition;
+        ///// <summary>
+        ///// The last known short position.
+        ///// </summary>
+        //private PositionResponse ShortPosition;
         
         /// <summary>
         /// The orders that are known in the application and are suposed to be resting on the server.
@@ -165,6 +170,9 @@
             Wallets = new Dictionary<long, WalletResponse>();
             Wallets.Add(connA.Account, (WalletResponse)connA.GetWalletInfo());
             Wallets.Add(connB.Account, (WalletResponse)connB.GetWalletInfo());
+            Positions = new Dictionary<long, PositionResponse>();
+            Positions.Add(connA.Account, null);
+            Positions.Add(connB.Account, null);
             MaxExposurePerc = maxExposurePerc;
             Leverage = leverage;
             PipSize = pipSize;
@@ -262,10 +270,10 @@
         /// <returns>The theoretical break even price</returns>
         private double CalculateBreakEvenPrice()
         {
-            if(LongPosition.IsOpen || ShortPosition.IsOpen)
+            if(Positions[AccountLong].IsOpen || Positions[AccountShort].IsOpen)
             {
-                double v_numerator = (LongPosition.CurrentQty * LongPosition.MarkPrice) + (ShortPosition.CurrentQty * ShortPosition.MarkPrice);
-                double v_denominator = LongPosition.CurrentQty + ShortPosition.CurrentQty;
+                double v_numerator = (Positions[AccountLong].CurrentQty * Positions[AccountLong].MarkPrice) + (Positions[AccountShort].CurrentQty * Positions[AccountShort].MarkPrice);
+                double v_denominator = Positions[AccountLong].CurrentQty + Positions[AccountShort].CurrentQty;
                 double bePrice = 0.0;
                 
                 bePrice = v_numerator / v_denominator;
@@ -284,9 +292,9 @@
         /// <returns>The total exposure </returns>
         private long CalculateTotalOpenExposure()
         {
-            if (LongPosition.IsOpen || ShortPosition.IsOpen)
+            if (Positions[AccountLong].IsOpen || Positions[AccountShort].IsOpen)
             {
-                return LongPosition.CurrentQty + Math.Abs(ShortPosition.CurrentQty);
+                return Positions[AccountLong].CurrentQty + Math.Abs(Positions[AccountShort].CurrentQty);
             }
             else
             {
@@ -321,9 +329,9 @@
         /// <returns>1 = LONG, -1 = SHORT, 0 = UNDEFINED</returns>
         private int GetNextDirection()
         {
-            if (LongPosition.IsOpen || ShortPosition.IsOpen)
+            if (Positions[AccountLong].IsOpen || Positions[AccountShort].IsOpen)
             {
-                if (Math.Abs(LongPosition.CurrentQty) > Math.Abs(ShortPosition.CurrentQty))
+                if (Math.Abs(Positions[AccountLong].CurrentQty) > Math.Abs(Positions[AccountShort].CurrentQty))
                     return -1;
                 else
                     return 1;
@@ -346,14 +354,14 @@
             {
                 case ZoneRecoveryOrderType.TP:
                     if (GetNextDirection() == 1)
-                        return Math.Abs(ShortPosition.CurrentQty);
+                        return Math.Abs(Positions[AccountShort].CurrentQty);
                     else
-                        return -LongPosition.CurrentQty;
+                        return -Positions[AccountLong].CurrentQty;
                 case ZoneRecoveryOrderType.TL:
                     if (GetNextDirection() == 1)
-                        return -LongPosition.CurrentQty; 
+                        return -Positions[AccountLong].CurrentQty; 
                     else
-                        return Math.Abs(ShortPosition.CurrentQty);
+                        return Math.Abs(Positions[AccountShort].CurrentQty);
                 case ZoneRecoveryOrderType.REV:
                     return GetNextDirection() * UnitSize * FactorArray[CurrentZRPosition];
                 default:
@@ -367,12 +375,12 @@
         /// <returns>The next reverse price</returns>
         private double CalculateNextReversePrice()
         {
-            if (LongPosition.IsOpen && ShortPosition.IsOpen)
-                return RoundToPipsize((GetNextDirection() == 1) ? ShortPosition.MarkPrice : LongPosition.MarkPrice);
-            else if (LongPosition.IsOpen)
-                return RoundToPipsize(LongPosition.MarkPrice - ZoneSize);
-            else if (ShortPosition.IsOpen)
-                return RoundToPipsize(ShortPosition.MarkPrice + ZoneSize);
+            if (Positions[AccountLong].IsOpen && Positions[AccountShort].IsOpen)
+                return RoundToPipsize((GetNextDirection() == 1) ? Positions[AccountShort].MarkPrice : Positions[AccountLong].MarkPrice);
+            else if (Positions[AccountLong].IsOpen)
+                return RoundToPipsize(Positions[AccountLong].MarkPrice - ZoneSize);
+            else if (Positions[AccountShort].IsOpen)
+                return RoundToPipsize(Positions[AccountShort].MarkPrice + ZoneSize);
             else
                 return 0;
 
@@ -395,12 +403,13 @@
         private bool SyncPositions()
         {
             bool inSync = true;
+            
             try
             {
                 List<PositionResponse> lp = (List<PositionResponse>)Connections[AccountLong].GetPositionsForSymbols(new string[] { Symbol });
-                LongPosition = lp[1];
+                Positions[AccountLong] = lp[0];
                 List<PositionResponse> sp = (List<PositionResponse>)Connections[AccountShort].GetPositionsForSymbols(new string[] { Symbol });
-                ShortPosition = sp[1];
+                Positions[AccountShort] = sp[0];
             }
             catch (Exception e)
             {
@@ -499,7 +508,7 @@
                     if (acquiredLock)
                     {
 
-                        if (ApplicationOrders.Count > 0 && CurrentStatus != ZoneRecoveryStatus.Init)
+                        if (ApplicationOrders.Count >= 2 && CurrentStatus != ZoneRecoveryStatus.Init)
                         {
                             // Try getting the order status on the server...
                             try
@@ -611,35 +620,35 @@
 
                             }
                         }
-                        else    // No Application orders
+                        else    // No Application orders OR ZoneRecoveryStatus = Init
                         {
                             try
                             {
                                 // Synchronize the internal positions
                                 SyncPositions();
 
-                                if (ShortPosition.CurrentQty == 0 && LongPosition.CurrentQty == 0)
+                                if (Positions[AccountShort].CurrentQty == 0 && Positions[AccountLong].CurrentQty == 0)
                                 {
                                     // Do nothing
                                 }
-                                else if (ShortPosition.CurrentQty == 0 && LongPosition.CurrentQty > 0)
+                                else if (Positions[AccountShort].CurrentQty == 0 && Positions[AccountLong].CurrentQty > 0)
                                 {
                                     // Set the initial unit size
-                                    UnitSize = LongPosition.CurrentQty;
+                                    UnitSize = Positions[AccountLong].CurrentQty;
                                     
                                     // Create App orders and send to server
-                                    UpdateAppOrderAndSync(LongPosition.Account, ShortPosition.Account);
+                                    UpdateAppOrderAndSync(Positions[AccountLong].Account, Positions[AccountShort].Account);
 
                                     // Turn the wheel
                                     TakeStepForward();
                                 }
-                                else if(LongPosition.CurrentQty == 0 && ShortPosition.CurrentQty < 0)
+                                else if(Positions[AccountLong].CurrentQty == 0 && Positions[AccountShort].CurrentQty < 0)
                                 {
                                     // Set the initial unit size
-                                    UnitSize = Math.Abs(ShortPosition.CurrentQty);
+                                    UnitSize = Math.Abs(Positions[AccountShort].CurrentQty);
 
                                     // Create App orders and send to server
-                                    UpdateAppOrderAndSync(ShortPosition.Account, LongPosition.Account);
+                                    UpdateAppOrderAndSync(Positions[AccountShort].Account, Positions[AccountLong].Account);
 
                                     // Turn the wheel
                                     TakeStepForward();
@@ -676,7 +685,21 @@
             return returnValue;
         }
 
+        /// <summary>
+        /// Get the position for a specific connection.
+        /// </summary>
+        /// <param name="conn">A MordoR connection</param>
+        /// <returns>A PositionResponse for the connection</returns>
+        public PositionResponse GetPositionForConnection(MordoR conn)
+        {
+            return Positions[conn.Account];
+        }
 
+        /// <summary>
+        /// Get the wallet for a specific connection.
+        /// </summary>
+        /// <param name="conn">A MordoR connection</param>
+        /// <returns>A WalletResponse for the connection</returns>
         public WalletResponse GetWalletInfoForConnection(MordoR conn)
         {
             return Wallets[conn.Account];
