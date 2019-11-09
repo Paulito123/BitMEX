@@ -124,6 +124,9 @@ namespace BitMEX.Client
                 case "/api/v1/order/closeposition":
                     o = OrderResponse.FromJson(this.Json);
                     break;
+                case "/api/v1/user/wallet":
+                    o = WalletResponse.FromJson(this.Json);
+                    break;
                 case "/api/v1/order/cancelallafter":
                 default:
                     o = null;

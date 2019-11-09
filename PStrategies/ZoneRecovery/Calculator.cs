@@ -49,6 +49,11 @@
         private Dictionary<long, MordoR> Connections;
 
         /// <summary>
+        /// List of Wallets.
+        /// </summary>
+        private Dictionary<long, WalletResponse> Wallets;
+
+        /// <summary>
         /// The account used for LONG transactions.
         /// </summary>
         private long AccountLong;
@@ -83,11 +88,6 @@
         /// the market. 
         /// </summary>
         private double MaxExposurePerc { get; }
-
-        /// <summary>
-        /// The total balance of the wallet at the time that the Calculator class is initialized.
-        /// </summary>
-        private double TotalBalance { get; }
 
         /// <summary>
         /// The current leverage used for calculating other measures
@@ -149,18 +149,20 @@
         /// <param name="minPrftPerc">Minimum required profit margin</param>
         /// <param name="connLong">A MordoR connection configured for the Long account</param>
         /// <param name="connShort">A MordoR connection configured for the Short account</param>
-        public Calculator(string symbol, double maxExposurePerc, double totalBalance, double leverage, double pipSize, int maxDepthIndex, int zoneSize, double minPrftPerc
+        public Calculator(string symbol, double maxExposurePerc, double leverage, double pipSize, int maxDepthIndex, int zoneSize, double minPrftPerc
                           , MordoR connA, MordoR connB)
         {
             // Initialize main variables
             Symbol = symbol;
-            Connections = new Dictionary<long, MordoR>();
             AccountLong = connA.Account;
             AccountShort = connB.Account;
+            Connections = new Dictionary<long, MordoR>();
             Connections.Add(connA.Account, connA);
             Connections.Add(connB.Account, connB);
+            Wallets = new Dictionary<long, WalletResponse>();
+            Wallets.Add(connA.Account, (WalletResponse)connA.GetWalletInfo());
+            Wallets.Add(connB.Account, (WalletResponse)connB.GetWalletInfo());
             MaxExposurePerc = maxExposurePerc;
-            TotalBalance = totalBalance;
             Leverage = leverage;
             PipSize = pipSize;
             MaxDepthIndex = maxDepthIndex;
@@ -357,24 +359,24 @@
         /// <returns>The next reverse price</returns>
         private double CalculateNextReversePrice()
         {
-            // TODO Test the equalized Reverse price for optimal risk
-            if (GetNextDirection() == 1)
-            {
-                return RoundToPipsize(((LongPosition.MarkPrice + (ZoneSize * GetNextDirection())) * (ShortPosition.CurrentQty + (FactorArray[CurrentZRPosition] * GetNextDirection())) - (ShortPosition.MarkPrice * ShortPosition.CurrentQty)) / FactorArray[CurrentZRPosition]);
-            }
-            else if (GetNextDirection() == -1)
-            {
-                return RoundToPipsize(((ShortPosition.MarkPrice + (ZoneSize * GetNextDirection())) * (LongPosition.CurrentQty + (FactorArray[CurrentZRPosition] * GetNextDirection())) - (LongPosition.MarkPrice * LongPosition.CurrentQty)) / FactorArray[CurrentZRPosition]);                
-            }
+            if (LongPosition.IsOpen && ShortPosition.IsOpen)
+                return RoundToPipsize((GetNextDirection() == 1) ? ShortPosition.MarkPrice : LongPosition.MarkPrice);
+            else if (LongPosition.IsOpen)
+                return RoundToPipsize(LongPosition.MarkPrice - ZoneSize);
+            else if (ShortPosition.IsOpen)
+                return RoundToPipsize(ShortPosition.MarkPrice + ZoneSize);
             else
                 return 0;
 
-            //if (LongPosition.IsOpen && ShortPosition.IsOpen)
-            //    return RoundToPipsize((GetNextDirection()== 1) ? LongPosition.MarkPrice : ShortPosition.MarkPrice);
-            //else if (LongPosition.IsOpen)
-            //    return RoundToPipsize(LongPosition.MarkPrice - ZoneSize);
-            //else if (ShortPosition.IsOpen)
-            //    return RoundToPipsize(ShortPosition.MarkPrice + ZoneSize);
+            //// Test the equalized Reverse price for optimal risk
+            //if (GetNextDirection() == 1)
+            //{
+            //    return RoundToPipsize(((LongPosition.MarkPrice + (ZoneSize * GetNextDirection())) * (ShortPosition.CurrentQty + (FactorArray[CurrentZRPosition] * GetNextDirection())) - (ShortPosition.MarkPrice * ShortPosition.CurrentQty)) / FactorArray[CurrentZRPosition]);
+            //}
+            //else if (GetNextDirection() == -1)
+            //{
+            //    return RoundToPipsize(((ShortPosition.MarkPrice + (ZoneSize * GetNextDirection())) * (LongPosition.CurrentQty + (FactorArray[CurrentZRPosition] * GetNextDirection())) - (LongPosition.MarkPrice * LongPosition.CurrentQty)) / FactorArray[CurrentZRPosition]);
+            //}
             //else
             //    return 0;
         }
@@ -674,8 +676,9 @@
         {
             if (refPrice > 0)
             {
+                double totalBalance = (Wallets[AccountLong].Amount + Wallets[AccountShort].Amount) / 100000000;
                 double totalDepthMaxExposure = (double)this.GetMaximumDepth();
-                return (long)Math.Round(refPrice * Leverage * TotalBalance * MaxExposurePerc / totalDepthMaxExposure, MidpointRounding.ToEven);
+                return (long)Math.Round(refPrice * Leverage * totalBalance * MaxExposurePerc / totalDepthMaxExposure, MidpointRounding.ToEven);
             }
             else
                 return 0;
@@ -686,34 +689,6 @@
 }
 
 /*
- * BreakEvenPrice
- * i    A[i]    V[i]   A[i]*V[i]
- * --------------------------------
- * 1    1.13    -1000    -1130
- * 2    1.125    2000     2250
- * 3    1.129   -3000    -3387   +
- * --------------------------------
- * SOM:         -2000    -2267
- * BREAK_EVEN_PRICE = SOM(A[i]*V[i]) / SOM(V[i]) = -2267 / -2000 = 1.1335
-
-private static double CalculateBEP(double[] orders, double[] vol, int tradeindex, double dir) {
-	// BEP = Sum(Vol R P) / Sum(Vol R)
-	double v_numerator 		= 0.0;
-	double v_denominator 	= 0.0;
-	double o 				= 0.0;
-	double cDir 				= dir;
-			
-	for (int i = tradeindex-1; i >= 0; i--) {
-		v_numerator = Math.Round(v_numerator + (vol[i] * orders[i] * cDir), 5);
-		v_denominator = Math.Round(v_denominator + (vol[i] * cDir), 5);
-		// Change direction for next calculation
-		cDir = (cDir < 0)? 1 : -1;
-	}
-			
-	o = v_numerator / v_denominator;
-			
-	return Math.Round(o, 4);
-}
 
 Hey I'm coming from Bitfinex where we can manually set OCO orders. I'm trying to find the equivalent on Bitmex so when I open a position I can set my targets and walk away.
 For Long:

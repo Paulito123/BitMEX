@@ -21,14 +21,14 @@ namespace BitMEX.TestForm
         string guid;
 
         //private static readonly ManualResetEvent ExitEvent = new ManualResetEvent(false);
-        //private static readonly string API_KEY = "rTAFXRKn2dLARuG_t1dDOtgI";
-        //private static readonly string API_SECRET = "K2LmL6aTbj8eW_LVj7OLa7iA6eZa8TJMllh3sjCynV4fpnMr";
-        
+        //private static readonly string API_KEY = "_VreS7qgkoUW0q60DfF4ZaQn";
+        //private static readonly string API_SECRET = "a_6InG8c6xuOXwqGW6GfKlkc_HyLSS5SicMKooSdZ2qWlDqF";
+
         public Form1()
         {
             InitializeComponent();
             guid = MordoR.GenerateGUID();
-            mconn = new MordoR();
+            mconn = new MordoR("_VreS7qgkoUW0q60DfF4ZaQn", "a_6InG8c6xuOXwqGW6GfKlkc_HyLSS5SicMKooSdZ2qWlDqF");
             TBMarketOrder.Text = "XBTUSD";
 
             log4net.Config.XmlConfigurator.Configure();

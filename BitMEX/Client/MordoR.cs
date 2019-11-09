@@ -23,14 +23,16 @@ namespace BitMEX.Client
         private string  ApiKey;
         private string  ApiSecret;
         public long Account { get; }
-        //ILog            log;
 
         #endregion End variables
 
         #region Constructor
 
-        public MordoR(string bitmexKey = "rTAFXRKn2dLARuG_t1dDOtgI", 
-                      string bitmexSecret = "K2LmL6aTbj8eW_LVj7OLa7iA6eZa8TJMllh3sjCynV4fpnMr", 
+        // TESTLONG  [51091]    : "_VreS7qgkoUW0q60DfF4ZaQn" - "a_6InG8c6xuOXwqGW6GfKlkc_HyLSS5SicMKooSdZ2qWlDqF"
+        // TESTSHORT [170591]   : "4vB259igatg3eg-dYFc7ZW3q" - "iISb35d4QsA-SmBOcSjd9ZSseeSACujN-4vnCJSa0SFtO55v"
+
+        public MordoR(string bitmexKey, 
+                      string bitmexSecret, 
                       string bitmexDomain = "https://testnet.bitmex.com")
         {
             this.ApiKey = bitmexKey;
@@ -607,7 +609,18 @@ namespace BitMEX.Client
 
         #region /user/wallet
 
-
+        /// <summary>
+        /// Get the latest wallet balance known on the server.
+        /// </summary>
+        /// <param name="currency"></param>
+        /// <returns>A WalletResponse object containing the wallet balances.</returns>
+        public object GetWalletInfo(string currency = null)
+        {
+            var param = new Dictionary<string, string>();
+            param["currency"] = (currency == null) ? "XBt" : currency;
+            ApiResponse res = Query("GET", "/user/wallet", false, param, true);
+            return res.ApiResponseProcessor();
+        }
 
         #endregion
 
