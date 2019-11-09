@@ -16,6 +16,8 @@ namespace BitMEX.Client
 {
     public class MordoR
     {
+        // TODO IDEA Let all methods that query the Exchange return a fixed object type. 
+        // When error is returned, write it to the log.
 
         #region Variables
 
@@ -38,7 +40,7 @@ namespace BitMEX.Client
             this.ApiKey = bitmexKey;
             this.ApiSecret = bitmexSecret;
             this.Domain = bitmexDomain;
-            this.Account = GetAccount();
+            this.Account = GetExchangeAccountNumber();
 
             //if (l == null)
             //{
@@ -102,7 +104,7 @@ namespace BitMEX.Client
         /// <param name="param"></param>
         /// <param name="depth"></param>
         /// <returns></returns>
-        private string BuildJSONParamListWithFilter(Dictionary<string, string> param, string filterJSONClause = null)
+        private string BuildQueryData(Dictionary<string, string> param)
         {
             if (param == null)
                 return "";
@@ -110,10 +112,7 @@ namespace BitMEX.Client
             StringBuilder b = new StringBuilder();
             foreach (var item in param)
                 b.Append(string.Format("&{0}={1}", item.Key, WebUtility.UrlEncode(item.Value)));
-
-            if (!String.IsNullOrEmpty(filterJSONClause))
-                b.Append(string.Format("&{0}={1}", "filter", WebUtility.UrlEncode(filterJSONClause)));
-
+            
             try { return b.ToString().Substring(1); }
             catch (Exception e)
             {
@@ -165,10 +164,9 @@ namespace BitMEX.Client
         /// <param name="json">Specifiy the format or the call (optional)</param>
         /// <param name="filter"></param>
         /// <returns>ApiResponse object that can be various types.</returns>
-        private ApiResponse Query(string method, string function, bool refreshLimitInfo = false, Dictionary<string, string> param = null, bool auth = false, bool json = false, string filter = null)
+        private ApiResponse Query(string method, string function, Dictionary<string, string> param = null, bool auth = false, bool json = false, bool refreshLimitInfo = false)
         {
-            string f = (String.IsNullOrEmpty(filter)) ? "" : filter;
-            string paramData = json ? BuildJSONParamList(param) : BuildJSONParamListWithFilter(param, f);
+            string paramData = json ? BuildJSONParamList(param) : BuildQueryData(param);
             string url = "/api/v1" + function + ((method == "GET" && paramData != "") ? "?" + paramData : "");
             string postData = (method != "GET") ? paramData : "";
 
@@ -247,11 +245,11 @@ namespace BitMEX.Client
         /// <returns></returns>
         public object GetOpenOrdersForSymbol(string symbol)
         {
-            string filter = "{\"OrdStatus\": \"New\"}";
             var param = new Dictionary<string, string>();
             param["symbol"] = symbol;
             param["reverse"] = true.ToString();
-            ApiResponse res = Query("GET", "/order", false, param, true, false, filter);
+            param["filter"] = "{\"OrdStatus\": \"New\"}";
+            ApiResponse res = Query("GET", "/order", param, true);
 
             // Deserialize JSON result
             return res.ApiResponseProcessor();
@@ -268,10 +266,11 @@ namespace BitMEX.Client
         /// <returns></returns>
         public object GetFilledOrderForId(string ClOrdId)
         {
-            string filter = "{\"clOrdID\":\"" + ClOrdId + "\",\"ordStatus\":\"Filled\"}";
             var param = new Dictionary<string, string>();
             param["reverse"] = true.ToString();
-            ApiResponse res = Query("GET", "/order", false, param, true, false, filter);
+            param["clOrdID"] = ClOrdId;
+            param["ordStatus"] = "Filled";
+            ApiResponse res = Query("GET", "/order", param, true);
 
             // Deserialize JSON result
             return res.ApiResponseProcessor();
@@ -284,16 +283,15 @@ namespace BitMEX.Client
         /// <returns>List<OrderResponse></returns>
         public object GetOrdersForCSId(string CSID)
         {
-            string filter = "";
+            var param = new Dictionary<string, string>();
 
             if (CSID.Count(f => f == ',') == 0)
-                filter = "{\"clOrdID\":\"" + CSID + "\"}";
+                param["clOrdID"] = CSID;
             else
-                filter = "{\"clOrdID\":[\"" + CSID.Replace(",","\",\"") + "\"]}";
+                param["clOrdID"] = "[\"" + CSID.Replace(",","\",\"") + "\"]";
             
-            var param = new Dictionary<string, string>();
             param["reverse"] = true.ToString();
-            ApiResponse res = Query("GET", "/order", false, param, true, false, filter);
+            ApiResponse res = Query("GET", "/order", param, true);
 
             // Deserialize JSON result
             return res.ApiResponseProcessor();
@@ -311,7 +309,7 @@ namespace BitMEX.Client
             param["symbol"] = symbol;
             param["clOrdID"] = (clOrdIDs.GetUpperBound(0) > 0) ? BuildJSONArray(clOrdIDs) : clOrdIDs[0];
             
-            ApiResponse res = Query("GET", "/order", false, param, true);
+            ApiResponse res = Query("GET", "/order", param, true);
 
             // Deserialize JSON result
             return res.ApiResponseProcessor();
@@ -373,7 +371,7 @@ namespace BitMEX.Client
 
             if (param.Count > 1)
             {
-                ApiResponse res = Query("PUT", "/order", false, param, true);
+                ApiResponse res = Query("PUT", "/order", param, true);
                 return res.ApiResponseProcessor();
             }
             else
@@ -398,7 +396,7 @@ namespace BitMEX.Client
             param["orderQty"] = orderQty.ToString();
             param["clOrdID"] = clOrdID;
             param["ordType"] = "Market";
-            ApiResponse res = Query("POST", "/order", false, param, true);
+            ApiResponse res = Query("POST", "/order", param, true);
 
             // Deserialize JSON result
             return res.ApiResponseProcessor();
@@ -423,7 +421,7 @@ namespace BitMEX.Client
             param["orderQty"] = orderQty.ToString();
             param["price"] = price.ToString();
             
-            ApiResponse res = Query("POST", "/order", false, param, true);
+            ApiResponse res = Query("POST", "/order", param, true);
             
             return res.ApiResponseProcessor();
         }
@@ -460,7 +458,7 @@ namespace BitMEX.Client
 
             param["text"] = "Some text";
 
-            ApiResponse res = Query("POST", "/order", false, param, true);
+            ApiResponse res = Query("POST", "/order", param, true);
 
             // Deserialize JSON result
             return res.ApiResponseProcessor();
@@ -491,7 +489,7 @@ namespace BitMEX.Client
             param["execInst"] = "LastPrice";
             param["text"] = text;
 
-            ApiResponse res = Query("POST", "/order", false, param, true);
+            ApiResponse res = Query("POST", "/order", param, true);
 
             // Deserialize JSON result
             return res.ApiResponseProcessor();
@@ -541,7 +539,7 @@ namespace BitMEX.Client
             var param = new Dictionary<string, string>();
             param["clOrdID"] = BuildJSONArray(clOrdIDs);
             param["text"] = message;
-            ApiResponse res = Query("DELETE", "/order", false, param, true, true);
+            ApiResponse res = Query("DELETE", "/order", param, true, true);
 
             // Deserialize JSON result
             return res.ApiResponseProcessor();
@@ -555,13 +553,18 @@ namespace BitMEX.Client
         /// Returns the account for this MordoR instance.
         /// </summary>
         /// <returns>Account number</returns>
-        private long GetAccount()
+        private long GetExchangeAccountNumber()
         {
-            var a = new string[] { "XBTUSD" };
-            List<PositionResponse> lijst = (List<PositionResponse>)GetPositionsForSymbols(a);
+            var resp = GetPositionsForSymbols(new string[] { "XBTUSD" });
 
-            if (lijst != null)
-                return lijst[1].Account;
+            if (resp is List<PositionResponse>)
+            {
+                List<PositionResponse> lijst = (List<PositionResponse>)resp;
+                if (lijst.Count > 0)
+                    return lijst[0].Account;
+                else
+                    return 1;
+            } 
             else
                 return 0;
         }
@@ -573,16 +576,16 @@ namespace BitMEX.Client
         /// <returns>A list of PositionResponse objects, List<PositionResponse></returns>
         public object GetPositionsForSymbols(string[] symbol)
         {
-            string filter;
+            var param = new Dictionary<string, string>();
 
-            if (symbol.GetUpperBound(0) <= 0)
+            if (symbol.GetUpperBound(0) == -1)
                 return null;
-            else if (symbol.GetUpperBound(0) == 1)
-                filter = "{\"symbol\": \"" + symbol + "\"}";
+            else if (symbol.GetUpperBound(0) == 0)
+                param["filter"] = "{\"symbol\":\"" + symbol[0] + "\"}";
             else
-                filter = "{\"symbol\":" + BuildJSONArray(symbol) + "}";
+                param["filter"] = "{\"symbol\":\"" + BuildJSONArray(symbol) + "\"}";
 
-            ApiResponse res = Query("GET", "/position", false, null, true, false, filter);
+            ApiResponse res = Query("GET", "/position", param, true);
 
             // Deserialize JSON result
             return res.ApiResponseProcessor();
@@ -601,7 +604,7 @@ namespace BitMEX.Client
             var param = new Dictionary<string, string>();
             param["symbol"] = symbol;
             param["leverage"] = leverage.ToString();
-            ApiResponse res = Query("PUT", "/position/leverage", false, param, true);
+            ApiResponse res = Query("PUT", "/position/leverage", param, true);
             return res.ApiResponseProcessor();
         }
 
@@ -618,7 +621,7 @@ namespace BitMEX.Client
         {
             var param = new Dictionary<string, string>();
             param["currency"] = (currency == null) ? "XBt" : currency;
-            ApiResponse res = Query("GET", "/user/wallet", false, param, true);
+            ApiResponse res = Query("GET", "/user/wallet", param, true);
             return res.ApiResponseProcessor();
         }
 

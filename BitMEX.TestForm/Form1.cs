@@ -8,8 +8,8 @@ using System.Threading;
 //using Serilog;
 using BitMEX.Model;
 using BitMEX.Client;
+using PStrategies.ZoneRecovery;
 using System.Data.SqlClient;
-//using Bitmex.Client.Websocket;
 using log4net; 
 
 namespace BitMEX.TestForm
@@ -17,6 +17,9 @@ namespace BitMEX.TestForm
     public partial class Form1 : Form
     {
         private MordoR mconn;
+        private MordoR connLong;
+        private MordoR connShort;
+        private Calculator calc;
         ILog log;
         string guid;
 
@@ -24,15 +27,22 @@ namespace BitMEX.TestForm
         //private static readonly string API_KEY = "_VreS7qgkoUW0q60DfF4ZaQn";
         //private static readonly string API_SECRET = "a_6InG8c6xuOXwqGW6GfKlkc_HyLSS5SicMKooSdZ2qWlDqF";
 
+        // TESTLONG  [51091]    : "_VreS7qgkoUW0q60DfF4ZaQn" - "a_6InG8c6xuOXwqGW6GfKlkc_HyLSS5SicMKooSdZ2qWlDqF"
+        // TESTSHORT [170591]   : "4vB259igatg3eg-dYFc7ZW3q" - "iISb35d4QsA-SmBOcSjd9ZSseeSACujN-4vnCJSa0SFtO55v"
+
         public Form1()
         {
             InitializeComponent();
-            guid = MordoR.GenerateGUID();
-            mconn = new MordoR("_VreS7qgkoUW0q60DfF4ZaQn", "a_6InG8c6xuOXwqGW6GfKlkc_HyLSS5SicMKooSdZ2qWlDqF");
-            TBMarketOrder.Text = "XBTUSD";
+            //guid = MordoR.GenerateGUID();
+            //mconn = new MordoR("_VreS7qgkoUW0q60DfF4ZaQn", "a_6InG8c6xuOXwqGW6GfKlkc_HyLSS5SicMKooSdZ2qWlDqF");
+            connLong = new MordoR("_VreS7qgkoUW0q60DfF4ZaQn", "a_6InG8c6xuOXwqGW6GfKlkc_HyLSS5SicMKooSdZ2qWlDqF");
+            connShort = new MordoR("4vB259igatg3eg-dYFc7ZW3q", "iISb35d4QsA-SmBOcSjd9ZSseeSACujN-4vnCJSa0SFtO55v");
+            calc = new Calculator("XBTUSD", 0.2, 10, 0.5, 2, 10, 0.02, connLong, connShort);
+            
+            //TBMarketOrder.Text = "XBTUSD";
 
-            log4net.Config.XmlConfigurator.Configure();
-            log = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+            //log4net.Config.XmlConfigurator.Configure();
+            //log = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
         }
 
         private void btnMarketOrder_Click(object sender, EventArgs e)
@@ -511,6 +521,21 @@ namespace BitMEX.TestForm
 
         private void Form1_FormClosed(object sender, FormClosedEventArgs e)
         {
+
+        }
+
+        private void buttonTest_Click(object sender, EventArgs e)
+        {
+            buttonTest.Text = "calc.Evaluate()";
+            OutputLabel.Text = "";
+            //MessageBox.Show(calc.GetUnitSizeForPrice(8839).ToString());
+
+            //MessageBox.Show((calc.GetWalletInfoForConnection(connLong).Amount/100000000.0).ToString());
+            //calc.Evaluate();
+
+            OutputLabel.Text = calc.Evaluate().ToString() + Environment.NewLine + OutputLabel.Text;
+
+            //MessageBox.Show(mconn.Account.ToString());
 
         }
     }

@@ -50,6 +50,7 @@
             this.btnCancel = new System.Windows.Forms.Button();
             this.RBBuy = new System.Windows.Forms.RadioButton();
             this.RBSell = new System.Windows.Forms.RadioButton();
+            this.buttonTest = new System.Windows.Forms.Button();
             this.tableLayoutPanel1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.NUDPrice)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.NUDMarketOrderQuantity)).BeginInit();
@@ -86,6 +87,7 @@
             this.tableLayoutPanel1.Controls.Add(this.btnCancel, 0, 7);
             this.tableLayoutPanel1.Controls.Add(this.RBBuy, 1, 5);
             this.tableLayoutPanel1.Controls.Add(this.RBSell, 2, 5);
+            this.tableLayoutPanel1.Controls.Add(this.buttonTest, 1, 6);
             this.tableLayoutPanel1.Location = new System.Drawing.Point(12, 12);
             this.tableLayoutPanel1.Name = "tableLayoutPanel1";
             this.tableLayoutPanel1.RowCount = 10;
@@ -329,6 +331,16 @@
             this.RBSell.Text = "Sell";
             this.RBSell.UseVisualStyleBackColor = true;
             // 
+            // buttonTest
+            // 
+            this.buttonTest.Location = new System.Drawing.Point(132, 255);
+            this.buttonTest.Name = "buttonTest";
+            this.buttonTest.Size = new System.Drawing.Size(123, 23);
+            this.buttonTest.TabIndex = 18;
+            this.buttonTest.Text = "Test";
+            this.buttonTest.UseVisualStyleBackColor = true;
+            this.buttonTest.Click += new System.EventHandler(this.buttonTest_Click);
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -372,6 +384,7 @@
         private System.Windows.Forms.Button btnCancel;
         private System.Windows.Forms.RadioButton RBBuy;
         private System.Windows.Forms.RadioButton RBSell;
+        private System.Windows.Forms.Button buttonTest;
     }
 }
 

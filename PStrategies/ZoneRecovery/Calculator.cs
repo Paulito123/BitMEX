@@ -4,9 +4,11 @@
     using System.Collections.Generic;
     using System.Linq;
     using System.Threading;
-    using System.Threading.Tasks;
     using BitMEX.Model;
     using BitMEX.Client;
+
+    // TESTLONG  [51091]    : "_VreS7qgkoUW0q60DfF4ZaQn" - "a_6InG8c6xuOXwqGW6GfKlkc_HyLSS5SicMKooSdZ2qWlDqF"
+    // TESTSHORT [170591]   : "4vB259igatg3eg-dYFc7ZW3q" - "iISb35d4QsA-SmBOcSjd9ZSseeSACujN-4vnCJSa0SFtO55v"
 
     public class Calculator
     {
@@ -137,6 +139,7 @@
         #endregion Private variables
 
         #region Constructor(s)
+
         /// <summary>
         /// Initializes the Zone Recovery Calculator.
         /// </summary>
@@ -173,6 +176,7 @@
             // Initialize calculation variables
             InitializeCalculator();
         }
+        
         #endregion Constructor(s)
 
         #region Private methods
@@ -187,6 +191,10 @@
             CurrentZRPosition = 0;
             UnitSize = 0;
             ApplicationOrders = new List<ZoneRecoveryOrder>();
+            
+            //Wallets = new Dictionary<long, WalletResponse>();
+            //Wallets.Add(connA.Account, (WalletResponse)connA.GetWalletInfo());
+            //Wallets.Add(connB.Account, (WalletResponse)connB.GetWalletInfo());
         }
 
         /// <summary>
@@ -473,6 +481,8 @@
         /// <returns>TODO: Let it return information needed to draw an action on the plot of NinjaTrader.</returns>
         public bool Evaluate()
         {
+            bool returnValue = false;
+
             // Check if server can be queried
             if (DateTime.Now >= NextServerReleaseDateTime)
             {
@@ -657,11 +667,19 @@
                         
                         // Exit the lock
                         Monitor.Exit(_Lock);
+
+                        returnValue = true;
                     }
                 }
-                return true;
             }
-            else return false;
+
+            return returnValue;
+        }
+
+
+        public WalletResponse GetWalletInfoForConnection(MordoR conn)
+        {
+            return Wallets[conn.Account];
         }
 
         /// <summary>
@@ -676,7 +694,7 @@
         {
             if (refPrice > 0)
             {
-                double totalBalance = (Wallets[AccountLong].Amount + Wallets[AccountShort].Amount) / 100000000;
+                double totalBalance = (Wallets[AccountLong].Amount + Wallets[AccountShort].Amount) / 100000000.0;
                 double totalDepthMaxExposure = (double)this.GetMaximumDepth();
                 return (long)Math.Round(refPrice * Leverage * totalBalance * MaxExposurePerc / totalDepthMaxExposure, MidpointRounding.ToEven);
             }

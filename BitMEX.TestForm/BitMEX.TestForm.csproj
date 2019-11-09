@@ -109,5 +109,11 @@
       <SubType>Designer</SubType>
     </None>
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\PStrategies\PStrategies.csproj">
+      <Project>{bba09875-410f-46b5-bc68-1f647bc00c1b}</Project>
+      <Name>PStrategies</Name>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

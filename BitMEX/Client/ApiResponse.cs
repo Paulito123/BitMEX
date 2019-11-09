@@ -57,21 +57,24 @@ namespace BitMEX.Client
                         break;
                     default:
                         // build a BaseError
-                        BaseError bErr = new BaseError();
-                        bErr.Error.Name = "Unknown StatusCode";
-                        bErr.Error.Message = "The status code returned is of an unknown type.";
-                        o = bErr;
+                        o = new BaseError();
+                        Error er = new Error();
+                        er.Name = "Unknown StatusCode";
+                        er.Message = "The status code returned is of an unknown type.";
+                        ((BaseError)o).Error = er;
                         break;
                 }
-                log.Info("ApiResponse statuscode [" + StatusCode + "] for uri [" + Uri + "]");
+                //log.Info("ApiResponse statuscode [" + StatusCode + "] for uri [" + Uri + "]");
                 return o;
             }
             catch (Exception exc)
             {
                 o = new BaseError();
-                ((BaseError)o).Error.Name = "ApiResponseError";
-                ((BaseError)o).Error.Message = exc.ToString();
-                log.Error("ApiResponse error [" + exc.ToString() + "]");
+                Error er = new Error();
+                er.Name = "ApiResponseError";
+                er.Message = exc.ToString();
+                ((BaseError)o).Error = er;
+                //log.Error("ApiResponse error [" + exc.ToString() + "]");
                 return o;
             }
         }
@@ -85,14 +88,14 @@ namespace BitMEX.Client
             // Json is empty > Shit...
             if(String.IsNullOrEmpty(Json))
             {
-                log.Error("Json == null or empty");
+                //log.Error("Json == null or empty");
                 return null;
             }
                 
             // Uri is empty > Shit...
             if (this.Uri == null || this.Uri.AbsolutePath == "")
             {
-                log.Error("Uri.AbsolutePath null or empty");
+                //log.Error("Uri.AbsolutePath null or empty");
                 return null;
             }
                 
@@ -103,13 +106,9 @@ namespace BitMEX.Client
             {
                 case "/api/v1/order":
                     if(this.Json.Substring(0, 1) == "[")
-                    {
                         o = OrdersResponse.FromJson(this.Json);
-                    }
                     else
-                    {
                         o = OrderResponse.FromJson(this.Json);
-                    }
                     break;
                 case "/api/v1/order/all":
                 case "/api/v1/order/bulk":
@@ -130,7 +129,7 @@ namespace BitMEX.Client
                 case "/api/v1/order/cancelallafter":
                 default:
                     o = null;
-                    log.Error("Uri unknown. Please add [" + this.Uri.AbsolutePath + "] to the evaluated Uri's.");
+                    //log.Error("Uri unknown. Please add [" + this.Uri.AbsolutePath + "] to the evaluated Uri's.");
                     break;
             }
 
