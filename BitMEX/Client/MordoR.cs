@@ -30,8 +30,8 @@ namespace BitMEX.Client
 
         #region Constructor
 
-        // TESTLONG  [51091]    : "_VreS7qgkoUW0q60DfF4ZaQn" - "a_6InG8c6xuOXwqGW6GfKlkc_HyLSS5SicMKooSdZ2qWlDqF"
-        // TESTSHORT [170591]   : "4vB259igatg3eg-dYFc7ZW3q" - "iISb35d4QsA-SmBOcSjd9ZSseeSACujN-4vnCJSa0SFtO55v"
+        // TESTLONG  [51091]    : "QbpGewiOyIYMbyQ-ieaTKfOJ" - "FqGOSAewtkMBIuiIQHI47dxc6vBm3zqARSEr4Qif8K8N5eHf"
+        // TESTSHORT [170591]   : "xEuMT-y7ffwxrvHA2yDwL1bZ" - "3l0AmJz7l3P47-gK__LwgZQQ23uOKCFhYJG4HeTLlGXadRm6"
 
         public MordoR(string bitmexKey, 
                       string bitmexSecret, 
@@ -484,7 +484,6 @@ namespace BitMEX.Client
             param["stopPx"] = stopPx.ToString();
             param["orderQty"] = orderQty.ToString();
             param["clOrdID"] = clOrdID;
-            param["timeInForce"] = "ImmediateOrCancel";
             param["ordType"] = "Stop";
             param["execInst"] = "LastPrice";
             param["text"] = text;
@@ -583,7 +582,7 @@ namespace BitMEX.Client
             else if (symbol.GetUpperBound(0) == 0)
                 param["filter"] = "{\"symbol\":\"" + symbol[0] + "\"}";
             else
-                param["filter"] = "{\"symbol\":\"" + BuildJSONArray(symbol) + "\"}";
+                param["filter"] = "{\"symbol\":" + BuildJSONArray(symbol) + "}";
 
             ApiResponse res = Query("GET", "/position", param, true);
 
@@ -650,8 +649,77 @@ namespace BitMEX.Client
         //{
         //    log.Info(message);
         //}
-        
+
         #endregion
+
+        public string PostOrders()
+        {
+            var param = new Dictionary<string, string>();
+            param["symbol"] = "XBTUSD";
+            param["orderQty"] = "-1000";
+            param["stopPx"] = "8750";
+            param["ordType"] = "Stop";
+            return TestQuery("POST", "/order", param, true);
+        }
+
+        private string TestQuery(string method, string function, Dictionary<string, string> param = null, bool auth = false, bool json = false)
+        {
+            string paramData = json ? BuildJSONParamList(param) : BuildQueryData(param);
+            string url = "/api/v1" + function + ((method == "GET" && paramData != "") ? "?" + paramData : "");
+            string postData = (method != "GET") ? paramData : "";
+
+            HttpWebRequest webRequest = (HttpWebRequest)WebRequest.Create(Domain + url);
+            webRequest.Method = method;
+
+            if (auth)
+            {
+                string expires = GetExpires().ToString();
+                string message = method + url + expires + postData;
+                byte[] signatureBytes = hmacsha256(Encoding.UTF8.GetBytes(ApiSecret), Encoding.UTF8.GetBytes(message));
+                string signatureString = ByteArrayToString(signatureBytes);
+
+                webRequest.Headers.Add("api-expires", expires);
+                webRequest.Headers.Add("api-key", ApiKey);
+                webRequest.Headers.Add("api-signature", signatureString);
+            }
+
+            try
+            {
+                if (postData != "")
+                {
+                    webRequest.ContentType = json ? "application/json" : "application/x-www-form-urlencoded";
+                    var data = Encoding.UTF8.GetBytes(postData);
+                    using (var stream = webRequest.GetRequestStream())
+                    {
+                        stream.Write(data, 0, data.Length);
+                    }
+                }
+
+                using (WebResponse webResponse = webRequest.GetResponse())
+                using (Stream str = webResponse.GetResponseStream())
+                using (StreamReader sr = new StreamReader(str))
+                {
+                    return sr.ReadToEnd();
+                }
+            }
+            catch (WebException wex)
+            {
+                using (HttpWebResponse response = (HttpWebResponse)wex.Response)
+                {
+                    if (response == null)
+                        throw;
+
+                    using (Stream str = response.GetResponseStream())
+                    {
+                        using (StreamReader sr = new StreamReader(str))
+                        {
+                            return sr.ReadToEnd();
+                        }
+                    }
+                }
+            }
+        }
+
     }
 }
 

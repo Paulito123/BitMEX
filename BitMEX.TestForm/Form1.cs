@@ -20,23 +20,29 @@ namespace BitMEX.TestForm
         private MordoR connLong;
         private MordoR connShort;
         private Calculator calc;
+        private Dictionary<long, MordoR> Connections;
         ILog log;
         string guid;
 
         //private static readonly ManualResetEvent ExitEvent = new ManualResetEvent(false);
-        //private static readonly string API_KEY = "_VreS7qgkoUW0q60DfF4ZaQn";
-        //private static readonly string API_SECRET = "a_6InG8c6xuOXwqGW6GfKlkc_HyLSS5SicMKooSdZ2qWlDqF";
+        //private static readonly string API_KEY = "QbpGewiOyIYMbyQ-ieaTKfOJ";
+        //private static readonly string API_SECRET = "FqGOSAewtkMBIuiIQHI47dxc6vBm3zqARSEr4Qif8K8N5eHf";
 
-        // TESTLONG  [51091]    : "_VreS7qgkoUW0q60DfF4ZaQn" - "a_6InG8c6xuOXwqGW6GfKlkc_HyLSS5SicMKooSdZ2qWlDqF"
-        // TESTSHORT [170591]   : "4vB259igatg3eg-dYFc7ZW3q" - "iISb35d4QsA-SmBOcSjd9ZSseeSACujN-4vnCJSa0SFtO55v"
+        // TESTLONG  [51091]    : "QbpGewiOyIYMbyQ-ieaTKfOJ" - "FqGOSAewtkMBIuiIQHI47dxc6vBm3zqARSEr4Qif8K8N5eHf"
+        // TESTSHORT [170591]   : "xEuMT-y7ffwxrvHA2yDwL1bZ" - "3l0AmJz7l3P47-gK__LwgZQQ23uOKCFhYJG4HeTLlGXadRm6"
 
         public Form1()
         {
             InitializeComponent();
             //guid = MordoR.GenerateGUID();
-            //mconn = new MordoR("_VreS7qgkoUW0q60DfF4ZaQn", "a_6InG8c6xuOXwqGW6GfKlkc_HyLSS5SicMKooSdZ2qWlDqF");
-            connLong = new MordoR("_VreS7qgkoUW0q60DfF4ZaQn", "a_6InG8c6xuOXwqGW6GfKlkc_HyLSS5SicMKooSdZ2qWlDqF");
-            connShort = new MordoR("4vB259igatg3eg-dYFc7ZW3q", "iISb35d4QsA-SmBOcSjd9ZSseeSACujN-4vnCJSa0SFtO55v");
+            //mconn = new MordoR("QbpGewiOyIYMbyQ-ieaTKfOJ", "FqGOSAewtkMBIuiIQHI47dxc6vBm3zqARSEr4Qif8K8N5eHf");
+
+            buttonTest.Text = "calc.Evaluate()";
+            connLong = new MordoR("QbpGewiOyIYMbyQ-ieaTKfOJ", "FqGOSAewtkMBIuiIQHI47dxc6vBm3zqARSEr4Qif8K8N5eHf");
+            connShort = new MordoR("xEuMT-y7ffwxrvHA2yDwL1bZ", "3l0AmJz7l3P47-gK__LwgZQQ23uOKCFhYJG4HeTLlGXadRm6");
+            Connections = new Dictionary<long, MordoR>();
+            Connections.Add(connLong.Account, connLong);
+            Connections.Add(connShort.Account, connShort);
             calc = new Calculator("XBTUSD", 0.2, 10, 0.5, 2, 10, 0.02, connLong, connShort);
             
             //TBMarketOrder.Text = "XBTUSD";
@@ -526,18 +532,80 @@ namespace BitMEX.TestForm
 
         private void buttonTest_Click(object sender, EventArgs e)
         {
-            buttonTest.Text = "calc.Evaluate()";
+
 
             //MessageBox.Show(calc.GetUnitSizeForPrice(8839).ToString());
+            //MessageBox.Show(calc.GetWalletInfoForConnection(connLong).ToString());
 
-            MessageBox.Show(calc.GetWalletInfoForConnection(connLong).ToString());
-            //calc.Evaluate();
+            //var t = connShort.GetPositionsForSymbols(new string[] { "XBTUSD" });
+            //var s = connLong.GetPositionsForSymbols(new string[] { "XBTUSD" });
+
+            //MessageBox.Show(t.ToString());
+            //MessageBox.Show(s.ToString());
+
+            //if (t is List<PositionResponse>)
+            //    MessageBox.Show(((List<PositionResponse>)t)[0].ToString());
+            //else if (t is PositionResponse)
+            //    MessageBox.Show(((PositionResponse)t).ToString());
+            //else if (t is BaseError)
+            //    MessageBox.Show(((BaseError)t).Error.Message.ToString());
+
+            //if (s is List<PositionResponse>)
+            //    MessageBox.Show(((List<PositionResponse>)s)[0].ToString());
+            //else if (s is PositionResponse)
+            //    MessageBox.Show(((PositionResponse)s).ToString());
+            //else if (s is BaseError)
+            //    MessageBox.Show(((BaseError)s).Error.Message.ToString());
+
+            //List<PositionResponse> lp = (List<PositionResponse>)Connections[AccountLong].GetPositionsForSymbols(new string[] { Symbol });
+            //Positions[AccountLong] = lp[0];
+            //List<PositionResponse> sp = (List<PositionResponse>)Connections[AccountShort].GetPositionsForSymbols(new string[] { Symbol });
+            //Positions[AccountShort] = sp[0];
+
+            //MessageBox.Show(connShort.PostOrders());
+
+            //List<ZoneRecoveryOrder> lzra = new List<ZoneRecoveryOrder>();
+            //ZoneRecoveryOrder a = new ZoneRecoveryOrder(MordoR.GenerateGUID(), "XBTUSD", connLong.Account, 9000.0, -1000, ZoneRecoveryOrderType.TP);
+            //ZoneRecoveryOrder b = new ZoneRecoveryOrder(MordoR.GenerateGUID(), "XBTUSD", connShort.Account, 8700.0, -2000, ZoneRecoveryOrderType.TP);
+            //lzra.Add(a);
+            //lzra.Add(b);
+
+            //// Send the orders to the server
+            //foreach (ZoneRecoveryOrder zorro in lzra)
+            //{
+            //    var resp = zorro.SendOrderToServer(Connections[zorro.Account]);
+            //    if (resp is BaseError)
+            //        MessageBox.Show(((BaseError)resp).Error.Message);
+            //    else if (resp is OrderResponse)
+            //        MessageBox.Show(((OrderResponse)resp).LeavesQty.ToString());
+            //    // TODO Double check if the orders are live
+            //}
+
+            //MessageBox.Show(calc.Evaluate());
+            //var a = calc.UpdateAppOrderAndSync(connLong.Account, connShort.Account);
+
+            //if(a is List<ZoneRecoveryOrder>)
+            //{
+            //    foreach(ZoneRecoveryOrder o in (List<ZoneRecoveryOrder>)a)
+            //    {
+            //        MessageBox.Show(o.ToString());
+            //    }
+            //}
+
+            MessageBox.Show(calc.CalculateTakeProfitPrice().ToString());
+            
+
+
             //MessageBox.Show(calc.GetPositionForConnection(connLong).ToString());
 
             //OutputLabel.Text = "";
             //OutputLabel.Text = calc.Evaluate().ToString() + Environment.NewLine + OutputLabel.Text;
 
             //MessageBox.Show(mconn.Account.ToString());
+
+
+            // TODO: Debug the Evaluate() method. Currently it is not repsonding to a situation where 
+            // one of two positions > 0 and Status = Init.
 
         }
     }

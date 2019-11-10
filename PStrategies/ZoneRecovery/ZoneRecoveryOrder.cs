@@ -76,7 +76,21 @@
             OrderType = orderType;
         }
 
-        public OrderResponse SendOrderToServer(MordoR conn)
+        public override string ToString()
+        {
+            var sb = new System.Text.StringBuilder();
+            sb.Append("class ZoneRecoveryOrder {\n");
+            sb.Append("  ClOrdId: ").Append(ClOrdId.ToString()).Append("\n");
+            sb.Append("  Symbol: ").Append(Symbol.ToString()).Append("\n");
+            sb.Append("  Account: ").Append(Account.ToString()).Append("\n");
+            sb.Append("  Price: ").Append(Price.ToString()).Append("\n");
+            sb.Append("  Qty: ").Append(Qty.ToString()).Append("\n");
+            sb.Append("  OrderType: ").Append(OrderType.ToString()).Append("\n");
+            sb.Append("}\n");
+            return sb.ToString();
+        }
+
+        public object SendOrderToServer(MordoR conn)
         {
             if (Account != conn.Account)
                 return null;
@@ -84,13 +98,19 @@
             switch(OrderType)
             {
                 case ZoneRecoveryOrderType.TP: // Limit order > Tegenovergestelde van open position
-                    return (OrderResponse)conn.LimitOrder(Symbol, ClOrdId, Qty, Price);
+                    return conn.LimitOrder(Symbol, ClOrdId, Qty, Price);
                 case ZoneRecoveryOrderType.TL: // Speciaal order
-                    return (OrderResponse)conn.StopMarketOrder(Symbol, ClOrdId, Qty, Price, "TL");
+                    return conn.StopMarketOrder(Symbol, ClOrdId, Qty, Price, "TL");
                 case ZoneRecoveryOrderType.REV:// Speciaal order
-                    return (OrderResponse)conn.StopMarketOrder(Symbol, ClOrdId, Qty, Price, "REV");
+                    return conn.StopMarketOrder(Symbol, ClOrdId, Qty, Price, "REV");
                 case ZoneRecoveryOrderType.Cancel:
-                    return ((List<OrderResponse>)conn.CancelOrders(new string[] { ClOrdId })).First();
+                    var o = conn.CancelOrders(new string[] { ClOrdId });
+                    if (o is List<OrderResponse>)
+                        return ((List<OrderResponse>)o).First();
+                    else if (o is BaseError)
+                        return o;
+                    else
+                        return null;
                 default:
                     return null;
             }

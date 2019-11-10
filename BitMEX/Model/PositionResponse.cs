@@ -211,7 +211,7 @@
         /// <summary>
         /// The weighted average price of the current open position. When the currentQty is 0, the markPrice is null.
         /// </summary>
-        [JsonProperty("markPrice")]
+        [JsonProperty("markPrice", NullValueHandling = NullValueHandling.Ignore)]
         public double MarkPrice { get; set; }
 
         [JsonProperty("markValue", NullValueHandling = NullValueHandling.Ignore)]
@@ -374,7 +374,7 @@
             sb.Append("  RiskLimit: ").Append(RiskLimit.ToString()).Append("\n");
             sb.Append("  Leverage: ").Append(Leverage.ToString()).Append("\n");
             sb.Append("  CrossMargin: ").Append(CrossMargin.ToString()).Append("\n");
-            sb.Append("  DeleveragePercentile: ").Append(DeleveragePercentile.ToString()).Append("\n");
+            //sb.Append("  DeleveragePercentile: ").Append(DeleveragePercentile.ToString()).Append("\n");
             sb.Append("  RebalancedPnl: ").Append(RebalancedPnl.ToString()).Append("\n");
             sb.Append("  PrevRealisedPnl: ").Append(PrevRealisedPnl.ToString()).Append("\n");
             sb.Append("  PrevUnrealisedPnl: ").Append(PrevUnrealisedPnl.ToString()).Append("\n");
@@ -445,12 +445,12 @@
             //sb.Append("  SimpleValue: ").Append(SimpleValue.ToString()).Append("\n");
             //sb.Append("  SimplePnl: ").Append(SimplePnl.ToString()).Append("\n");
             //sb.Append("  SimplePnlPcnt: ").Append(SimplePnlPcnt.ToString()).Append("\n");
-            sb.Append("  AvgCostPrice: ").Append(AvgCostPrice.ToString()).Append("\n");
-            sb.Append("  AvgEntryPrice: ").Append(AvgEntryPrice.ToString()).Append("\n");
-            sb.Append("  BreakEvenPrice: ").Append(BreakEvenPrice.ToString()).Append("\n");
-            sb.Append("  MarginCallPrice: ").Append(MarginCallPrice.ToString()).Append("\n");
-            sb.Append("  LiquidationPrice: ").Append(LiquidationPrice.ToString()).Append("\n");
-            sb.Append("  BankruptPrice: ").Append(BankruptPrice.ToString()).Append("\n");
+            //sb.Append("  AvgCostPrice: ").Append(AvgCostPrice.ToString()).Append("\n");
+            //sb.Append("  AvgEntryPrice: ").Append(AvgEntryPrice.ToString()).Append("\n");
+            //sb.Append("  BreakEvenPrice: ").Append(BreakEvenPrice.ToString()).Append("\n");
+            //sb.Append("  MarginCallPrice: ").Append(MarginCallPrice.ToString()).Append("\n");
+            //sb.Append("  LiquidationPrice: ").Append(LiquidationPrice.ToString()).Append("\n");
+            //sb.Append("  BankruptPrice: ").Append(BankruptPrice.ToString()).Append("\n");
             sb.Append("  Timestamp: ").Append(Timestamp.ToString()).Append("\n");
             sb.Append("  LastPrice: ").Append(LastPrice.ToString()).Append("\n");
             sb.Append("  LastValue: ").Append(LastValue.ToString()).Append("\n");

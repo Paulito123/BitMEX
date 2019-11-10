@@ -7,8 +7,8 @@
     using BitMEX.Model;
     using BitMEX.Client;
 
-    // TESTLONG  [51091]    : "_VreS7qgkoUW0q60DfF4ZaQn" - "a_6InG8c6xuOXwqGW6GfKlkc_HyLSS5SicMKooSdZ2qWlDqF"
-    // TESTSHORT [170591]   : "4vB259igatg3eg-dYFc7ZW3q" - "iISb35d4QsA-SmBOcSjd9ZSseeSACujN-4vnCJSa0SFtO55v"
+    // TESTLONG  [51091]    : "QbpGewiOyIYMbyQ-ieaTKfOJ" - "FqGOSAewtkMBIuiIQHI47dxc6vBm3zqARSEr4Qif8K8N5eHf"
+    // TESTSHORT [170591]   : "xEuMT-y7ffwxrvHA2yDwL1bZ" - "3l0AmJz7l3P47-gK__LwgZQQ23uOKCFhYJG4HeTLlGXadRm6"
 
     public class Calculator
     {
@@ -69,16 +69,6 @@
         /// The account used for SHORT transactions.
         /// </summary>
         private long AccountShort;
-
-        ///// <summary>
-        ///// The last known long position.
-        ///// </summary>
-        //private PositionResponse LongPosition;
-
-        ///// <summary>
-        ///// The last known short position.
-        ///// </summary>
-        //private PositionResponse ShortPosition;
         
         /// <summary>
         /// The orders that are known in the application and are suposed to be resting on the server.
@@ -270,20 +260,23 @@
         /// <returns>The theoretical break even price</returns>
         private double CalculateBreakEvenPrice()
         {
-            if(Positions[AccountLong].IsOpen || Positions[AccountShort].IsOpen)
+            if (Positions[AccountLong].IsOpen && Positions[AccountShort].IsOpen)
             {
+                // Calculate and return the break even price when there is a position in both directions.
                 double v_numerator = (Positions[AccountLong].CurrentQty * Positions[AccountLong].MarkPrice) + (Positions[AccountShort].CurrentQty * Positions[AccountShort].MarkPrice);
                 double v_denominator = Positions[AccountLong].CurrentQty + Positions[AccountShort].CurrentQty;
                 double bePrice = 0.0;
-                
+
                 bePrice = v_numerator / v_denominator;
 
                 return RoundToPipsize(bePrice);
             }
+            else if (Positions[AccountLong].IsOpen || Positions[AccountShort].IsOpen)
+                // Return the MarkPrice as Break even price.
+                return (Positions[AccountLong].IsOpen) ? Positions[AccountLong].MarkPrice : Positions[AccountShort].MarkPrice;
             else
-            {
+                // Default return value.
                 return 0.0;
-            }
         }
 
         /// <summary>
@@ -423,8 +416,9 @@
         /// </summary>
         /// <param name="accNewTP">The Account number of the connection used to create the next TP order.</param>
         /// <param name="accNewREV">The Account number of the connection used to create the next REV and optionally TL order.</param>
-        private void UpdateAppOrderAndSync(long accNewTP, long accNewREV)
+        private object UpdateAppOrderAndSync(long accNewTP, long accNewREV)
         {
+            // TODO MAKE PRIVATE
             // Create new Application Orders
             ApplicationOrders = new List<ZoneRecoveryOrder>();
 
@@ -471,10 +465,12 @@
                     ZoneRecoveryOrderType.REV));
             }
 
-            // Send the orders to the server
+            return ApplicationOrders;
+
+            //Send the orders to the server
             foreach (ZoneRecoveryOrder zorro in ApplicationOrders)
             {
-                var resp = (OrderResponse)zorro.SendOrderToServer(Connections[zorro.Account]);
+                var resp = zorro.SendOrderToServer(Connections[zorro.Account]);
                 // TODO Double check if the orders are live
             }
         }
@@ -488,9 +484,9 @@
         /// the application, the appropriate action is taken.
         /// </summary>
         /// <returns>TODO: Let it return information needed to draw an action on the plot of NinjaTrader.</returns>
-        public bool Evaluate()
+        public string Evaluate()
         {
-            bool returnValue = false;
+            string returnValue = "";
 
             // Check if server can be queried
             if (DateTime.Now >= NextServerReleaseDateTime)
@@ -617,7 +613,7 @@
                             }
                             catch (Exception e)
                             {
-
+                                returnValue = e.Message;
                             }
                         }
                         else    // No Application orders OR ZoneRecoveryStatus = Init
@@ -627,11 +623,11 @@
                                 // Synchronize the internal positions
                                 SyncPositions();
 
-                                if (Positions[AccountShort].CurrentQty == 0 && Positions[AccountLong].CurrentQty == 0)
+                                if (Math.Abs(Positions[AccountShort].CurrentQty) == 0 && Math.Abs(Positions[AccountLong].CurrentQty) == 0)
                                 {
                                     // Do nothing
                                 }
-                                else if (Positions[AccountShort].CurrentQty == 0 && Positions[AccountLong].CurrentQty > 0)
+                                else if (Math.Abs(Positions[AccountShort].CurrentQty) == 0 && Math.Abs(Positions[AccountLong].CurrentQty) > 0)
                                 {
                                     // Set the initial unit size
                                     UnitSize = Positions[AccountLong].CurrentQty;
@@ -641,14 +637,15 @@
 
                                     // Turn the wheel
                                     TakeStepForward();
+
                                 }
-                                else if(Positions[AccountLong].CurrentQty == 0 && Positions[AccountShort].CurrentQty < 0)
+                                else if(Math.Abs(Positions[AccountLong].CurrentQty) == 0 && Math.Abs(Positions[AccountShort].CurrentQty) < 0)
                                 {
                                     // Set the initial unit size
                                     UnitSize = Math.Abs(Positions[AccountShort].CurrentQty);
 
                                     // Create App orders and send to server
-                                    UpdateAppOrderAndSync(Positions[AccountShort].Account, Positions[AccountLong].Account);
+                                    UpdateAppOrderAndSync(Math.Abs(Positions[AccountShort].Account), Math.Abs(Positions[AccountLong].Account));
 
                                     // Turn the wheel
                                     TakeStepForward();
@@ -660,7 +657,7 @@
                             }
                             catch (Exception e)
                             {
-
+                                returnValue = returnValue + "|" + e.Message;
                             }
                         }
                     }
@@ -677,7 +674,7 @@
                         // Exit the lock
                         Monitor.Exit(_Lock);
 
-                        returnValue = true;
+                        //returnValue = "END";
                     }
                 }
             }
