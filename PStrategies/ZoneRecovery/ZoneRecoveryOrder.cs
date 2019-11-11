@@ -15,7 +15,16 @@
     /// REV = Reverse
     /// </summary>
     public enum ZoneRecoveryOrderType { TP, TL, REV, Cancel }
-    
+
+    /// <summary>
+    /// An enumeration that represents the status of an order as known in the application.
+    /// New     = Resting order
+    /// Filled  = Filled order
+    /// Cancel  = Canceled order
+    /// Error   = Error occurred at the time the order was being transferred to the server.
+    /// </summary>
+    public enum ZoneRecoveryOrderStatus { New, Filled, PartiallyFilled, Cancelled, Error, Unknown }
+
     /// <summary>
     /// Class that represents an order sent to the exchange. 
     /// When Qty is negative, it is a Sell order.
@@ -29,9 +38,18 @@
         public string ClOrdId { get; set; }
 
         /// <summary>
-        /// The Order response coming from the Exchange
+        /// The Order response coming from the Exchange. This response is used to compare the status of the order when it 
+        /// was placed with a later status.
         /// </summary>
-        public OrderResponse ServerResponse { get; set; }
+        public OrderResponse ServerResponseCompare { get; set; }
+
+        /// <summary>
+        /// The response coming from the server at the time the order is placed. Should be one of types:
+        ///     - OrderResponse
+        ///     - List<OrderResponse>
+        ///     - BaseError
+        /// </summary>
+        public object ServerResponseInitial { get; set; }
 
         /// <summary>
         /// The symbol of the asset.
@@ -57,6 +75,11 @@
         /// The type of order.
         /// </summary>
         public ZoneRecoveryOrderType OrderType { get; set; }
+
+        /// <summary>
+        /// The status of the order as known by the application.
+        /// </summary>
+        public ZoneRecoveryOrderStatus OrderStatus { get; set; }
 
         /// <summary>
         /// Constructor of the class ZoneRecoveryOrder
@@ -98,27 +121,57 @@
             switch(OrderType)
             {
                 case ZoneRecoveryOrderType.TP: // Limit order > Tegenovergestelde van open position
-                    return conn.LimitOrder(Symbol, ClOrdId, Qty, Price);
+                    ServerResponseInitial = conn.LimitOrder(Symbol, ClOrdId, Qty, Price);               //"New"
+                    break;
                 case ZoneRecoveryOrderType.TL: // Speciaal order
-                    return conn.StopMarketOrder(Symbol, ClOrdId, Qty, Price, "TL");
+                    ServerResponseInitial = conn.StopMarketOrder(Symbol, ClOrdId, Qty, Price, "TL");    //"New"
+                    break;
                 case ZoneRecoveryOrderType.REV:// Speciaal order
-                    return conn.StopMarketOrder(Symbol, ClOrdId, Qty, Price, "REV");
+                    ServerResponseInitial = conn.StopMarketOrder(Symbol, ClOrdId, Qty, Price, "REV");   //"New"
+                    break;
                 case ZoneRecoveryOrderType.Cancel:
-                    var o = conn.CancelOrders(new string[] { ClOrdId });
+                    var o = conn.CancelOrders(new string[] { ClOrdId });                                //"Canceled"
                     if (o is List<OrderResponse>)
-                        return ((List<OrderResponse>)o).First();
-                    else if (o is BaseError)
-                        return o;
+                        ServerResponseInitial = ((List < OrderResponse > )o).First();
                     else
-                        return null;
+                        ServerResponseInitial = o;                
+                    break;
                 default:
+                    OrderStatus = ZoneRecoveryOrderStatus.Error;
                     return null;
             }
+
+            if(ServerResponseInitial is OrderResponse)
+            {
+                switch (((OrderResponse)ServerResponseInitial).OrdStatus)
+                {
+                    case "Filled":
+                        OrderStatus = ZoneRecoveryOrderStatus.Filled;
+                        break;
+                    case "New":
+                        OrderStatus = ZoneRecoveryOrderStatus.New;
+                        break;
+                    case "Partially filled":
+                        OrderStatus = ZoneRecoveryOrderStatus.PartiallyFilled;
+                        break;
+                    case "Cancelled":
+                        OrderStatus = ZoneRecoveryOrderStatus.Cancelled;
+                        break;
+                    default:
+                        OrderStatus = ZoneRecoveryOrderStatus.Unknown;
+                        break;
+                }
+            }
+            else
+                OrderStatus = ZoneRecoveryOrderStatus.Error;
+
+            return ServerResponseInitial;
         }
-
-        //public ZoneRecoveryOrder()
-        //{
-
-        //}
+        
+        public object UndoOrder(MordoR conn)
+        {
+            ServerResponseInitial = conn.CancelOrders(new string[] { ClOrdId });
+            return ServerResponseInitial;
+        }
     }
 }

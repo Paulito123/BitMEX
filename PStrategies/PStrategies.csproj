@@ -45,7 +45,6 @@
     <Compile Include="MeanSearch\Calculator.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ZoneRecovery\Calculator.cs" />
-    <Compile Include="ZoneRecovery\ZoneRecoveryAction.cs" />
     <Compile Include="ZoneRecovery\ZoneRecoveryOrder.cs" />
   </ItemGroup>
   <ItemGroup>

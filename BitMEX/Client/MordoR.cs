@@ -485,7 +485,8 @@ namespace BitMEX.Client
             param["orderQty"] = orderQty.ToString();
             param["clOrdID"] = clOrdID;
             param["ordType"] = "Stop";
-            param["execInst"] = "LastPrice";
+            // MarkPrice, LastPrice, IndexPrice
+            param["execInst"] = "MarkPrice";
             param["text"] = text;
 
             ApiResponse res = Query("POST", "/order", param, true);
@@ -540,8 +541,15 @@ namespace BitMEX.Client
             param["text"] = message;
             ApiResponse res = Query("DELETE", "/order", param, true, true);
 
-            // Deserialize JSON result
-            return res.ApiResponseProcessor();
+            var r = res.ApiResponseProcessor();
+
+            if(r is List<OrderResponse>)
+            {
+                if (((List<OrderResponse>)r).Count == 1)
+                    return ((List<OrderResponse>)r).First();
+            }
+
+            return r;
         }
 
         #endregion
