@@ -40,7 +40,16 @@ namespace BitMEX.Client
             this.ApiKey = bitmexKey;
             this.ApiSecret = bitmexSecret;
             this.Domain = bitmexDomain;
-            this.Account = GetExchangeAccountNumber();
+
+            try
+            {
+                this.Account = GetExchangeAccountNumber();
+            }
+            catch (Exception ex)
+            {
+                this.Account = 0;
+            }
+            
 
             //if (l == null)
             //{
@@ -494,36 +503,7 @@ namespace BitMEX.Client
             // Deserialize JSON result
             return res.ApiResponseProcessor();
         }
-
-        ///// <summary>
-        ///// 
-        ///// </summary>
-        ///// <param name="symbol"></param>
-        ///// <param name="price"></param>
-        ///// <param name="side"></param>
-        ///// <param name="orderQty"></param>
-        ///// <param name="options"></param>
-        ///// <returns></returns>
-        //public object ClosePostion(string symbol, double price, string side, double? orderQty = null, string options = null)
-        //{
-        //    var param = new Dictionary<string, string>();
-        //    string safeSide = (side.ToLower() == "buy") ? "Buy" : "Sell";
-        //    param["side"] = safeSide;
-        //    param["symbol"] = symbol;
-        //    //param["price"] = price.ToString();
-        //    param["stopPx"] = price.ToString();
-        //    if(orderQty != 0)
-        //        param["ordType"] = "Stop";
-        //    param["text"] = "Position closed";
-        //    param["execInst"] = "Close";
-        //    if (orderQty != null)
-        //        param["orderQty"] = Math.Abs((double)orderQty).ToString();
-        //    ApiResponse res = Query("POST", "/order", false, param, true);
-
-        //    // Deserialize JSON result
-        //    return res.ApiResponseProcessor();
-        //}
-
+        
         #endregion
 
         #region DELETE /order
@@ -660,73 +640,73 @@ namespace BitMEX.Client
 
         #endregion
 
-        public string PostOrders()
-        {
-            var param = new Dictionary<string, string>();
-            param["symbol"] = "XBTUSD";
-            param["orderQty"] = "-1000";
-            param["stopPx"] = "8750";
-            param["ordType"] = "Stop";
-            return TestQuery("POST", "/order", param, true);
-        }
+        //public string PostOrders()
+        //{
+        //    var param = new Dictionary<string, string>();
+        //    param["symbol"] = "XBTUSD";
+        //    param["orderQty"] = "-1000";
+        //    param["stopPx"] = "8750";
+        //    param["ordType"] = "Stop";
+        //    return TestQuery("POST", "/order", param, true);
+        //}
 
-        private string TestQuery(string method, string function, Dictionary<string, string> param = null, bool auth = false, bool json = false)
-        {
-            string paramData = json ? BuildJSONParamList(param) : BuildQueryData(param);
-            string url = "/api/v1" + function + ((method == "GET" && paramData != "") ? "?" + paramData : "");
-            string postData = (method != "GET") ? paramData : "";
+        //private string TestQuery(string method, string function, Dictionary<string, string> param = null, bool auth = false, bool json = false)
+        //{
+        //    string paramData = json ? BuildJSONParamList(param) : BuildQueryData(param);
+        //    string url = "/api/v1" + function + ((method == "GET" && paramData != "") ? "?" + paramData : "");
+        //    string postData = (method != "GET") ? paramData : "";
 
-            HttpWebRequest webRequest = (HttpWebRequest)WebRequest.Create(Domain + url);
-            webRequest.Method = method;
+        //    HttpWebRequest webRequest = (HttpWebRequest)WebRequest.Create(Domain + url);
+        //    webRequest.Method = method;
 
-            if (auth)
-            {
-                string expires = GetExpires().ToString();
-                string message = method + url + expires + postData;
-                byte[] signatureBytes = hmacsha256(Encoding.UTF8.GetBytes(ApiSecret), Encoding.UTF8.GetBytes(message));
-                string signatureString = ByteArrayToString(signatureBytes);
+        //    if (auth)
+        //    {
+        //        string expires = GetExpires().ToString();
+        //        string message = method + url + expires + postData;
+        //        byte[] signatureBytes = hmacsha256(Encoding.UTF8.GetBytes(ApiSecret), Encoding.UTF8.GetBytes(message));
+        //        string signatureString = ByteArrayToString(signatureBytes);
 
-                webRequest.Headers.Add("api-expires", expires);
-                webRequest.Headers.Add("api-key", ApiKey);
-                webRequest.Headers.Add("api-signature", signatureString);
-            }
+        //        webRequest.Headers.Add("api-expires", expires);
+        //        webRequest.Headers.Add("api-key", ApiKey);
+        //        webRequest.Headers.Add("api-signature", signatureString);
+        //    }
 
-            try
-            {
-                if (postData != "")
-                {
-                    webRequest.ContentType = json ? "application/json" : "application/x-www-form-urlencoded";
-                    var data = Encoding.UTF8.GetBytes(postData);
-                    using (var stream = webRequest.GetRequestStream())
-                    {
-                        stream.Write(data, 0, data.Length);
-                    }
-                }
+        //    try
+        //    {
+        //        if (postData != "")
+        //        {
+        //            webRequest.ContentType = json ? "application/json" : "application/x-www-form-urlencoded";
+        //            var data = Encoding.UTF8.GetBytes(postData);
+        //            using (var stream = webRequest.GetRequestStream())
+        //            {
+        //                stream.Write(data, 0, data.Length);
+        //            }
+        //        }
 
-                using (WebResponse webResponse = webRequest.GetResponse())
-                using (Stream str = webResponse.GetResponseStream())
-                using (StreamReader sr = new StreamReader(str))
-                {
-                    return sr.ReadToEnd();
-                }
-            }
-            catch (WebException wex)
-            {
-                using (HttpWebResponse response = (HttpWebResponse)wex.Response)
-                {
-                    if (response == null)
-                        throw;
+        //        using (WebResponse webResponse = webRequest.GetResponse())
+        //        using (Stream str = webResponse.GetResponseStream())
+        //        using (StreamReader sr = new StreamReader(str))
+        //        {
+        //            return sr.ReadToEnd();
+        //        }
+        //    }
+        //    catch (WebException wex)
+        //    {
+        //        using (HttpWebResponse response = (HttpWebResponse)wex.Response)
+        //        {
+        //            if (response == null)
+        //                throw;
 
-                    using (Stream str = response.GetResponseStream())
-                    {
-                        using (StreamReader sr = new StreamReader(str))
-                        {
-                            return sr.ReadToEnd();
-                        }
-                    }
-                }
-            }
-        }
+        //            using (Stream str = response.GetResponseStream())
+        //            {
+        //                using (StreamReader sr = new StreamReader(str))
+        //                {
+        //                    return sr.ReadToEnd();
+        //                }
+        //            }
+        //        }
+        //    }
+        //}
 
     }
 }

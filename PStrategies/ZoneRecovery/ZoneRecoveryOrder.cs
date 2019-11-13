@@ -99,6 +99,10 @@
             OrderType = orderType;
         }
 
+        /// <summary>
+        /// Override for default ToString() method
+        /// </summary>
+        /// <returns>Concatenated values of this instance of ZoneRecoveryOrder.</returns>
         public override string ToString()
         {
             var sb = new System.Text.StringBuilder();
@@ -113,6 +117,11 @@
             return sb.ToString();
         }
 
+        /// <summary>
+        /// Send the current ZoneRecoveryOrder to the exchange.
+        /// </summary>
+        /// <param name="conn">The MordoR connection to use to send the ZoneRecoveryOrder.</param>
+        /// <returns>The object returned by the server.</returns>
         public object SendOrderToServer(MordoR conn)
         {
             if (Account != conn.Account)
@@ -130,7 +139,7 @@
                     ServerResponseInitial = conn.StopMarketOrder(Symbol, ClOrdId, Qty, Price, "REV");   //"New"
                     break;
                 case ZoneRecoveryOrderType.Cancel:
-                    var o = conn.CancelOrders(new string[] { ClOrdId });                                //"Canceled"
+                    var o = UndoOrder(conn);                                                            //"Canceled"
                     if (o is List<OrderResponse>)
                         ServerResponseInitial = ((List < OrderResponse > )o).First();
                     else
@@ -167,7 +176,12 @@
 
             return ServerResponseInitial;
         }
-        
+
+        /// <summary>
+        /// Cancel this ZoneRecoveryOrder on the Exchange.
+        /// </summary>
+        /// <param name="conn">The MordoR connection to use to send the ZoneRecoveryOrder.</param>
+        /// <returns>The object returned by the server.</returns>
         public object UndoOrder(MordoR conn)
         {
             ServerResponseInitial = conn.CancelOrders(new string[] { ClOrdId });
