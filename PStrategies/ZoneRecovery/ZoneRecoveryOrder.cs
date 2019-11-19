@@ -23,7 +23,7 @@
     /// Cancel  = Canceled order
     /// Error   = Error occurred at the time the order was being transferred to the server.
     /// </summary>
-    public enum ZoneRecoveryOrderStatus { New, Filled, PartiallyFilled, Cancelled, Error, Unknown }
+    public enum ZoneRecoveryOrderStatus { New, Filled, PartiallyFilled, Canceled, Error, Unknown }
 
     /// <summary>
     /// Class that represents an order sent to the exchange. 
@@ -163,8 +163,8 @@
                     case "Partially filled":
                         OrderStatus = ZoneRecoveryOrderStatus.PartiallyFilled;
                         break;
-                    case "Cancelled":
-                        OrderStatus = ZoneRecoveryOrderStatus.Cancelled;
+                    case "Canceled":
+                        OrderStatus = ZoneRecoveryOrderStatus.Canceled;
                         break;
                     default:
                         OrderStatus = ZoneRecoveryOrderStatus.Unknown;

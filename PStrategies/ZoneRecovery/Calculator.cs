@@ -5,7 +5,7 @@
     using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
-    //using System.Windows.Forms;
+    using System.Windows.Forms;
     using BitMEX.Model;
     using BitMEX.Client;
 
@@ -477,7 +477,7 @@
 
             return errorCounter;
         }
-
+        
         #endregion Private methods
 
         #region Public methods
@@ -487,13 +487,13 @@
         /// the application, the appropriate action is taken.
         /// </summary>
         /// <returns>TODO: Let it return information needed to draw an action on the plot of NinjaTrader.</returns>
-        public object Evaluate()
+        public void Evaluate()
         {
-            if (CurrentStatus == ZoneRecoveryStatus.Alert)
-                return null;
+            //if (CurrentStatus == ZoneRecoveryStatus.Alert)
+            //    return null;
             
             // Check if server can be queried
-            if (DateTime.Now >= NextServerReleaseDateTime)
+            if (DateTime.Now >= NextServerReleaseDateTime && Connections[AccountLong].LastKnownRateLimit > 15 && Connections[AccountShort].LastKnownRateLimit > 15)
             {
                 // Create a variable used for locking.
                 bool acquiredLock = false;
@@ -513,17 +513,30 @@
                             
                             List<OrderResponse> ServerOrders = new List<OrderResponse>();
 
+                            // Get the clOrdIds that are supposed to be live
                             var l = string.Join(",", ApplicationOrders.Where(p => p.Account == AccountLong).Select(p => p.ClOrdId));
                             var s = string.Join(",", ApplicationOrders.Where(p => p.Account == AccountShort).Select(p => p.ClOrdId));
 
-                            ServerOrders.AddRange((List<OrderResponse>)Connections[AccountLong].GetOrdersForCSId(l));
-                            ServerOrders.AddRange((List<OrderResponse>)Connections[AccountShort].GetOrdersForCSId(s));
+                            // Check the status of these clOrdIds
+                            var ol = Connections[AccountLong].GetOrdersForCSId(l);
+                            var os = Connections[AccountShort].GetOrdersForCSId(s);
 
-                            // Synchronize the internal positions
-                            SyncPositions();
+                            // Add OrderResponses to ServerOrders
+                            if (ol is List<OrderResponse>)
+                                ServerOrders.AddRange((List<OrderResponse>)ol);
+                            else
+                                throw new Exception("Error: OrderResponse Long not valid");
 
+                            if(os is List<OrderResponse>)
+                                ServerOrders.AddRange((List<OrderResponse>)os);
+                            else
+                                throw new Exception("Error: OrderResponse Short not valid");
+                            
                             if (ServerOrders.Where(o => o.OrdStatus == "Filled").Count() > 0)
                             {
+                                // Synchronize the internal positions
+                                SyncPositions();
+
                                 timeOutMS = 5000;
                                     
                                 // Match the orders on the server with the orders known in the application
@@ -534,103 +547,45 @@
 
                                 string REVStatus = ApplicationOrders.Where(o => o.OrderType == ZoneRecoveryOrderType.REV).Select(o => o.ServerResponseCompare.OrdStatus).Single();
                                 string TPStatus = ApplicationOrders.Where(o => o.OrderType == ZoneRecoveryOrderType.TP).Select(o => o.ServerResponseCompare.OrdStatus).Single();
-                                string TLStatus;
+                                string TLStatus = "N/A";
                                 if (ApplicationOrders.Where(o => o.OrderType == ZoneRecoveryOrderType.TL).Select(o => o.ServerResponseCompare.OrdStatus).Count() == 1)
                                     TLStatus = ApplicationOrders.Where(o => o.OrderType == ZoneRecoveryOrderType.TL).Select(o => o.ServerResponseCompare.OrdStatus).Single();
-                                else
-                                    TLStatus = "N/A";
 
                                 long REVAccount = ApplicationOrders.Where(o => o.OrderType == ZoneRecoveryOrderType.REV).Select(o => o.ServerResponseCompare.Account).Single();
                                 long TPAccount = ApplicationOrders.Where(o => o.OrderType == ZoneRecoveryOrderType.TP).Select(o => o.ServerResponseCompare.Account).Single();
-                                long TLAccount;
+                                long TLAccount = 0;
                                 if (ApplicationOrders.Where(o => o.OrderType == ZoneRecoveryOrderType.TL).Select(o => o.ServerResponseCompare.OrdStatus).Count() == 1)
                                     TLAccount = ApplicationOrders.Where(o => o.OrderType == ZoneRecoveryOrderType.TL).Select(o => o.ServerResponseCompare.Account).Single();
-                                else
-                                    TLAccount = 0;
 
                                 // Check all possible cases + response to the case
                                 if (TPStatus == "New" && (TLStatus == "New" || TLStatus == "N/A") && REVStatus == "Filled")            // Reversed
                                 {
-                                    bool isCancelled = false;
-                                    long repeatCounter = 0;
+                                    var cancelTP = Connections[TPAccount].CancelAllOrders(Symbol);
+                                    var cancelTL = Connections[TLAccount].CancelAllOrders(Symbol);
 
-                                    //// Try to close cancel to order. TODO: Move this in a separate method.
-                                    //do
-                                    //{
-                                    //    string clOrdId = ApplicationOrders.Where(o => o.OrderType == ZoneRecoveryOrderType.REV).Select(o => o.ServerResponseCompare.ClOrdId).Single();
-
-                                    //    // Create a task to be able to set a timeout.
-                                    //    var task = Task.Run(() => Connections[REVAccount].CancelOrders(new string[] { clOrdId }));
-
-                                    //    if (task.Result is List<OrderResponse>)
-                                    //    {
-                                    //        if (((List<OrderResponse>)task.Result).First().OrdStatus == "Cancelled")
-                                    //            isCancelled = true;
-                                    //    }
-                                    //    else
-                                    //    {
-                                    //        repeatCounter++;
-                                    //        task.Wait(TimeSpan.FromSeconds(1));
-                                    //    }
-                                    //} while (!isCancelled || repeatCounter >= 10);
-
-                                    //if (repeatCounter >= 10)
-                                    //    // Throw an exception
-                                    //    throw new Exception("Unable to cancel order.");
-
-                                    List<ZoneRecoveryOrder> cancelTP;
-                                    List<ZoneRecoveryOrder> cancelTL;
-
-                                    // Close the remaining TP order.
-                                    cancelTP = (List<ZoneRecoveryOrder>)Connections[TPAccount].CancelOrders(new string[] {
-                                        ApplicationOrders.Where(o => o.OrderType == ZoneRecoveryOrderType.TP).Select(o => o.ServerResponseCompare.ClOrdId).Single() });
-
-                                    // Close the remaining TL order.
-                                    if (TLStatus != "N/A")
-                                        cancelTL = (List<ZoneRecoveryOrder>)Connections[TLAccount].CancelOrders(new string[] {
-                                            ApplicationOrders.Where(o => o.OrderType == ZoneRecoveryOrderType.TL).Select(o => o.ServerResponseCompare.ClOrdId).Single() });
-
-                                    // TODO check if all orders are closed
-
+                                    // Throw an exception if not all orders could have been canceled
+                                    if (!cancelTP || !cancelTL)
+                                        throw new Exception("Unable to cancel orders.");
+                                        
                                     // Go one step forward in the Calculator status.
                                     TakeStepForward();
 
                                     // Create App orders and send to server
                                     UpdateAppOrderAndSync(REVAccount, TPAccount);
-                                        
+
                                 }
                                 else if (TPStatus == "Filled" && (TLStatus == "Filled" || TLStatus == "N/A") && REVStatus == "New")
                                 {
-                                    // TP and TL
-                                    bool isCancelled = false;
-                                    long repeatCounter = 0;
+                                    // Try to cancel a previous order.
+                                    var cancelRev = Connections[REVAccount].CancelAllOrders(Symbol, "", "TP Reached. Close all open orders.");
 
-                                    // Try to close cancel to order. TODO: Move this in a separate method.
-                                    do
-                                    {
-                                        string clOrdId = ApplicationOrders.Where(o => o.OrderType == ZoneRecoveryOrderType.REV).Select(o => o.ServerResponseCompare.ClOrdId).Single();
+                                    // Throw an exception if not all orders could have been canceled
+                                    if (!cancelRev)
+                                        throw new Exception("Unable to cancel orders.");
+                                    
+                                    // Reset the Calculator internal variables
+                                    InitializeCalculator();
 
-                                        // Create a task to be able to set a timeout.
-                                        var task = Task.Run(() => Connections[REVAccount].CancelOrders(new string[] { clOrdId }));
-
-                                        if (task.Result is List<OrderResponse>)
-                                        {
-                                            if (((List<OrderResponse>)task.Result).First().OrdStatus == "Cancelled")
-                                                isCancelled = true;
-                                        } 
-                                        else
-                                        {
-                                            repeatCounter++;
-                                            task.Wait(TimeSpan.FromSeconds(1));
-                                        }
-                                    } while (!isCancelled || repeatCounter >= 10);
-
-                                    if (repeatCounter >= 10)
-                                        // Throw an exception
-                                        throw new Exception("Unable to cancel order.");
-                                    else
-                                        // Reset the Calculator internal variables
-                                        InitializeCalculator();
                                 }
                                 else if (TPStatus == "Filled" && TLStatus == "New" && REVStatus == "New")       
                                 {
@@ -661,6 +616,9 @@
                         }
                         else if (CurrentStatus == ZoneRecoveryStatus.Init)    // No Application orders OR ZoneRecoveryStatus = Init
                         {
+                            // Synchronize the internal positions
+                            SyncPositions();
+
                             long errorCounter = 0;
 
                             if (Math.Abs(Positions[AccountShort].CurrentQty) == 0 && Math.Abs(Positions[AccountLong].CurrentQty) == 0)
@@ -706,6 +664,7 @@
                 catch(Exception e)
                 {
                     CurrentStatus = ZoneRecoveryStatus.Alert;
+                    MessageBox.Show(e.Message);
                 }
                 finally
                 {
@@ -722,7 +681,7 @@
                 }
             }
 
-            return ApplicationOrders;
+            //return ApplicationOrders;
         }
 
         /// <summary>

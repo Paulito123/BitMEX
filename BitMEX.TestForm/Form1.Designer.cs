@@ -28,6 +28,7 @@
         /// </summary>
         private void InitializeComponent()
         {
+            this.components = new System.ComponentModel.Container();
             this.tableLayoutPanel1 = new System.Windows.Forms.TableLayoutPanel();
             this.btnMarketOrder = new System.Windows.Forms.Button();
             this.btnStopOrder = new System.Windows.Forms.Button();
@@ -51,6 +52,15 @@
             this.RBBuy = new System.Windows.Forms.RadioButton();
             this.RBSell = new System.Windows.Forms.RadioButton();
             this.buttonTest = new System.Windows.Forms.Button();
+            this.OutputLabel2 = new System.Windows.Forms.Label();
+            this.OutputLabel3 = new System.Windows.Forms.Label();
+            this.OutputLabel4 = new System.Windows.Forms.Label();
+            this.Heartbeat = new System.Windows.Forms.Timer(this.components);
+            this.LabelOnOff = new System.Windows.Forms.Label();
+            this.label4 = new System.Windows.Forms.Label();
+            this.label5 = new System.Windows.Forms.Label();
+            this.label6 = new System.Windows.Forms.Label();
+            this.label7 = new System.Windows.Forms.Label();
             this.tableLayoutPanel1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.NUDPrice)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.NUDMarketOrderQuantity)).BeginInit();
@@ -88,6 +98,14 @@
             this.tableLayoutPanel1.Controls.Add(this.RBBuy, 1, 5);
             this.tableLayoutPanel1.Controls.Add(this.RBSell, 2, 5);
             this.tableLayoutPanel1.Controls.Add(this.buttonTest, 1, 6);
+            this.tableLayoutPanel1.Controls.Add(this.OutputLabel2, 0, 9);
+            this.tableLayoutPanel1.Controls.Add(this.OutputLabel3, 1, 8);
+            this.tableLayoutPanel1.Controls.Add(this.OutputLabel4, 1, 9);
+            this.tableLayoutPanel1.Controls.Add(this.LabelOnOff, 2, 6);
+            this.tableLayoutPanel1.Controls.Add(this.label4, 2, 8);
+            this.tableLayoutPanel1.Controls.Add(this.label5, 3, 9);
+            this.tableLayoutPanel1.Controls.Add(this.label6, 2, 9);
+            this.tableLayoutPanel1.Controls.Add(this.label7, 3, 8);
             this.tableLayoutPanel1.Location = new System.Drawing.Point(12, 12);
             this.tableLayoutPanel1.Name = "tableLayoutPanel1";
             this.tableLayoutPanel1.RowCount = 10;
@@ -341,6 +359,83 @@
             this.buttonTest.UseVisualStyleBackColor = true;
             this.buttonTest.Click += new System.EventHandler(this.buttonTest_Click);
             // 
+            // OutputLabel2
+            // 
+            this.OutputLabel2.AutoSize = true;
+            this.OutputLabel2.Location = new System.Drawing.Point(3, 378);
+            this.OutputLabel2.Name = "OutputLabel2";
+            this.OutputLabel2.Size = new System.Drawing.Size(52, 13);
+            this.OutputLabel2.TabIndex = 9;
+            this.OutputLabel2.Text = "OUTPUT";
+            // 
+            // OutputLabel3
+            // 
+            this.OutputLabel3.AutoSize = true;
+            this.OutputLabel3.Location = new System.Drawing.Point(132, 336);
+            this.OutputLabel3.Name = "OutputLabel3";
+            this.OutputLabel3.Size = new System.Drawing.Size(52, 13);
+            this.OutputLabel3.TabIndex = 9;
+            this.OutputLabel3.Text = "OUTPUT";
+            // 
+            // OutputLabel4
+            // 
+            this.OutputLabel4.AutoSize = true;
+            this.OutputLabel4.Location = new System.Drawing.Point(132, 378);
+            this.OutputLabel4.Name = "OutputLabel4";
+            this.OutputLabel4.Size = new System.Drawing.Size(52, 13);
+            this.OutputLabel4.TabIndex = 9;
+            this.OutputLabel4.Text = "OUTPUT";
+            // 
+            // Heartbeat
+            // 
+            this.Heartbeat.Interval = 2000;
+            this.Heartbeat.Tick += new System.EventHandler(this.Heartbeat_Tick);
+            // 
+            // LabelOnOff
+            // 
+            this.LabelOnOff.AutoSize = true;
+            this.LabelOnOff.Location = new System.Drawing.Point(261, 252);
+            this.LabelOnOff.Name = "LabelOnOff";
+            this.LabelOnOff.Size = new System.Drawing.Size(27, 13);
+            this.LabelOnOff.TabIndex = 9;
+            this.LabelOnOff.Text = "OFF";
+            // 
+            // label4
+            // 
+            this.label4.AutoSize = true;
+            this.label4.Location = new System.Drawing.Point(261, 336);
+            this.label4.Name = "label4";
+            this.label4.Size = new System.Drawing.Size(52, 13);
+            this.label4.TabIndex = 9;
+            this.label4.Text = "OUTPUT";
+            // 
+            // label5
+            // 
+            this.label5.AutoSize = true;
+            this.label5.Location = new System.Drawing.Point(390, 378);
+            this.label5.Name = "label5";
+            this.label5.Size = new System.Drawing.Size(52, 13);
+            this.label5.TabIndex = 9;
+            this.label5.Text = "OUTPUT";
+            // 
+            // label6
+            // 
+            this.label6.AutoSize = true;
+            this.label6.Location = new System.Drawing.Point(261, 378);
+            this.label6.Name = "label6";
+            this.label6.Size = new System.Drawing.Size(52, 13);
+            this.label6.TabIndex = 9;
+            this.label6.Text = "OUTPUT";
+            // 
+            // label7
+            // 
+            this.label7.AutoSize = true;
+            this.label7.Location = new System.Drawing.Point(390, 336);
+            this.label7.Name = "label7";
+            this.label7.Size = new System.Drawing.Size(52, 13);
+            this.label7.TabIndex = 9;
+            this.label7.Text = "OUTPUT";
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -385,6 +480,15 @@
         private System.Windows.Forms.RadioButton RBBuy;
         private System.Windows.Forms.RadioButton RBSell;
         private System.Windows.Forms.Button buttonTest;
+        private System.Windows.Forms.Label OutputLabel2;
+        private System.Windows.Forms.Label OutputLabel3;
+        private System.Windows.Forms.Label OutputLabel4;
+        private System.Windows.Forms.Timer Heartbeat;
+        private System.Windows.Forms.Label LabelOnOff;
+        private System.Windows.Forms.Label label4;
+        private System.Windows.Forms.Label label5;
+        private System.Windows.Forms.Label label6;
+        private System.Windows.Forms.Label label7;
     }
 }
 

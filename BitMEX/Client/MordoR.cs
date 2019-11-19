@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Security.Cryptography;
+using System.Threading.Tasks;
 using System.Text;
 using BitMEX.Model;
 using System.Diagnostics;
@@ -16,6 +17,8 @@ namespace BitMEX.Client
 {
     public class MordoR
     {
+        // https://docs.microsoft.com/en-us/dotnet/api/system.threading.tasks.task.run?view=netframework-4.8
+        // TODO: https://stackoverflow.com/questions/18587628/best-asynchronous-while-method
         // TODO IDEA Let all methods that query the Exchange return a fixed object type. 
         // When error is returned, write it to the log.
 
@@ -25,6 +28,7 @@ namespace BitMEX.Client
         private string  ApiKey;
         private string  ApiSecret;
         public long Account { get; }
+        public long LastKnownRateLimit;
 
         #endregion End variables
 
@@ -40,6 +44,7 @@ namespace BitMEX.Client
             this.ApiKey = bitmexKey;
             this.ApiSecret = bitmexSecret;
             this.Domain = bitmexDomain;
+            this.LastKnownRateLimit = -1;
 
             try
             {
@@ -214,6 +219,11 @@ namespace BitMEX.Client
                     Dictionary<string, string> respHeadr = new Dictionary<string, string>();
                     respHeadr.Add("content-type", webResponse.GetResponseHeader("content-type")) ;
                     respHeadr.Add("status", webResponse.GetResponseHeader("status"));
+                    //respHeadr.Add("x-ratelimit-limit", webResponse.GetResponseHeader("x-ratelimit-limit"));
+                    //respHeadr.Add("x-ratelimit-remaining", webResponse.GetResponseHeader("x-ratelimit-remaining"));
+                    //respHeadr.Add("date", webResponse.GetResponseHeader("date"));
+
+                    this.LastKnownRateLimit = long.Parse(webResponse.GetResponseHeader("x-ratelimit-remaining"));
 
                     //return sr.ReadToEnd();
                     return new ApiResponse((int)webResponse.StatusCode, respHeadr, sr.ReadToEnd(), null, webResponse.ResponseUri);
@@ -230,8 +240,10 @@ namespace BitMEX.Client
                     using (StreamReader sr = new StreamReader(str))
                     {
                         Dictionary<string, string> respHeadr = new Dictionary<string, string>();
-                        //respHeadr.Add("content-type", webResponse.GetResponseHeader("content-type"));
-                        //respHeadr.Add("status", webResponse.GetResponseHeader("status"));
+                        respHeadr.Add("content-type", webResponse.GetResponseHeader("content-type"));
+                        respHeadr.Add("status", webResponse.GetResponseHeader("status"));
+
+                        this.LastKnownRateLimit = long.Parse(webResponse.GetResponseHeader("x-ratelimit-remaining"));
 
                         return new ApiResponse((int)webResponse.StatusCode, respHeadr, sr.ReadToEnd(), null, webResponse.ResponseUri);
                     }
@@ -514,11 +526,11 @@ namespace BitMEX.Client
         /// <param name="clOrdIDs">Collection of client order IDs to close</param>
         /// <param name="message">Informational message to be saved with the cancelation</param>
         /// <returns></returns>
-        public object CancelOrders(string[] clOrdIDs, string message = "Cancel order...")
+        public object CancelOrders(string[] clOrdIDs, string text = "Cancel order...")
         {
             var param = new Dictionary<string, string>();
             param["clOrdID"] = BuildJSONArray(clOrdIDs);
-            param["text"] = message;
+            param["text"] = text;
             ApiResponse res = Query("DELETE", "/order", param, true, true);
 
             var r = res.ApiResponseProcessor();
@@ -530,6 +542,57 @@ namespace BitMEX.Client
             }
 
             return r;
+        }
+
+        /// <summary>
+        /// Closes all open NON-Filled orders for a symbol on an account. (= resting orders)
+        /// </summary>
+        /// <param name="symbol">The symbol for which all orders must be closed.</param>
+        /// <param name="filter">An optional filter can be specified</param>
+        /// <param name="text">Optional text to link to the cancellation order.</param>
+        /// <returns>A list of orders that have been caceled or null when not all orders have been canceled.</returns>
+        public bool CancelAllOrders(string symbol, string filter = "", string text = "Cancel order...")
+        {
+            var param = new Dictionary<string, string>();
+            param["symbol"] = symbol;
+            if(!filter.Equals(""))
+                param["filter"] = symbol;
+            param["text"] = text;
+            
+            long repeatCounter = 0;
+            bool isCanceled = false;
+            //List<OrderResponse> outList = new List<OrderResponse>();
+
+            // Retry up to 10 times to close all orders
+            do
+            {
+                // Create a task to be able to set a timeout.
+                var task = Task.Run(() => Query("DELETE", "/order/all", param, true, true));
+                var r = task.Result.ApiResponseProcessor();
+
+                if (r is List<OrderResponse>)
+                {
+                    //// Add range to outputRange
+                    //outList.AddRange((List<OrderResponse>)r);
+
+                    // Check if all orders have been canceled
+                    if (((List<OrderResponse>)r).Where(o => o.OrdStatus == "Canceled").Count() == ((List<OrderResponse>)r).Count())
+                        isCanceled = true;
+                }
+                else
+                    // Wait 1.5 seconds
+                    task.Wait(TimeSpan.FromSeconds(1.5));
+
+                // Increase the repeatCounter
+                repeatCounter++;
+
+            } while ((!isCanceled || repeatCounter <= 10) && LastKnownRateLimit >= 10);
+
+            //if (!isCanceled)
+            //    return null;
+            //else
+            //    return outList;
+            return isCanceled;
         }
 
         #endregion

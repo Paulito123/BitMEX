@@ -46,11 +46,12 @@ namespace BitMEX.TestForm
             {
                 Connections.Add(connLong.Account, connLong);
                 Connections.Add(connShort.Account, connShort);
-                calc = new Calculator("XBTUSD", 0.2, 10, 2, 80, 0.02, connLong, connShort);
-                MessageBox.Show(connLong.Account.ToString() + "-" + connShort.Account.ToString());
+                calc = new Calculator("XBTUSD", 0.2, 10, 4, 20, 0.02, connLong, connShort);
             }
 
             OutputLabel.Text = "";
+
+            Heartbeat.Interval = 2000;
 
             //TBMarketOrder.Text = "XBTUSD";
 
@@ -539,80 +540,102 @@ namespace BitMEX.TestForm
 
         private void buttonTest_Click(object sender, EventArgs e)
         {
-            var o = calc.Evaluate();
-
-
-
-            if (o is List<ZoneRecoveryOrder>)
+            if (Heartbeat.Enabled)
             {
-                foreach (ZoneRecoveryOrder zo in (List<ZoneRecoveryOrder>)o)
-                {
-                    //MessageBox.Show(zo.ToString());
-
-                    if (zo.ServerResponseInitial is OrderResponse)
-                    {
-                        if(zo.ServerResponseInitial != null)
-                            MessageBox.Show(((OrderResponse)zo.ServerResponseInitial).ClOrdId.ToString());
-                        else
-                            MessageBox.Show("ServerResponseInitial NULL > " + zo.ToString());
-                    }
-                    else if (zo.ServerResponseInitial is BaseError)
-                    {
-                        MessageBox.Show(((BaseError)zo.ServerResponseInitial).Error.Message);
-                    }
-                    else if (zo.ServerResponseInitial == null)
-                    {
-                        MessageBox.Show("NULL = " + zo.ToString());
-                        //MessageBox.Show("NULL");
-                    }
-                    else
-                    {
-                        MessageBox.Show(zo.ServerResponseInitial.GetType().ToString());
-                    }
-                }
+                LabelOnOff.Text = "OFF";
+                Heartbeat.Stop();
             }
             else
-                MessageBox.Show("Dikke Sheiss");
+            {
+                LabelOnOff.Text = "ON";
+                Heartbeat.Start();
+            }
+                
+            
+        }
 
-            //calc.SetUnitSize(1000);
+        private void Heartbeat_Tick(object sender, EventArgs e)
+        {
+            calc.Evaluate();
 
-            //double breakEvenPrice = calc.CalculateBreakEvenPrice();
-            //double direction = -calc.GetNextDirection();
-            //double totalExposure = calc.CalculateTotalOpenExposure();
-            //double MinimumProfitPercentage = Convert.ToDouble(TBClOrdId.Text);
+            OutputLabel.Text = "Status:" + calc.GetStatus().ToString();
+            OutputLabel2.Text = DateTime.Now.ToString();
 
-            //double gewoon = breakEvenPrice + (direction * (totalExposure * MinimumProfitPercentage));
-            //double result = Math.Round(breakEvenPrice + (direction * (totalExposure * MinimumProfitPercentage)));
-
-            //OutputLabel.Text = OutputLabel.Text + MinimumProfitPercentage.ToString() + "=>" + gewoon.ToString() + "||"; //+ Environment.NewLine
-
-            //MessageBox.Show(breakEvenPrice.ToString());
-            //MessageBox.Show(direction.ToString());
-            //MessageBox.Show(totalExposure.ToString());
-            //MessageBox.Show(MinimumProfitPercentage.ToString());
-            //MessageBox.Show("gewoon=" + gewoon.ToString());
-            //MessageBox.Show("result=" + result.ToString());
-
-            //string s = "TP-Price=" + calc.CalculatePriceForOrderType(ZoneRecoveryOrderType.TP).ToString();
-            //s = s + Environment.NewLine + "TP-Qty=" + calc.CalculateQtyForOrderType(ZoneRecoveryOrderType.TP).ToString();
-            //s = s + Environment.NewLine + "BE-Price=" + calc.CalculateBreakEvenPrice().ToString();
-            //s = s + Environment.NewLine + "TE=" + calc.CalculateTotalOpenExposure().ToString();
-            //s = s + Environment.NewLine + "DIR=" + calc.GetNextDirection().ToString();
-            //s = s + Environment.NewLine + "-----------------";
-            //s = s + Environment.NewLine + "TP-Price=" + calc.CalculatePriceForOrderType(ZoneRecoveryOrderType.REV).ToString();
-            //s = s + Environment.NewLine + "TP-Qty=" + calc.CalculateQtyForOrderType(ZoneRecoveryOrderType.REV).ToString();
-            //MessageBox.Show(s);
-
-
-            // TODO Error: Price must be a number
-            // TODO Error: stopPx must be a number
-
-            //MessageBox.Show(o.ToString());
-            //if (o is string)
-            //    MessageBox.Show(o.ToString());
-            //else if(o is List<ZoneRecoveryOrder>)
-            //    MessageBox.Show(o.ToString());
+            OutputLabel4.Text = connLong.LastKnownRateLimit.ToString();
+            OutputLabel3.Text = connShort.LastKnownRateLimit.ToString();
 
         }
     }
 }
+
+
+
+//if (o is List<ZoneRecoveryOrder>)
+//{
+//    foreach (ZoneRecoveryOrder zo in (List<ZoneRecoveryOrder>)o)
+//    {
+//        //MessageBox.Show(zo.ToString());
+
+//        if (zo.ServerResponseInitial is OrderResponse)
+//        {
+//            if(zo.ServerResponseInitial != null)
+//                MessageBox.Show(((OrderResponse)zo.ServerResponseInitial).ClOrdId.ToString());
+//            else
+//                MessageBox.Show("ServerResponseInitial NULL > " + zo.ToString());
+//        }
+//        else if (zo.ServerResponseInitial is BaseError)
+//        {
+//            MessageBox.Show(((BaseError)zo.ServerResponseInitial).Error.Message);
+//        }
+//        else if (zo.ServerResponseInitial == null)
+//        {
+//            MessageBox.Show("NULL = " + zo.ToString());
+//            //MessageBox.Show("NULL");
+//        }
+//        else
+//        {
+//            MessageBox.Show(zo.ServerResponseInitial.GetType().ToString());
+//        }
+//    }
+//}
+//else
+//    MessageBox.Show("Dikke Sheiss");
+
+//calc.SetUnitSize(1000);
+
+//double breakEvenPrice = calc.CalculateBreakEvenPrice();
+//double direction = -calc.GetNextDirection();
+//double totalExposure = calc.CalculateTotalOpenExposure();
+//double MinimumProfitPercentage = Convert.ToDouble(TBClOrdId.Text);
+
+//double gewoon = breakEvenPrice + (direction * (totalExposure * MinimumProfitPercentage));
+//double result = Math.Round(breakEvenPrice + (direction * (totalExposure * MinimumProfitPercentage)));
+
+//OutputLabel.Text = OutputLabel.Text + MinimumProfitPercentage.ToString() + "=>" + gewoon.ToString() + "||"; //+ Environment.NewLine
+
+//MessageBox.Show(breakEvenPrice.ToString());
+//MessageBox.Show(direction.ToString());
+//MessageBox.Show(totalExposure.ToString());
+//MessageBox.Show(MinimumProfitPercentage.ToString());
+//MessageBox.Show("gewoon=" + gewoon.ToString());
+//MessageBox.Show("result=" + result.ToString());
+
+//string s = "TP-Price=" + calc.CalculatePriceForOrderType(ZoneRecoveryOrderType.TP).ToString();
+//s = s + Environment.NewLine + "TP-Qty=" + calc.CalculateQtyForOrderType(ZoneRecoveryOrderType.TP).ToString();
+//s = s + Environment.NewLine + "BE-Price=" + calc.CalculateBreakEvenPrice().ToString();
+//s = s + Environment.NewLine + "TE=" + calc.CalculateTotalOpenExposure().ToString();
+//s = s + Environment.NewLine + "DIR=" + calc.GetNextDirection().ToString();
+//s = s + Environment.NewLine + "-----------------";
+//s = s + Environment.NewLine + "TP-Price=" + calc.CalculatePriceForOrderType(ZoneRecoveryOrderType.REV).ToString();
+//s = s + Environment.NewLine + "TP-Qty=" + calc.CalculateQtyForOrderType(ZoneRecoveryOrderType.REV).ToString();
+//MessageBox.Show(s);
+
+
+// TODO Error: Price must be a number
+// TODO Error: stopPx must be a number
+
+//MessageBox.Show(o.ToString());
+//if (o is string)
+//    MessageBox.Show(o.ToString());
+//else if(o is List<ZoneRecoveryOrder>)
+//    MessageBox.Show(o.ToString());
