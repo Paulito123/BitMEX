@@ -515,7 +515,31 @@ namespace BitMEX.Client
             // Deserialize JSON result
             return res.ApiResponseProcessor();
         }
-        
+
+        /// <summary>
+        /// Market close your open position for a specific symbol for this account.
+        /// </summary>
+        /// <param name="symbol">The symbol for which the position must be closed.</param>
+        /// <returns>List<OrderResponse> with the orders that were created to close the position.</returns>
+        public object ClosePosition(string symbol)
+        {
+            var param = new Dictionary<string, string>();
+            param["symbol"] = symbol;
+            param["ordType"] = "Market";
+            param["execInst"] = "Close";
+
+            ApiResponse res = Query("POST", "/order", param, true);
+
+            return res.ApiResponseProcessor();
+        }
+
+        /* TODO: Close all positions POST /order with execInst:"Close"
+         * Close: 'Close' implies 'ReduceOnly'. A 'Close' order will cancel other active limit orders with the same side and symbol 
+         * if the open quantity exceeds the current position. This is useful for stops: by canceling these orders, a 'Close' Stop 
+         * is ensured to have the margin required to execute, and can only execute up to the full size of your position. If orderQty 
+         * is not specified, a 'Close' order has an orderQty equal to your current position's size.
+         */
+
         #endregion
 
         #region DELETE /order
@@ -556,7 +580,7 @@ namespace BitMEX.Client
             var param = new Dictionary<string, string>();
             param["symbol"] = symbol;
             if(!filter.Equals(""))
-                param["filter"] = symbol;
+                param["filter"] = filter;
             param["text"] = text;
             
             long repeatCounter = 0;

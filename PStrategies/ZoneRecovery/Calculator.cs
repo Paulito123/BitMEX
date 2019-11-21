@@ -335,7 +335,12 @@
                     else
                         return Math.Abs(Positions[AccountShort].CurrentQty);
                 case ZoneRecoveryOrderType.REV:
-                    return GetNextDirection() * UnitSize * FactorArray[GetNextZRPosition()]; 
+                    if (CurrentStatus == ZoneRecoveryStatus.Winding || CurrentStatus == ZoneRecoveryStatus.Init)
+                        return GetNextDirection() * UnitSize * FactorArray[GetNextZRPosition()];
+                    else if (CurrentStatus == ZoneRecoveryStatus.Unwinding)
+                        return GetNextDirection() * UnitSize * FactorArray[GetNextZRPosition()]; // TODO: Check if offset is needed for GetNextZRPosition() here
+                    else
+                        return 0;
                 default:
                     return 0;
             }
@@ -453,6 +458,8 @@
             {
                 return 9;
             }
+
+            // TODO: reorganize this mess!!!
 
             long errorCounter = 0;
 
@@ -655,8 +662,24 @@
                             }
                             else
                             {
-                                // TODO Close all open positions in the most cost saving way...
-                                // Send email
+                                // Cancel all open orders
+                                var l = Connections[AccountLong].CancelAllOrders(Symbol);
+                                var s = Connections[AccountShort].CancelAllOrders(Symbol);
+                                
+                                /* TODO: Close all positions POST /order with execInst:"Close"
+                                 * Close: 'Close' implies 'ReduceOnly'. A 'Close' order will cancel other active limit orders with the same side and symbol 
+                                 * if the open quantity exceeds the current position. This is useful for stops: by canceling these orders, a 'Close' Stop 
+                                 * is ensured to have the margin required to execute, and can only execute up to the full size of your position. If orderQty 
+                                 * is not specified, a 'Close' order has an orderQty equal to your current position's size.
+                                 */
+
+                                // Throw an exception if not all orders could have been canceled
+                                if (!l || !s)
+                                    throw new Exception("Unable to cancel orders.");
+                                else
+                                    InitializeCalculator();
+
+                                //TODO: Send mail
                             }
                         }
                     }
