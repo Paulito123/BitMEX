@@ -335,10 +335,10 @@
                     else
                         return Math.Abs(Positions[AccountShort].CurrentQty);
                 case ZoneRecoveryOrderType.REV:
-                    if (CurrentStatus == ZoneRecoveryStatus.Winding || CurrentStatus == ZoneRecoveryStatus.Init)
+                    if (CurrentStatus == ZoneRecoveryStatus.Winding || CurrentStatus == ZoneRecoveryStatus.Init || CurrentStatus == ZoneRecoveryStatus.Unwinding)
                         return GetNextDirection() * UnitSize * FactorArray[GetNextZRPosition()];
-                    else if (CurrentStatus == ZoneRecoveryStatus.Unwinding)
-                        return GetNextDirection() * UnitSize * FactorArray[GetNextZRPosition()]; // TODO: Check if offset is needed for GetNextZRPosition() here
+                    //else if (CurrentStatus == ZoneRecoveryStatus.Unwinding)
+                    //    return GetNextDirection() * UnitSize * FactorArray[GetNextZRPosition()]; // TODO: Check if offset is needed for GetNextZRPosition() here
                     else
                         return 0;
                 default:
@@ -407,82 +407,128 @@
         }
 
         /// <summary>
+        /// Return the correct account for placing an order, relative to the TP account.
+        /// </summary>
+        /// <returns></returns>
+        private long GetAccountRelative2TPAccount(long TPAccount, ZoneRecoveryOrderType outputType)
+        {
+            if (outputType == ZoneRecoveryOrderType.TL)
+                // Return always the oposite account
+                return Connections.Where(c => c.Key != TPAccount).Select(c => c.Key).First();
+            else if (outputType == ZoneRecoveryOrderType.REV && (CurrentStatus == ZoneRecoveryStatus.Init || CurrentStatus == ZoneRecoveryStatus.Winding))
+                // Return oposite account when winding or init
+                return Connections.Where(c => c.Key != TPAccount).Select(c => c.Key).First();
+            else if (outputType == ZoneRecoveryOrderType.REV && CurrentStatus == ZoneRecoveryStatus.Unwinding)
+                // Return TP account when unwinding
+                return TPAccount;
+            else if (outputType == ZoneRecoveryOrderType.TP)
+                // Return the supplied account
+                return TPAccount;
+            else
+                return 0;
+        }
+
+        /// <summary>
         /// Update the internal ApplicationOrders list and send the ApplicationOrders that have been created to the server.
         /// </summary>
         /// <param name="accNewTP">The Account number of the connection used to create the next TP order.</param>
         /// <param name="accNewREV">The Account number of the connection used to create the next REV and optionally TL order.</param>
-        private long UpdateAppOrderAndSync(long accNewTP, long accNewREV)
+        private long UpdateAppOrderAndSync(long accNewTP)
         {
+            // Working variables
+            ZoneRecoveryOrder tp;
+            ZoneRecoveryOrder tl;
+            ZoneRecoveryOrder rev;
+
             // Create new Application Orders
             ApplicationOrders = new List<ZoneRecoveryOrder>();
 
             // Check if orders still need to be placed.
-            if (CurrentStatus == ZoneRecoveryStatus.Winding || CurrentStatus == ZoneRecoveryStatus.Unwinding)
+            if (CurrentStatus == ZoneRecoveryStatus.Winding)
             {
-                ApplicationOrders.Add(new ZoneRecoveryOrder(
-                    MordoR.GenerateGUID(),
-                    Symbol,
-                    accNewTP,
+                tp = new ZoneRecoveryOrder(MordoR.GenerateGUID(), Symbol,
                     CalculatePriceForOrderType(ZoneRecoveryOrderType.TP),
                     CalculateQtyForOrderType(ZoneRecoveryOrderType.TP),
-                    ZoneRecoveryOrderType.TP));
-                ApplicationOrders.Add(new ZoneRecoveryOrder(
-                    MordoR.GenerateGUID(),
-                    Symbol,
-                    accNewREV,
+                    ZoneRecoveryOrderType.TP,
+                    CurrentStatus);
+                tl = new ZoneRecoveryOrder(MordoR.GenerateGUID(), Symbol,
                     CalculatePriceForOrderType(ZoneRecoveryOrderType.TL),
                     CalculateQtyForOrderType(ZoneRecoveryOrderType.TL),
-                    ZoneRecoveryOrderType.TL));
-                ApplicationOrders.Add(new ZoneRecoveryOrder(
-                    MordoR.GenerateGUID(),
-                    Symbol,
-                    accNewREV,
+                    ZoneRecoveryOrderType.TL,
+                    CurrentStatus);
+                rev = new ZoneRecoveryOrder(MordoR.GenerateGUID(), Symbol,
                     CalculatePriceForOrderType(ZoneRecoveryOrderType.REV),
                     CalculateQtyForOrderType(ZoneRecoveryOrderType.REV),
-                    ZoneRecoveryOrderType.REV));
+                    ZoneRecoveryOrderType.REV,
+                    CurrentStatus);
+
+                ApplicationOrders.Add(tp);
+                ApplicationOrders.Add(tl);
+                ApplicationOrders.Add(rev);
+
+                var tpResp = tp.SendOrderToServer(Connections[accNewTP]);
+                var tlResp = tl.SendOrderToServer(Connections[GetAccountRelative2TPAccount(accNewTP, ZoneRecoveryOrderType.TL)]);
+                var revResp = rev.SendOrderToServer(Connections[GetAccountRelative2TPAccount(accNewTP, ZoneRecoveryOrderType.REV)]);
+            }
+            else if (CurrentStatus == ZoneRecoveryStatus.Unwinding)
+            {
+                tp = new ZoneRecoveryOrder(MordoR.GenerateGUID(), Symbol,
+                    CalculatePriceForOrderType(ZoneRecoveryOrderType.TP),
+                    CalculateQtyForOrderType(ZoneRecoveryOrderType.TP),
+                    ZoneRecoveryOrderType.TP,
+                    CurrentStatus);
+
+                // When we reach the last winding, TL does not need to be set.
+                if(Positions[AccountLong].IsOpen || Positions[AccountShort].IsOpen)
+                {
+                    tl = new ZoneRecoveryOrder(MordoR.GenerateGUID(), Symbol,
+                    CalculatePriceForOrderType(ZoneRecoveryOrderType.TL),
+                    CalculateQtyForOrderType(ZoneRecoveryOrderType.TL),
+                    ZoneRecoveryOrderType.TL,
+                    CurrentStatus);
+
+                    ApplicationOrders.Add(tl);
+
+                    var tlResp = tl.SendOrderToServer(Connections[GetAccountRelative2TPAccount(accNewTP, ZoneRecoveryOrderType.TL)]);
+                }
+
+                rev = new ZoneRecoveryOrder(MordoR.GenerateGUID(), Symbol,
+                    CalculatePriceForOrderType(ZoneRecoveryOrderType.REV),
+                    CalculateQtyForOrderType(ZoneRecoveryOrderType.REV),
+                    ZoneRecoveryOrderType.REV,
+                    CurrentStatus);
+
+                ApplicationOrders.Add(tp);
+                ApplicationOrders.Add(rev);
+
+                var tpResp = tp.SendOrderToServer(Connections[accNewTP]);
+                var revResp = rev.SendOrderToServer(Connections[GetAccountRelative2TPAccount(accNewTP, ZoneRecoveryOrderType.REV)]);
             }
             else if(CurrentStatus == ZoneRecoveryStatus.Init)
             {
-                ApplicationOrders.Add(new ZoneRecoveryOrder(MordoR.GenerateGUID(),Symbol,
-                    accNewTP,
+                tp = new ZoneRecoveryOrder(MordoR.GenerateGUID(), Symbol,
                     CalculatePriceForOrderType(ZoneRecoveryOrderType.TP),
                     CalculateQtyForOrderType(ZoneRecoveryOrderType.TP),
-                    ZoneRecoveryOrderType.TP));
-                ApplicationOrders.Add(new ZoneRecoveryOrder(MordoR.GenerateGUID(),Symbol,
-                    accNewREV,
+                    ZoneRecoveryOrderType.TP,
+                    CurrentStatus);
+                rev = new ZoneRecoveryOrder(MordoR.GenerateGUID(),Symbol,
                     CalculatePriceForOrderType(ZoneRecoveryOrderType.REV),
                     CalculateQtyForOrderType(ZoneRecoveryOrderType.REV),
-                    ZoneRecoveryOrderType.REV));
+                    ZoneRecoveryOrderType.REV,
+                    CurrentStatus);
+
+                ApplicationOrders.Add(tp);
+                ApplicationOrders.Add(rev);
+
+                var tpResp = tp.SendOrderToServer(Connections[accNewTP]);
+                var revResp = rev.SendOrderToServer(Connections[GetAccountRelative2TPAccount(accNewTP, ZoneRecoveryOrderType.REV)]);
             }
             else if (CurrentStatus == ZoneRecoveryStatus.Alert)
             {
                 return 9;
             }
-
-            // TODO: reorganize this mess!!!
-
-            long errorCounter = 0;
-
-            //Send the orders to the server
-            foreach (ZoneRecoveryOrder zorro in ApplicationOrders)
-            {
-                var resp = zorro.SendOrderToServer(Connections[zorro.Account]);
-                if (resp is BaseError)
-                    errorCounter++;
-            }
-
-            // Undo all orders when one order failed.
-            if (errorCounter > 0)
-            {
-                //Undo orders
-                foreach (ZoneRecoveryOrder zorro in ApplicationOrders)
-                {
-                    if (zorro.ServerResponseInitial is OrderResponse)
-                        zorro.UndoOrder(Connections[zorro.Account]);
-                }
-            }
-
-            return errorCounter;
+            
+            return 0;
         }
         
         #endregion Private methods
@@ -521,8 +567,8 @@
                             List<OrderResponse> ServerOrders = new List<OrderResponse>();
 
                             // Get the clOrdIds that are supposed to be live
-                            var l = string.Join(",", ApplicationOrders.Where(p => p.Account == AccountLong).Select(p => p.ClOrdId));
-                            var s = string.Join(",", ApplicationOrders.Where(p => p.Account == AccountShort).Select(p => p.ClOrdId));
+                            var l = string.Join(",", ApplicationOrders.Where(p => ((OrderResponse)p.ServerResponseInitial).Account == AccountLong).Select(p => p.ClOrdId));
+                            var s = string.Join(",", ApplicationOrders.Where(p => ((OrderResponse)p.ServerResponseInitial).Account == AccountShort).Select(p => p.ClOrdId));
 
                             // Check the status of these clOrdIds
                             var ol = Connections[AccountLong].GetOrdersForCSId(l);
@@ -532,12 +578,12 @@
                             if (ol is List<OrderResponse>)
                                 ServerOrders.AddRange((List<OrderResponse>)ol);
                             else
-                                throw new Exception("Error: OrderResponse Long not valid");
+                                throw new Exception("Error: Cannot update OrderResponse Long");
 
                             if(os is List<OrderResponse>)
                                 ServerOrders.AddRange((List<OrderResponse>)os);
                             else
-                                throw new Exception("Error: OrderResponse Short not valid");
+                                throw new Exception("Error: Cannot update OrderResponse Short");
                             
                             if (ServerOrders.Where(o => o.OrdStatus == "Filled").Count() > 0)
                             {
@@ -558,17 +604,14 @@
                                 if (ApplicationOrders.Where(o => o.OrderType == ZoneRecoveryOrderType.TL).Select(o => o.ServerResponseCompare.OrdStatus).Count() == 1)
                                     TLStatus = ApplicationOrders.Where(o => o.OrderType == ZoneRecoveryOrderType.TL).Select(o => o.ServerResponseCompare.OrdStatus).Single();
 
-                                long REVAccount = ApplicationOrders.Where(o => o.OrderType == ZoneRecoveryOrderType.REV).Select(o => o.ServerResponseCompare.Account).Single();
                                 long TPAccount = ApplicationOrders.Where(o => o.OrderType == ZoneRecoveryOrderType.TP).Select(o => o.ServerResponseCompare.Account).Single();
-                                long TLAccount = 0;
-                                if (ApplicationOrders.Where(o => o.OrderType == ZoneRecoveryOrderType.TL).Select(o => o.ServerResponseCompare.OrdStatus).Count() == 1)
-                                    TLAccount = ApplicationOrders.Where(o => o.OrderType == ZoneRecoveryOrderType.TL).Select(o => o.ServerResponseCompare.Account).Single();
+                                long TLAccount = Connections.Where(c => c.Key != TPAccount).Select(c => c.Key).First();
 
                                 // Check all possible cases + response to the case
                                 if (TPStatus == "New" && (TLStatus == "New" || TLStatus == "N/A") && REVStatus == "Filled")            // Reversed
                                 {
-                                    var cancelTP = Connections[TPAccount].CancelAllOrders(Symbol);
-                                    var cancelTL = Connections[TLAccount].CancelAllOrders(Symbol);
+                                    var cancelTP = Connections[TPAccount].CancelAllOrders(Symbol, "", "Reversed. Close all open orders.");
+                                    var cancelTL = Connections[TLAccount].CancelAllOrders(Symbol, "", "Reversed. Close all open orders.");
 
                                     // Throw an exception if not all orders could have been canceled
                                     if (!cancelTP || !cancelTL)
@@ -577,14 +620,14 @@
                                     // Go one step forward in the Calculator status.
                                     TakeStepForward();
 
-                                    // Create App orders and send to server
-                                    UpdateAppOrderAndSync(REVAccount, TPAccount);
+                                    // Create App orders and send to server. TP is the old TL.
+                                    UpdateAppOrderAndSync(TLAccount);
 
                                 }
-                                else if (TPStatus == "Filled" && (TLStatus == "Filled" || TLStatus == "N/A") && REVStatus == "New")
+                                else if (TPStatus == "Filled" && (TLStatus == "Filled" || TLStatus == "N/A") && REVStatus == "New")     // Profit taken
                                 {
                                     // Try to cancel a previous order.
-                                    var cancelRev = Connections[REVAccount].CancelAllOrders(Symbol, "", "TP Reached. Close all open orders.");
+                                    var cancelRev = Connections[TLAccount].CancelAllOrders(Symbol, "", "TP Reached. Close all open orders.");
 
                                     // Throw an exception if not all orders could have been canceled
                                     if (!cancelRev)
@@ -638,7 +681,7 @@
                                 UnitSize = Positions[AccountLong].CurrentQty;
                                     
                                 // Create App orders and send to server
-                                errorCounter = UpdateAppOrderAndSync(Positions[AccountLong].Account, Positions[AccountShort].Account);
+                                errorCounter = UpdateAppOrderAndSync(Positions[AccountLong].Account);
 
                                 // check if Orders are placed with success
                                 if (errorCounter == 0)
@@ -652,7 +695,7 @@
                                 UnitSize = Math.Abs(Positions[AccountShort].CurrentQty);
                                     
                                 // Create App orders and send to server
-                                errorCounter = UpdateAppOrderAndSync(Positions[AccountShort].Account, Positions[AccountLong].Account);
+                                errorCounter = UpdateAppOrderAndSync(Positions[AccountShort].Account);
 
                                 // check if Orders are placed with success
                                 if (errorCounter == 0)
@@ -663,18 +706,15 @@
                             else
                             {
                                 // Cancel all open orders
-                                var l = Connections[AccountLong].CancelAllOrders(Symbol);
-                                var s = Connections[AccountShort].CancelAllOrders(Symbol);
-                                
-                                /* TODO: Close all positions POST /order with execInst:"Close"
-                                 * Close: 'Close' implies 'ReduceOnly'. A 'Close' order will cancel other active limit orders with the same side and symbol 
-                                 * if the open quantity exceeds the current position. This is useful for stops: by canceling these orders, a 'Close' Stop 
-                                 * is ensured to have the margin required to execute, and can only execute up to the full size of your position. If orderQty 
-                                 * is not specified, a 'Close' order has an orderQty equal to your current position's size.
-                                 */
+                                var closeLongOrders = Connections[AccountLong].CancelAllOrders(Symbol);
+                                var closeShortOrders = Connections[AccountShort].CancelAllOrders(Symbol);
+                                var closeLongPosition = Connections[AccountLong].ClosePosition(Symbol);
+                                var closeShortPosition = Connections[AccountShort].ClosePosition(Symbol);
+
+                                //TODO: handle whatever this returns
 
                                 // Throw an exception if not all orders could have been canceled
-                                if (!l || !s)
+                                if (!closeLongOrders || !closeShortOrders)
                                     throw new Exception("Unable to cancel orders.");
                                 else
                                     InitializeCalculator();
@@ -798,8 +838,6 @@ Is that the right way to do it?
         /// When the TP is reached at the exchange, a new position should not be set. The current Calculator 
         /// instance should be disposed.
         /// 
-        /// TODO: Check how WebSocket returns updates on resting orders. This function makes the assumption 
-        /// that a list of OrderResponses is returned.
         /// Turning the wheel, advance one step further in the ZR winding process...
         /// </summary>
    

@@ -29,6 +29,7 @@ namespace BitMEX.Client
         private string  ApiSecret;
         public long Account { get; }
         public long LastKnownRateLimit;
+        private const long MinRateLimitAllowed = 5;
 
         #endregion End variables
 
@@ -180,6 +181,10 @@ namespace BitMEX.Client
         /// <returns>ApiResponse object that can be various types.</returns>
         private ApiResponse Query(string method, string function, Dictionary<string, string> param = null, bool auth = false, bool json = false, bool refreshLimitInfo = false)
         {
+            // Exit when minimum rate limit was reached.
+            if (LastKnownRateLimit <= MinRateLimitAllowed)
+                return new ApiResponse(400, new Dictionary<string, string>(), "{ \"error\": { \"message\": \"Minimum rate limit allowed was reached.\", \"name\": \"MinRateLimitException\" } }");
+
             string paramData = json ? BuildJSONParamList(param) : BuildQueryData(param);
             string url = "/api/v1" + function + ((method == "GET" && paramData != "") ? "?" + paramData : "");
             string postData = (method != "GET") ? paramData : "";
@@ -515,9 +520,12 @@ namespace BitMEX.Client
             // Deserialize JSON result
             return res.ApiResponseProcessor();
         }
-
+        
         /// <summary>
-        /// Market close your open position for a specific symbol for this account.
+        /// Close: 'Close' implies 'ReduceOnly'. A 'Close' order will cancel other active limit orders with the same side and symbol
+        /// if the open quantity exceeds the current position. This is useful for stops: by canceling these orders, a 'Close' Stop
+        /// is ensured to have the margin required to execute, and can only execute up to the full size of your position. If orderQty
+        /// is not specified, a 'Close' order has an orderQty equal to your current position's size.
         /// </summary>
         /// <param name="symbol">The symbol for which the position must be closed.</param>
         /// <returns>List<OrderResponse> with the orders that were created to close the position.</returns>
@@ -532,13 +540,6 @@ namespace BitMEX.Client
 
             return res.ApiResponseProcessor();
         }
-
-        /* TODO: Close all positions POST /order with execInst:"Close"
-         * Close: 'Close' implies 'ReduceOnly'. A 'Close' order will cancel other active limit orders with the same side and symbol 
-         * if the open quantity exceeds the current position. This is useful for stops: by canceling these orders, a 'Close' Stop 
-         * is ensured to have the margin required to execute, and can only execute up to the full size of your position. If orderQty 
-         * is not specified, a 'Close' order has an orderQty equal to your current position's size.
-         */
 
         #endregion
 

@@ -55,12 +55,7 @@
         /// The symbol of the asset.
         /// </summary>
         public string Symbol { get; set; }
-
-        /// <summary>
-        /// The identifier of the account on which the position is known.
-        /// </summary>
-        public long Account { get; set; }
-
+        
         /// <summary>
         /// The average price of the position.
         /// </summary>
@@ -70,6 +65,11 @@
         /// The total quantity of the position.
         /// </summary>
         public long Qty { get; set; }
+
+        /// <summary>
+        /// Shortcut to get the last known status of the order.
+        /// </summary>
+        public ZoneRecoveryStatus CurrentStatus { get; set; }
 
         /// <summary>
         /// The type of order.
@@ -89,14 +89,14 @@
         /// <param name="price"></param>
         /// <param name="qty"></param>
         /// <param name="orderType"></param>
-        public ZoneRecoveryOrder(string clOrdId, string symbol, long account, double price, long qty, ZoneRecoveryOrderType orderType)
+        public ZoneRecoveryOrder(string clOrdId, string symbol, double price, long qty, ZoneRecoveryOrderType orderType, ZoneRecoveryStatus cStatus)
         {
-            ClOrdId = clOrdId;
-            Symbol = symbol;
-            Account = account;
-            Price = price;
-            Qty = qty;
-            OrderType = orderType;
+            ClOrdId         = clOrdId;
+            Symbol          = symbol;
+            Price           = price;
+            Qty             = qty;
+            OrderType       = orderType;
+            CurrentStatus   = cStatus;
         }
 
         /// <summary>
@@ -109,10 +109,10 @@
             sb.Append("class ZoneRecoveryOrder {\n");
             sb.Append("  ClOrdId: ").Append(ClOrdId.ToString()).Append("\n");
             sb.Append("  Symbol: ").Append(Symbol.ToString()).Append("\n");
-            sb.Append("  Account: ").Append(Account.ToString()).Append("\n");
             sb.Append("  Price: ").Append(Price.ToString()).Append("\n");
             sb.Append("  Qty: ").Append(Qty.ToString()).Append("\n");
             sb.Append("  OrderType: ").Append(OrderType.ToString()).Append("\n");
+            sb.Append("  CurrentStatus: ").Append(CurrentStatus.ToString()).Append("\n");
             sb.Append("}\n");
             return sb.ToString();
         }
@@ -124,22 +124,27 @@
         /// <returns>The object returned by the server.</returns>
         public object SendOrderToServer(MordoR conn)
         {
-            if (Account != conn.Account)
-                return null;
+            //if (Account != conn.Account)
+            //    return null;
 
             switch(OrderType)
             {
                 case ZoneRecoveryOrderType.TP: // Limit order > Tegenovergestelde van open position
-                    ServerResponseInitial = conn.LimitOrder(Symbol, ClOrdId, Qty, Price);               //"New"
+                    ServerResponseInitial = conn.LimitOrder(Symbol, ClOrdId, Qty, Price, "TP");
                     break;
                 case ZoneRecoveryOrderType.TL: // Speciaal order
-                    ServerResponseInitial = conn.StopMarketOrder(Symbol, ClOrdId, Qty, Price, "TL");    //"New"
+                    ServerResponseInitial = conn.StopMarketOrder(Symbol, ClOrdId, Qty, Price, "TL");
                     break;
                 case ZoneRecoveryOrderType.REV:// Speciaal order
-                    ServerResponseInitial = conn.StopMarketOrder(Symbol, ClOrdId, Qty, Price, "REV");   //"New"
+                    if (CurrentStatus == ZoneRecoveryStatus.Winding)
+                        ServerResponseInitial = conn.StopMarketOrder(Symbol, ClOrdId, Qty, Price, "REV");
+                    else if (CurrentStatus == ZoneRecoveryStatus.Unwinding)
+                        ServerResponseInitial = conn.LimitOrder(Symbol, ClOrdId, Qty, Price, "REV"); //TODO
+                    else
+                        return null;
                     break;
                 case ZoneRecoveryOrderType.Cancel:
-                    var o = UndoOrder(conn);                                                            //"Canceled"
+                    var o = UndoOrder(conn);                                                            
                     if (o is List<OrderResponse>)
                         ServerResponseInitial = ((List < OrderResponse > )o).First();
                     else
