@@ -775,16 +775,25 @@
         /// </summary>
         /// <param name="refPrice">reference price used for unit size calculation</param>
         /// <returns>The absolute minimum unit size for the given parameters</returns>
-        public long GetUnitSizeForPrice(double refPrice)
+        public long GetUnitSizeForPrice(double refPrice = 0)
         {
-            if (refPrice > 0)
+            double price = 0;
+
+            if (refPrice == 0)
             {
-                double totalBalance = (Wallets[AccountLong].Amount + Wallets[AccountShort].Amount) / 100000000.0;
-                double totalDepthMaxExposure = (double)this.GetMaximumDepth();
-                return (long)Math.Round(refPrice * Leverage * totalBalance * MaxExposurePerc / totalDepthMaxExposure, MidpointRounding.ToEven);
+                var a = Connections[Connections.Keys.First()].GetPositionsForSymbols(new string[] { Symbol });
+                if (a is List<PositionResponse>)
+                    price = (double)((List<PositionResponse>)a).First().LastPrice;
+                else
+                    return 0;
             }
             else
-                return 0;
+                price = refPrice;
+            
+            double totalBalance = (Wallets[AccountLong].Amount + Wallets[AccountShort].Amount) / 100000000.0;
+            double totalDepthMaxExposure = (double)this.GetMaximumDepth();
+
+            return (long)Math.Round(price * Leverage * totalBalance * MaxExposurePerc / totalDepthMaxExposure, MidpointRounding.ToEven);
         }
 
         /// <summary>

@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Windows.Forms;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
 using System.Text;
@@ -15,6 +16,8 @@ using log4net;
 
 namespace BitMEX.Client
 {
+    public enum BitMEXConnectorStatus { Connected, Disconnected, Connecting }
+
     public class MordoR
     {
         // https://docs.microsoft.com/en-us/dotnet/api/system.threading.tasks.task.run?view=netframework-4.8
@@ -27,9 +30,10 @@ namespace BitMEX.Client
         private string  Domain = "https://testnet.bitmex.com";
         private string  ApiKey;
         private string  ApiSecret;
-        public long Account { get; }
+        public long Account { get; set; }
         public long LastKnownRateLimit;
         private const long MinRateLimitAllowed = 5;
+        public BitMEXConnectorStatus ConnectorStatus { get; set; }
 
         #endregion End variables
 
@@ -42,20 +46,11 @@ namespace BitMEX.Client
                       string bitmexSecret, 
                       string bitmexDomain = "https://testnet.bitmex.com")
         {
-            this.ApiKey = bitmexKey;
-            this.ApiSecret = bitmexSecret;
-            this.Domain = bitmexDomain;
-            this.LastKnownRateLimit = -1;
-
-            try
-            {
-                this.Account = GetExchangeAccountNumber();
-            }
-            catch (Exception ex)
-            {
-                this.Account = 0;
-            }
-            
+            ApiKey = bitmexKey;
+            ApiSecret = bitmexSecret;
+            Domain = bitmexDomain;
+            LastKnownRateLimit = 30;
+            ConnectorStatus = TryConnect();
 
             //if (l == null)
             //{
@@ -66,6 +61,21 @@ namespace BitMEX.Client
             //    log = l;
 
             //log.Info(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType + " instantiated.");
+        }
+
+        public BitMEXConnectorStatus TryConnect()
+        {
+            long r = GetExchangeAccountNumber();
+
+            if (r > 0)
+            {
+                Account = r;
+                ConnectorStatus = BitMEXConnectorStatus.Connected;
+            }
+            else
+                ConnectorStatus = BitMEXConnectorStatus.Disconnected;
+                
+            return ConnectorStatus;
         }
 
         #endregion Constructor
@@ -631,7 +641,7 @@ namespace BitMEX.Client
         private long GetExchangeAccountNumber()
         {
             var resp = GetPositionsForSymbols(new string[] { "XBTUSD" });
-
+            
             if (resp is List<PositionResponse>)
             {
                 List<PositionResponse> lijst = (List<PositionResponse>)resp;

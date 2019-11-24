@@ -24,6 +24,11 @@ namespace BitMEX.TestForm
         ILog log;
         string guid;
 
+
+        // TESTING
+        object _object;
+        private DateTime NextServerReleaseDateTime;
+
         //private static readonly ManualResetEvent ExitEvent = new ManualResetEvent(false);
         //private static readonly string API_KEY = "QbpGewiOyIYMbyQ-ieaTKfOJ";
         //private static readonly string API_SECRET = "FqGOSAewtkMBIuiIQHI47dxc6vBm3zqARSEr4Qif8K8N5eHf";
@@ -34,24 +39,37 @@ namespace BitMEX.TestForm
         public Form1()
         {
             InitializeComponent();
-            //guid = MordoR.GenerateGUID();
-            //mconn = new MordoR("QbpGewiOyIYMbyQ-ieaTKfOJ", "FqGOSAewtkMBIuiIQHI47dxc6vBm3zqARSEr4Qif8K8N5eHf");
+            InitForm();
+        }
 
-            buttonTest.Text = "calc.Evaluate()";
+        public void PrepareConnections()
+        {
+            Connections = new Dictionary<long, MordoR>();
+
             connLong = new MordoR("QbpGewiOyIYMbyQ-ieaTKfOJ", "FqGOSAewtkMBIuiIQHI47dxc6vBm3zqARSEr4Qif8K8N5eHf");
             connShort = new MordoR("xEuMT-y7ffwxrvHA2yDwL1bZ", "3l0AmJz7l3P47-gK__LwgZQQ23uOKCFhYJG4HeTLlGXadRm6");
 
-            Connections = new Dictionary<long, MordoR>();
-            if (connLong.Account > 0 && connShort.Account > 0)
+            if (connLong.TryConnect() == BitMEXConnectorStatus.Connected && connShort.TryConnect() == BitMEXConnectorStatus.Connected)
             {
                 Connections.Add(connLong.Account, connLong);
                 Connections.Add(connShort.Account, connShort);
-                calc = new Calculator("XBTUSD", 0.2, 10, 4, 20, 0.02, connLong, connShort);
+                calc = new Calculator("XBTUSD", 0.1, 1, 4, 20, 0.02, connLong, connShort);
             }
+        }
 
-            OutputLabel.Text = "";
+        private void InitForm()
+        {
+            btn1.Text = "Start/Stops";
+
+            //btn8.Text = "calc.Evaluate()";
+            
+            lbl1.Text = "";
+            LabelOnOff.Text = "OFF";
 
             Heartbeat.Interval = 2000;
+            TimerTest.Interval = 250;
+
+            btn2.Text = "Test timer";
 
             //TBMarketOrder.Text = "XBTUSD";
 
@@ -59,233 +77,85 @@ namespace BitMEX.TestForm
             //log = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
         }
 
-        private void btnMarketOrder_Click(object sender, EventArgs e)
+        private void Form1_Load(object sender, EventArgs e)
         {
-            log.Info("btnMarketOrder_Click Clicked!");
 
-            // Local environment checks...
-            if (NUDMarketOrderQuantity.Value >= 1 || NUDMarketOrderQuantity.Value <= -1)
-            {
-                lock (guid)
-                {
-                    // Catch API and connection errors
-                    try
-                    {
-                        object outcome = mconn.MarketOrder(
-                            TBMarketOrder.Text.ToString(),
-                            guid,
-                            Decimal.ToInt32((decimal)NUDMarketOrderQuantity.Value));
+        }
 
-                        log.Info("Marked order sent: Qty = " + NUDMarketOrderQuantity.Value.ToString());
+        private void Form1_FormClosed(object sender, FormClosedEventArgs e)
+        {
 
-                        if (outcome != null)
-                        {
-                            if (outcome.GetType().ToString() == "BitMEX.Model.OrderResponse")
-                            {
-                                // Successful API call with successful result...
-                                log.Info((OrderResponse)outcome);
-                                //MessageBox.Show("Order success: " + clOrdID + "=" + ((OrderResponse)outcome).ClOrdId.ToString());
-                            }
-                            else
-                            {
-                                // Successful API call with error as result...
-                                log.Info((BaseError)outcome);
-                                //MessageBox.Show("Order error: " + ((BaseError)outcome).Error.Message.ToString());
-                            }
-                        }
-                        else
-                        {
-                            log.Error("Outcome is null");
-                            //MessageBox.Show("Outcome is null");
-                        }
-                        guid = MordoR.GenerateGUID();
-                        log.Info("Guid changed to " + guid);
-                    }
-                    catch (Exception exc)
-                    {
-                        // Catch all external exceptions like connection issues etc.
-                        log.Error(exc);
-                        //MessageBox.Show("Exception[" + exc.Message.ToString() + "]");
-                    }
-                }
-            }
-            log.Info("btnMarketOrder_Click End!");
         }
         
-        private void btnLimitOrder_Click(object sender, EventArgs e)
+        #region HELPERS
+
+        private static long ToUnixTimeSeconds(DateTimeOffset dateTimeOffset)
         {
-            log.Info("btnLimitOrder_Click Clicked!");
-
-            // Local environment checks...
-            if ((NUDMarketOrderQuantity.Value >= 1 || NUDMarketOrderQuantity.Value <= -1))
-            {
-                lock (guid)
-                {
-                    // Catch API and connection errors
-                    try
-                    {
-                        OrderResponse orderResp = new OrderResponse();
-                        BaseError orderErr = new BaseError();
-
-                        object outcome = mconn.LimitOrder(
-                            TBMarketOrder.Text.ToString(),
-                            guid,
-                            Decimal.ToInt32((decimal)NUDMarketOrderQuantity.Value),
-                            Decimal.ToInt32((decimal)NUDPrice.Value));
-
-                        log.Info("Limit order sent: Price = " + NUDPrice.Value.ToString() + " & = Qty = " + NUDMarketOrderQuantity.Value.ToString());
-
-                        if (outcome.GetType() == orderResp.GetType())
-                            log.Info((OrderResponse)outcome);
-                        else if (outcome.GetType() == orderErr.GetType())
-                            log.Error((BaseError)outcome);
-                        else
-                            log.Error("Unknown return type [" + outcome.GetType().ToString() + "]");
-                        TBClOrdId.Text = guid;
-                        guid = MordoR.GenerateGUID();
-                        log.Info("Guid changed to " + guid);
-                    }
-                    catch (Exception exc)
-                    {
-                        log.Error("Exception[" + exc.Message.ToString() + "]");
-                    }
-                }
-            }
-            log.Info("btnLimitOrder_Click End!");
+            var unixStart = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
+            var unixTimeStampInTicks = (dateTimeOffset.ToUniversalTime() - unixStart).Ticks;
+            return unixTimeStampInTicks / TimeSpan.TicksPerSecond;
         }
 
-        private void btnGetOpenOrders_Click(object sender, EventArgs e)
+        private long GetExpires()
         {
-            log.Info("btnGetOpenOrders_Click Clicked!");
-            
-            // Local environment checks...
-            if (!String.IsNullOrEmpty(TBClOrdId.Text))
-            {
-                
-                try
-                {
-                    List<OrderResponse> orderResp = new List<OrderResponse>();
-                    BaseError orderErr = new BaseError();
-                    object outcome = mconn.GetOpenOrdersForSymbol(TBMarketOrder.Text.ToString());
-
-                    log.Info("Get open orders sent");
-
-                    if (outcome.GetType() == orderResp.GetType())
-                    {
-                        // Successful API call with successful result...
-                        //string orderAccumulation = "";
-                        orderResp = (List<OrderResponse>)outcome;
-
-                        foreach (var resp in orderResp.Where(x => x.OrdStatus == "New")/*.Select(n => n.OrderId)*/)
-                        {
-                            log.Info(resp.ToString());
-                            //orderAccumulation = orderAccumulation + "¦" + resp.ToString();
-                        }
-                        //MessageBox.Show(orderAccumulation);
-                    }
-                    else if (outcome.GetType() == orderErr.GetType())
-                    {
-                        // Successful API call with error as result...
-                        log.Error(((BaseError)outcome).ToString());
-                        //orderErr = (BaseError)outcome;
-                        //MessageBox.Show("BitMEX API Error [" + orderErr.Error.Message.ToString() + "]");
-                    }
-                    else
-                    {
-                        log.Error("Unknown return type [" + outcome.GetType().ToString() + "]");
-                        // Should never happen...
-                        //MessageBox.Show("Unknown return type [" + outcome.GetType().ToString() + "]");
-                    }
-                }
-                catch (Exception exc)
-                {
-                    // Unsuccessful API call
-                    log.Error("Exception[" + exc.Message.ToString() + "]");
-                    //MessageBox.Show("Exception [" + exc.Message.ToString() + "]");
-                }
-            }
-            log.Info("btnGetOpenOrders_Click End!");
-        }
-        
-        private void btnStopOrder_Click(object sender, EventArgs e)
-        {
-            log.Info("btnStopOrder_Click Clicked!");
-            
-            lock (guid)
-            {
-                // Catch API and connection errors
-                try
-                {
-                    OrderResponse orderResp = new OrderResponse();
-                    BaseError orderErr = new BaseError();
-
-                    object outcome = mconn.StopLimitOrder(
-                        TBMarketOrder.Text.ToString(),
-                        guid,
-                        Decimal.ToInt32((decimal)NUDMarketOrderQuantity.Value),
-                        Decimal.ToInt32((decimal)NUDPrice.Value),
-                        Decimal.ToInt32((decimal)NUDStopOrder.Value)
-                        );
-
-                    log.Info("Stop order sent: stopPx = " + NUDStopOrder.Value.ToString() + " & = Qty = " + NUDMarketOrderQuantity.Value.ToString());
-
-                    if (outcome.GetType() == orderResp.GetType())
-                        log.Info((OrderResponse)outcome);
-                    else if (outcome.GetType() == orderErr.GetType())
-                        log.Error((BaseError)outcome);
-                    else
-                        log.Error("Unknown return type [" + outcome.GetType().ToString() + "]");
-
-                    TBClOrdId.Text = guid;
-                    guid = MordoR.GenerateGUID();
-                    log.Info("Guid changed to " + guid);
-                }
-                catch (Exception exc)
-                {
-                    log.Error("Exception[" + exc.Message.ToString() + "]");
-                }
-            }
-            
-            log.Info("btnStopOrder_Click End!");
+            return ToUnixTimeSeconds(DateTimeOffset.UtcNow) + 3600; // set expires one hour in the future
         }
 
-        private void btnGetOrdersForId_Click(object sender, EventArgs e)
-        {
-            //log.Info("btnGetOpenOrders_Click Clicked!");
+        #endregion HELPERS
 
-            //// Local environment checks...
-            //if (!String.IsNullOrEmpty(TBClOrdId.Text))
+        #region Button handlers
+
+        private void btnClose_Click(object sender, EventArgs e)
+        {
+            //log.Info("btnClose_Click Clicked!");
+
+            //try
             //{
+            //    OrderResponse orderResp = new OrderResponse();
+            //    BaseError orderErr = new BaseError();
+
             //    string IDInput = TBClOrdId.Text;
+            //    object outcome = mconn.ClosePostion(
+            //                    TBMarketOrder.Text,
+            //                    (double)NUDPrice.Value,
+            //                    RBBuy.Checked ? "Buy" : "Sell",
+            //                    (double)NUDMarketOrderQuantity.Value
+            //                    );
 
-            //    try
-            //    {
-            //        //object outcome = mconn.GetFilledOrdersForId(IDInput);
+            //    log.Info("Cancel order [" + IDInput + "].");
 
-            //        log.Info("Get closed orders for ID:" + IDInput);
+            //    if (outcome.GetType() == orderResp.GetType())
+            //        log.Info((OrderResponse)outcome);
+            //    else if (outcome.GetType() == orderErr.GetType())
+            //        log.Error((BaseError)outcome);
+            //    else
+            //        log.Error("Unknown return type [" + outcome.GetType().ToString() + "]");
 
-            //        if (outcome.GetType() == new List<OrderResponse>().GetType())
-            //        {
-            //            // Successful API call with successful result...
-            //            var orderResp = (List<OrderResponse>)outcome;
-            //            foreach (var resp in orderResp)
-            //                log.Info(resp);
-            //        }
-            //        else if(outcome.GetType() == new OrderResponse().GetType())
-            //            log.Info(outcome);
-            //        else if (outcome.GetType() == new BaseError().GetType())
-            //            log.Error(outcome);
-            //        else
-            //            log.Error("Unknown return type [" + outcome.GetType().ToString() + "]");
-            //    }
-                
-            //    catch (Exception exc)
-            //    {
-            //        // Unsuccessful API call
-            //        log.Error("Exception [" + exc.Message.ToString() + "]");
-            //    }
             //}
-            //log.Info("btnGetOpenOrders_Click End!");
+            //catch (Exception exc)
+            //{
+            //    log.Error("Exception[" + exc.Message.ToString() + "]");
+            //}
+
+            //log.Info("btnClose_Click End!");
+        }
+
+        #endregion Button handlers
+
+        private void btn1_Click(object sender, EventArgs e)
+        {
+            if (Heartbeat.Enabled)
+            {
+                Heartbeat.Stop();
+                LabelOnOff.Text = "OFF";
+            }
+            else
+            {
+                PrepareConnections();
+                Heartbeat.Start();
+                LabelOnOff.Text = "ON";
+            }
+                
         }
 
         private void DBLogOperation(string operation, object obj)
@@ -402,167 +272,30 @@ namespace BitMEX.TestForm
             Console.ReadKey(true);
         }
 
-        #region HELPERS
-
-        private static long ToUnixTimeSeconds(DateTimeOffset dateTimeOffset)
-        {
-            var unixStart = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
-            var unixTimeStampInTicks = (dateTimeOffset.ToUniversalTime() - unixStart).Ticks;
-            return unixTimeStampInTicks / TimeSpan.TicksPerSecond;
-        }
-
-        private long GetExpires()
-        {
-            return ToUnixTimeSeconds(DateTimeOffset.UtcNow) + 3600; // set expires one hour in the future
-        }
-
-        #endregion HELPERS
-        
-        
-
-        private void btnAmend_Click(object sender, EventArgs e)
-        {
-            log.Info("btnAmend_Click Clicked!");
-
-            // Local environment checks...
-            if ((NUDMarketOrderQuantity.Value >= 1 || NUDMarketOrderQuantity.Value <= -1))
-            {
-                lock (guid)
-                {
-                    // Catch API and connection errors
-                    try
-                    {
-                        OrderResponse orderResp = new OrderResponse();
-                        BaseError orderErr = new BaseError();
-
-                        object outcome = mconn.AmendOrder(
-                            TBClOrdId.Text,
-                            Decimal.ToInt32((decimal)NUDPrice.Value),
-                            Decimal.ToInt32((decimal)NUDMarketOrderQuantity.Value)
-                            );
-
-                        log.Info("Amend order sent: Price = " + NUDPrice.Value.ToString() + " & = Qty = " + NUDMarketOrderQuantity.Value.ToString());
-
-                        if (outcome.GetType() == orderResp.GetType())
-                            log.Info((OrderResponse)outcome);
-                        else if (outcome.GetType() == orderErr.GetType())
-                            log.Error((BaseError)outcome);
-                        else
-                            log.Error("Unknown return type [" + outcome.GetType().ToString() + "]");
-                        
-                    }
-                    catch (Exception exc)
-                    {
-                        log.Error("Exception[" + exc.Message.ToString() + "]");
-                    }
-                }
-            }
-            log.Info("btnAmend_Click End!");
-        }
-
-        private void btnClose_Click(object sender, EventArgs e)
-        {
-            //log.Info("btnClose_Click Clicked!");
-
-            //try
-            //{
-            //    OrderResponse orderResp = new OrderResponse();
-            //    BaseError orderErr = new BaseError();
-
-            //    string IDInput = TBClOrdId.Text;
-            //    object outcome = mconn.ClosePostion(
-            //                    TBMarketOrder.Text,
-            //                    (double)NUDPrice.Value,
-            //                    RBBuy.Checked ? "Buy" : "Sell",
-            //                    (double)NUDMarketOrderQuantity.Value
-            //                    );
-
-            //    log.Info("Cancel order [" + IDInput + "].");
-
-            //    if (outcome.GetType() == orderResp.GetType())
-            //        log.Info((OrderResponse)outcome);
-            //    else if (outcome.GetType() == orderErr.GetType())
-            //        log.Error((BaseError)outcome);
-            //    else
-            //        log.Error("Unknown return type [" + outcome.GetType().ToString() + "]");
-
-            //}
-            //catch (Exception exc)
-            //{
-            //    log.Error("Exception[" + exc.Message.ToString() + "]");
-            //}
-
-            //log.Info("btnClose_Click End!");
-        }
-
-        private void btnCancel_Click(object sender, EventArgs e)
-        {
-            log.Info("btnCancel_Click Clicked!");
-
-            try
-            {
-                OrderResponse orderResp = new OrderResponse();
-                BaseError orderErr = new BaseError();
-
-                string IDInput = TBClOrdId.Text;
-                object outcome = mconn.CancelOrders(
-                                new string[] { IDInput },
-                                "Schliessen die handel!"
-                                );
-
-                log.Info("Cancel order [" + IDInput + "].");
-
-                if (outcome.GetType() == orderResp.GetType())
-                    log.Info((OrderResponse)outcome);
-                else if (outcome.GetType() == orderErr.GetType())
-                    log.Error((BaseError)outcome);
-                else
-                    log.Error("Unknown return type [" + outcome.GetType().ToString() + "]");
-
-            }
-            catch (Exception exc)
-            {
-                log.Error("Exception[" + exc.Message.ToString() + "]");
-            }
-
-            log.Info("btnCancel_Click End!");
-        }
-
-        private void Form1_Load(object sender, EventArgs e)
-        {
-
-        }
-
-        private void Form1_FormClosed(object sender, FormClosedEventArgs e)
-        {
-
-        }
-
-        private void buttonTest_Click(object sender, EventArgs e)
-        {
-            if (Heartbeat.Enabled)
-            {
-                LabelOnOff.Text = "OFF";
-                Heartbeat.Stop();
-            }
-            else
-            {
-                LabelOnOff.Text = "ON";
-                Heartbeat.Start();
-            }
-                
-            
-        }
+        #region Timer handlers
 
         private void Heartbeat_Tick(object sender, EventArgs e)
         {
-            calc.Evaluate();
+            if (calc != null)
+            {
+                calc.Evaluate();
 
-            OutputLabel.Text = "Status:" + calc.GetStatus().ToString();
-            OutputLabel2.Text = DateTime.Now.ToString();
+                lbl2.Text = "L:" + connLong.LastKnownRateLimit.ToString();
+                lbl3.Text = "S:" + connShort.LastKnownRateLimit.ToString();
+            }
 
-            OutputLabel4.Text = connLong.LastKnownRateLimit.ToString();
-            OutputLabel3.Text = connShort.LastKnownRateLimit.ToString();
+            lbl1.Text = "Status:" + calc.GetStatus().ToString();
+        }
+
+        private void TimerTest_Tick(object sender, EventArgs e)
+        {
+
+        }
+
+        #endregion Timer handlers
+
+        private void btn2_Click(object sender, EventArgs e)
+        {
 
         }
     }
