@@ -146,6 +146,11 @@ namespace BitMEX.Client
             }
         }
         
+        /// <summary>
+        /// Created a signature string from a byte array.
+        /// </summary>
+        /// <param name="ba"></param>
+        /// <returns>Signature string</returns>
         public static string ByteArrayToString(byte[] ba)
         {
             StringBuilder hex = new StringBuilder(ba.Length * 2);
@@ -163,6 +168,11 @@ namespace BitMEX.Client
             return ToUnixTimeSeconds(DateTimeOffset.UtcNow) + 3600; // 
         }
 
+        /// <summary>
+        /// Returns a long representing a UNIX time formatted number from a DateTimeOffset type.
+        /// </summary>
+        /// <param name="dateTimeOffset">DateTimeOffset value to be converted to UNIX time</param>
+        /// <returns>Unix time formatted long</returns>
         private static long ToUnixTimeSeconds(DateTimeOffset dateTimeOffset)
         {
             var unixStart = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
@@ -170,6 +180,12 @@ namespace BitMEX.Client
             return unixTimeStampInTicks / TimeSpan.TicksPerSecond;
         }
 
+        /// <summary>
+        /// Returns a byte array hash from some byte arrays as input.
+        /// </summary>
+        /// <param name="keyByte"></param>
+        /// <param name="messageBytes"></param>
+        /// <returns></returns>
         private byte[] hmacsha256(byte[] keyByte, byte[] messageBytes)
         {
             using (var hash = new HMACSHA256(keyByte))
@@ -235,7 +251,6 @@ namespace BitMEX.Client
                     respHeadr.Add("content-type", webResponse.GetResponseHeader("content-type")) ;
                     respHeadr.Add("status", webResponse.GetResponseHeader("status"));
                     //respHeadr.Add("x-ratelimit-limit", webResponse.GetResponseHeader("x-ratelimit-limit"));
-                    //respHeadr.Add("x-ratelimit-remaining", webResponse.GetResponseHeader("x-ratelimit-remaining"));
                     //respHeadr.Add("date", webResponse.GetResponseHeader("date"));
 
                     this.LastKnownRateLimit = long.Parse(webResponse.GetResponseHeader("x-ratelimit-remaining"));

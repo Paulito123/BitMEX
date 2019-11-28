@@ -23,7 +23,7 @@ namespace BitMEX.TestForm
         private Dictionary<long, MordoR> Connections;
         ILog log;
         string guid;
-
+        
 
         // TESTING
         object _object;
@@ -42,7 +42,7 @@ namespace BitMEX.TestForm
             InitForm();
         }
 
-        public void PrepareConnections()
+        public void PrepareConnections(double maxExp, double leverage,int maxDepth, int zoneSize, double minProfit)
         {
             Connections = new Dictionary<long, MordoR>();
 
@@ -53,23 +53,28 @@ namespace BitMEX.TestForm
             {
                 Connections.Add(connLong.Account, connLong);
                 Connections.Add(connShort.Account, connShort);
-                calc = new Calculator("XBTUSD", 0.1, 1, 4, 20, 0.02, connLong, connShort);
+                calc = new Calculator("XBTUSD", maxExp, leverage, maxDepth, zoneSize, minProfit, connLong, connShort);
+                lblConnectionStatus.Text = maxExp.ToString() + "-" + leverage.ToString() + "-" + maxDepth.ToString() + "-" + zoneSize.ToString() + "-" + minProfit.ToString() + "-";
             }
         }
 
         private void InitForm()
         {
-            btn1.Text = "Start/Stops";
+            //btn1.Text = "Start/Stops";
 
             //btn8.Text = "calc.Evaluate()";
             
-            lbl1.Text = "";
             LabelOnOff.Text = "OFF";
 
             Heartbeat.Interval = 2000;
             TimerTest.Interval = 250;
 
-            btn2.Text = "Test timer";
+            //btn2.Text = "Test timer";
+            //btn6.Text = "Market";
+            //btn5.Text = "TEST";
+            //btn7.Text = "Connect";
+
+            //PrepareConnections();
 
             //TBMarketOrder.Text = "XBTUSD";
 
@@ -144,18 +149,8 @@ namespace BitMEX.TestForm
 
         private void btn1_Click(object sender, EventArgs e)
         {
-            if (Heartbeat.Enabled)
-            {
-                Heartbeat.Stop();
-                LabelOnOff.Text = "OFF";
-            }
-            else
-            {
-                PrepareConnections();
-                Heartbeat.Start();
-                LabelOnOff.Text = "ON";
-            }
-                
+            
+            PrepareConnections((double)NUDMaxExp.Value, (double)NUDLeverage.Value, (int)NUDDepth.Value, (int)NUDZonesize.Value, (double)NUDMinProfit.Value);
         }
 
         private void DBLogOperation(string operation, object obj)
@@ -278,13 +273,22 @@ namespace BitMEX.TestForm
         {
             if (calc != null)
             {
-                calc.Evaluate();
-
+                long r = calc.Evaluate();
+                lbl5.Text = "Return code:" + r.ToString();
                 lbl2.Text = "L:" + connLong.LastKnownRateLimit.ToString();
                 lbl3.Text = "S:" + connShort.LastKnownRateLimit.ToString();
-            }
+                lbl1.Text = "Status:" + calc.GetStatus().ToString();
+                lbl4.Text = "LastPrice:" + calc.GetLastPrice().ToString();
 
-            lbl1.Text = "Status:" + calc.GetStatus().ToString();
+                if (calc.GetStatus().ToString() == "Finish")
+                {
+                    calc.GetLastPrice();
+                    calc = new Calculator("XBTUSD", 0.1, 1, 4, 20, 0.02, connLong, connShort);
+                }  
+            }
+            else
+                lbl1.Text = "Status:Disconnected";
+
         }
 
         private void TimerTest_Tick(object sender, EventArgs e)
@@ -297,6 +301,58 @@ namespace BitMEX.TestForm
         private void btn2_Click(object sender, EventArgs e)
         {
 
+        }
+
+        private void btn6_Click(object sender, EventArgs e)
+        {
+            if (calc == null)
+            {
+                PrepareConnections((double)NUDMaxExp.Value, (double)NUDLeverage.Value, (int)NUDDepth.Value, (int)NUDZonesize.Value, (double)NUDMinProfit.Value);
+                lblConnectionStatus.Text = NUDMaxExp.Value.ToString() + "-" + NUDLeverage.Value.ToString() + "-" + NUDDepth.Value.ToString() + "-" + NUDZonesize.Value.ToString() + "-" + NUDMinProfit.Value.ToString() + "-";
+            }
+                
+
+            double price;
+            double usize;
+
+            price = calc.GetLastPrice();
+
+            if (price == 0)
+                price = (double)NUDDepth.Value;
+            
+            if (price > 0)
+            {
+                usize = calc.GetUnitSizeForPrice(price);
+                connLong.MarketOrder("XBTUSD", MordoR.GenerateGUID(), long.Parse(usize.ToString()));
+            }
+        }
+
+        private void btn5_Click(object sender, EventArgs e)
+        {
+            lbl2.Text = "L:" + connLong.LastKnownRateLimit.ToString();
+            lbl3.Text = "S:" + connShort.LastKnownRateLimit.ToString();
+            lbl1.Text = "Status:" + calc.GetStatus().ToString();
+            lbl4.Text = "LastPrice:" + calc.GetLastPrice().ToString();
+        }
+
+        private void btn7_Click(object sender, EventArgs e)
+        {
+            
+        }
+
+        private void btn4_Click(object sender, EventArgs e)
+        {
+            if (Heartbeat.Enabled)
+            {
+                Heartbeat.Stop();
+                LabelOnOff.Text = "OFF";
+            }
+            else
+            {
+                //PrepareConnections();
+                Heartbeat.Start();
+                LabelOnOff.Text = "ON";
+            }
         }
     }
 }

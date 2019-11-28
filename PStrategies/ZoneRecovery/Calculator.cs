@@ -12,7 +12,7 @@
     /// <summary>
     /// An enumeration used for expressing in which part of the Zone Recovery algorithm the class is at a given moment.
     /// </summary>
-    public enum ZoneRecoveryStatus { Winding, Unwinding, Init, Alert }
+    public enum ZoneRecoveryStatus { Winding, Unwinding, Init, Finish, Alert }
 
     // TESTLONG  [51091]    : "QbpGewiOyIYMbyQ-ieaTKfOJ" - "FqGOSAewtkMBIuiIQHI47dxc6vBm3zqARSEr4Qif8K8N5eHf"
     // TESTSHORT [170591]   : "xEuMT-y7ffwxrvHA2yDwL1bZ" - "3l0AmJz7l3P47-gK__LwgZQQ23uOKCFhYJG4HeTLlGXadRm6"
@@ -124,7 +124,7 @@
         private int CurrentZRPosition;
 
         #endregion Private variables
-
+        
         #region Constructor(s)
 
         /// <summary>
@@ -220,7 +220,7 @@
 
                 // Reset the calculator
                 if (CurrentZRPosition == 0)
-                    CurrentStatus = ZoneRecoveryStatus.Init;
+                    CurrentStatus = ZoneRecoveryStatus.Finish;
             }
             else if (CurrentStatus == ZoneRecoveryStatus.Init)
             {
@@ -337,8 +337,6 @@
                 case ZoneRecoveryOrderType.REV:
                     if (CurrentStatus == ZoneRecoveryStatus.Winding || CurrentStatus == ZoneRecoveryStatus.Init || CurrentStatus == ZoneRecoveryStatus.Unwinding)
                         return GetNextDirection() * UnitSize * FactorArray[GetNextZRPosition()];
-                    //else if (CurrentStatus == ZoneRecoveryStatus.Unwinding)
-                    //    return GetNextDirection() * UnitSize * FactorArray[GetNextZRPosition()]; // TODO: Check if offset is needed for GetNextZRPosition() here
                     else
                         return 0;
                 default:
@@ -527,10 +525,10 @@
             {
                 return 9;
             }
-            
+
             return 0;
         }
-        
+
         #endregion Private methods
 
         #region Public methods
@@ -540,13 +538,12 @@
         /// the application, the appropriate action is taken.
         /// </summary>
         /// <returns>TODO: Let it return information needed to draw an action on the plot of NinjaTrader.</returns>
-        public void Evaluate()
+        public long Evaluate()
         {
-            //if (CurrentStatus == ZoneRecoveryStatus.Alert)
-            //    return null;
-            
+            long exitCode = 0;
+
             // Check if server can be queried
-            if (DateTime.Now >= NextServerReleaseDateTime && Connections[AccountLong].LastKnownRateLimit > 15 && Connections[AccountShort].LastKnownRateLimit > 15)
+            if (DateTime.Now >= NextServerReleaseDateTime && Connections[AccountLong].LastKnownRateLimit > 5 && Connections[AccountShort].LastKnownRateLimit > 5)
             {
                 // Create a variable used for locking.
                 bool acquiredLock = false;
@@ -554,39 +551,65 @@
                 
                 try
                 {
+                    // ----------
+                    exitCode = 1;
+                    // ----------
+
                     // Try enter the lock.
                     Monitor.TryEnter(_Lock, 0, ref acquiredLock);
 
                     // Test if entering the lock was successful.
                     if (acquiredLock)
                     {
+                        // ----------
+                        exitCode = 2;
+                        // ----------
 
                         if (CurrentStatus == ZoneRecoveryStatus.Unwinding || CurrentStatus == ZoneRecoveryStatus.Winding)
                         {
-                            
+                            // ----------
+                            exitCode = 3;
+                            // ----------
+
                             List<OrderResponse> ServerOrders = new List<OrderResponse>();
 
+                            string l;
+                            string s;
+
                             // Get the clOrdIds that are supposed to be live
-                            var l = string.Join(",", ApplicationOrders.Where(p => ((OrderResponse)p.ServerResponseInitial).Account == AccountLong).Select(p => p.ClOrdId));
-                            var s = string.Join(",", ApplicationOrders.Where(p => ((OrderResponse)p.ServerResponseInitial).Account == AccountShort).Select(p => p.ClOrdId));
+                            if(ApplicationOrders.Where(p => ((OrderResponse)p.ServerResponseInitial).Account == AccountLong).Count() > 0)
+                            {
+                                l = string.Join(",", ApplicationOrders.Where(p => ((OrderResponse)p.ServerResponseInitial).Account == AccountLong).Select(p => p.ClOrdId));
+                                var ol = Connections[AccountLong].GetOrdersForCSId(l);
 
-                            // Check the status of these clOrdIds
-                            var ol = Connections[AccountLong].GetOrdersForCSId(l);
-                            var os = Connections[AccountShort].GetOrdersForCSId(s);
+                                // Add OrderResponses to ServerOrders
+                                if (ol is List<OrderResponse>)
+                                    ServerOrders.AddRange((List<OrderResponse>)ol);
+                                else
+                                    throw new Exception("Error: Cannot update OrderResponse Long");
+                            }
 
-                            // Add OrderResponses to ServerOrders
-                            if (ol is List<OrderResponse>)
-                                ServerOrders.AddRange((List<OrderResponse>)ol);
-                            else
-                                throw new Exception("Error: Cannot update OrderResponse Long");
+                            // Get the clOrdIds that are supposed to be live
+                            if (ApplicationOrders.Where(p => ((OrderResponse)p.ServerResponseInitial).Account == AccountShort).Count() > 0)
+                            {
+                                s = string.Join(",", ApplicationOrders.Where(p => ((OrderResponse)p.ServerResponseInitial).Account == AccountShort).Select(p => p.ClOrdId));
+                                var os = Connections[AccountShort].GetOrdersForCSId(s);
 
-                            if(os is List<OrderResponse>)
-                                ServerOrders.AddRange((List<OrderResponse>)os);
-                            else
-                                throw new Exception("Error: Cannot update OrderResponse Short");
+                                // Add OrderResponses to ServerOrders
+                                if (os is List<OrderResponse>)
+                                    ServerOrders.AddRange((List<OrderResponse>)os);
+                                else
+                                    throw new Exception("Error: Cannot update OrderResponse Short");
+                            }
+
+                            MessageBox.Show("ServerOrders.Count()=" + ServerOrders.Count().ToString());
                             
                             if (ServerOrders.Where(o => o.OrdStatus == "Filled").Count() > 0)
                             {
+                                // ----------
+                                exitCode = 4;
+                                // ----------
+
                                 // Synchronize the internal positions
                                 SyncPositions();
 
@@ -610,6 +633,10 @@
                                 // Check all possible cases + response to the case
                                 if (TPStatus == "New" && (TLStatus == "New" || TLStatus == "N/A") && REVStatus == "Filled")            // Reversed
                                 {
+                                    // ----------
+                                    exitCode = 5;
+                                    // ----------
+
                                     var cancelTP = Connections[TPAccount].CancelAllOrders(Symbol, "", "Reversed. Close all open orders.");
                                     var cancelTL = Connections[TLAccount].CancelAllOrders(Symbol, "", "Reversed. Close all open orders.");
 
@@ -626,6 +653,10 @@
                                 }
                                 else if (TPStatus == "Filled" && (TLStatus == "Filled" || TLStatus == "N/A") && REVStatus == "New")     // Profit taken
                                 {
+                                    // ----------
+                                    exitCode = 6;
+                                    // ----------
+
                                     // Try to cancel a previous order.
                                     var cancelRev = Connections[TLAccount].CancelAllOrders(Symbol, "", "TP Reached. Close all open orders.");
 
@@ -639,26 +670,41 @@
                                 }
                                 else if (TPStatus == "Filled" && TLStatus == "New" && REVStatus == "New")       
                                 {
+                                    // ----------
+                                    exitCode = 7;
+                                    // ----------
                                     // Profit side taken without loss side
 
                                 }
                                 else if (TPStatus == "New" && TLStatus == "Filled" && REVStatus == "New")       
                                 {
+                                    // ----------
+                                    exitCode = 8;
+                                    // ----------
                                     // Loss side taken without profit side
 
                                 }
                                 else if (TPStatus == "Filled" && (TLStatus == "New" || TLStatus == "N/A") && REVStatus == "Filled")    
                                 {
+                                    // ----------
+                                    exitCode = 9;
+                                    // ----------
                                     // Profit and reverse side taken without loss side
 
                                 }
                                 else if (TPStatus == "New" && TLStatus == "Filled" && REVStatus == "Filled")    
                                 {
+                                    // ----------
+                                    exitCode = 10;
+                                    // ----------
                                     // Profit side take without loss side
 
                                 }
                                 else if (TPStatus == "Filled" && TLStatus == "Filled" && REVStatus == "Filled") 
                                 {
+                                    // ----------
+                                    exitCode = 11;
+                                    // ----------
                                     // Profit side take without loss side
 
                                 }
@@ -666,6 +712,10 @@
                         }
                         else if (CurrentStatus == ZoneRecoveryStatus.Init)    // No Application orders OR ZoneRecoveryStatus = Init
                         {
+                            // ----------
+                            exitCode = 12;
+                            // ----------
+
                             // Synchronize the internal positions
                             SyncPositions();
 
@@ -674,9 +724,16 @@
                             if (Math.Abs(Positions[AccountShort].CurrentQty) == 0 && Math.Abs(Positions[AccountLong].CurrentQty) == 0)
                             {
                                 // Do nothing
+                                // ----------
+                                exitCode = 13;
+                                // ----------
                             }
                             else if (Math.Abs(Positions[AccountShort].CurrentQty) == 0 && Math.Abs(Positions[AccountLong].CurrentQty) > 0)
                             {
+                                // ----------
+                                exitCode = 14;
+                                // ----------
+
                                 // Set the initial unit size
                                 UnitSize = Positions[AccountLong].CurrentQty;
                                     
@@ -687,10 +744,16 @@
                                 if (errorCounter == 0)
                                     // Turn the wheel
                                     TakeStepForward();
+                                else
+                                    throw new Exception("Error: UpdateAppOrderAndSync(Positions[AccountLong].Account)");
 
                             }
                             else if (Math.Abs(Positions[AccountLong].CurrentQty) == 0 && Math.Abs(Positions[AccountShort].CurrentQty) > 0)
                             {
+                                // ----------
+                                exitCode = 15;
+                                // ----------
+
                                 // Set the initial unit size
                                 UnitSize = Math.Abs(Positions[AccountShort].CurrentQty);
                                     
@@ -701,33 +764,50 @@
                                 if (errorCounter == 0)
                                     // Turn the wheel
                                     TakeStepForward();
+                                else
+                                    throw new Exception("Error: UpdateAppOrderAndSync(Positions[AccountShort].Account)");
 
                             }
                             else
                             {
+                                // ----------
+                                exitCode = 16;
+                                // ----------
                                 // Cancel all open orders
-                                var closeLongOrders = Connections[AccountLong].CancelAllOrders(Symbol);
-                                var closeShortOrders = Connections[AccountShort].CancelAllOrders(Symbol);
-                                var closeLongPosition = Connections[AccountLong].ClosePosition(Symbol);
-                                var closeShortPosition = Connections[AccountShort].ClosePosition(Symbol);
+                                //var closeLongOrders = Connections[AccountLong].CancelAllOrders(Symbol);
+                                //var closeShortOrders = Connections[AccountShort].CancelAllOrders(Symbol);
+                                //var closeLongPosition = Connections[AccountLong].ClosePosition(Symbol);
+                                //var closeShortPosition = Connections[AccountShort].ClosePosition(Symbol);
 
-                                //TODO: handle whatever this returns
+                                ////TODO: handle whatever this returns
 
-                                // Throw an exception if not all orders could have been canceled
-                                if (!closeLongOrders || !closeShortOrders)
-                                    throw new Exception("Unable to cancel orders.");
-                                else
-                                    InitializeCalculator();
+                                //// Throw an exception if not all orders could have been canceled
+                                //if (!closeLongOrders || !closeShortOrders)
+                                //    throw new Exception("Unable to cancel orders.");
+                                //else
+                                //    InitializeCalculator();
 
                                 //TODO: Send mail
                             }
+                        }
+                        else if(CurrentStatus == ZoneRecoveryStatus.Alert)
+                        {
+                            // ----------
+                            exitCode = 17;
+                            // ----------
+                        }
+                        else if (CurrentStatus == ZoneRecoveryStatus.Finish)
+                        {
+                            // ----------
+                            exitCode = 18;
+                            // ----------
                         }
                     }
                 }
                 catch(Exception e)
                 {
                     CurrentStatus = ZoneRecoveryStatus.Alert;
-                    MessageBox.Show(e.Message);
+                    MessageBox.Show("[" + exitCode.ToString() + "]:" + e.Message);
                 }
                 finally
                 {
@@ -744,7 +824,7 @@
                 }
             }
 
-            //return ApplicationOrders;
+            return exitCode;
         }
 
         /// <summary>
@@ -803,6 +883,24 @@
         public ZoneRecoveryStatus GetStatus()
         {
             return CurrentStatus;
+        }
+
+        /// <summary>
+        /// Get the last price know on the server through Position object.
+        /// </summary>
+        /// <returns>Last price as double</returns>
+        public double GetLastPrice()
+        {
+            // Synchronize the positions to get the last price.
+            SyncPositions();
+
+            // Return the last price
+            if (Positions[AccountLong] != null && Positions[AccountLong].LastPrice != null)
+                return (double)Positions[AccountLong].LastPrice;
+            else if (Positions[AccountShort] != null && Positions[AccountShort].LastPrice != null)
+                return (double)Positions[AccountShort].LastPrice;
+            else
+                return 0;
         }
 
         //public void SetUnitSize(long unitSize)
