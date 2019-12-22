@@ -207,6 +207,9 @@ namespace BitMEX.Client
         /// <returns>ApiResponse object that can be various types.</returns>
         private ApiResponse Query(string method, string function, Dictionary<string, string> param = null, bool auth = false, bool json = false, bool refreshLimitInfo = false)
         {
+            long rateLimit;
+            bool success = false;
+
             // Exit when minimum rate limit was reached.
             if (LastKnownRateLimit <= MinRateLimitAllowed)
                 return new ApiResponse(400, new Dictionary<string, string>(), "{ \"error\": { \"message\": \"Minimum rate limit allowed was reached.\", \"name\": \"MinRateLimitException\" } }");
@@ -247,13 +250,17 @@ namespace BitMEX.Client
                 using (Stream str = webResponse.GetResponseStream())
                 using (StreamReader sr = new StreamReader(str))
                 {
+                    success = long.TryParse(webResponse.GetResponseHeader("x-ratelimit-remaining"), out rateLimit);
+                    if (success)
+                        LastKnownRateLimit = rateLimit;
+                    else
+                        LastKnownRateLimit = 4;
+
                     Dictionary<string, string> respHeadr = new Dictionary<string, string>();
                     respHeadr.Add("content-type", webResponse.GetResponseHeader("content-type")) ;
                     respHeadr.Add("status", webResponse.GetResponseHeader("status"));
                     //respHeadr.Add("x-ratelimit-limit", webResponse.GetResponseHeader("x-ratelimit-limit"));
                     //respHeadr.Add("date", webResponse.GetResponseHeader("date"));
-
-                    this.LastKnownRateLimit = long.Parse(webResponse.GetResponseHeader("x-ratelimit-remaining"));
 
                     //return sr.ReadToEnd();
                     return new ApiResponse((int)webResponse.StatusCode, respHeadr, sr.ReadToEnd(), null, webResponse.ResponseUri);
@@ -269,12 +276,16 @@ namespace BitMEX.Client
                     using (Stream str = webResponse.GetResponseStream())
                     using (StreamReader sr = new StreamReader(str))
                     {
+                        success = long.TryParse(webResponse.GetResponseHeader("x-ratelimit-remaining"), out rateLimit);
+                        if (success)
+                            LastKnownRateLimit = rateLimit;
+                        else
+                            LastKnownRateLimit = 4;
+
                         Dictionary<string, string> respHeadr = new Dictionary<string, string>();
                         respHeadr.Add("content-type", webResponse.GetResponseHeader("content-type"));
                         respHeadr.Add("status", webResponse.GetResponseHeader("status"));
-
-                        this.LastKnownRateLimit = long.Parse(webResponse.GetResponseHeader("x-ratelimit-remaining"));
-
+                        
                         return new ApiResponse((int)webResponse.StatusCode, respHeadr, sr.ReadToEnd(), null, webResponse.ResponseUri);
                     }
                 }

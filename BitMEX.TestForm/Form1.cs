@@ -26,8 +26,6 @@ namespace BitMEX.TestForm
         
 
         // TESTING
-        object _object;
-        private DateTime NextServerReleaseDateTime;
 
         //private static readonly ManualResetEvent ExitEvent = new ManualResetEvent(false);
         //private static readonly string API_KEY = "QbpGewiOyIYMbyQ-ieaTKfOJ";
@@ -61,13 +59,18 @@ namespace BitMEX.TestForm
         private void InitForm()
         {
             //btn1.Text = "Start/Stops";
-
             //btn8.Text = "calc.Evaluate()";
             
             LabelOnOff.Text = "OFF";
-
             Heartbeat.Interval = 2000;
             TimerTest.Interval = 250;
+
+            // Default values
+            NUDDepth.Value = 4;
+            NUDLeverage.Value = 10;
+            NUDMaxExp.Value = (decimal)0.1;
+            NUDMinProfit.Value = (decimal)0.03;
+            NUDZonesize.Value = 24;
 
             //btn2.Text = "Test timer";
             //btn6.Text = "Market";
@@ -110,40 +113,7 @@ namespace BitMEX.TestForm
 
         #region Button handlers
 
-        private void btnClose_Click(object sender, EventArgs e)
-        {
-            //log.Info("btnClose_Click Clicked!");
-
-            //try
-            //{
-            //    OrderResponse orderResp = new OrderResponse();
-            //    BaseError orderErr = new BaseError();
-
-            //    string IDInput = TBClOrdId.Text;
-            //    object outcome = mconn.ClosePostion(
-            //                    TBMarketOrder.Text,
-            //                    (double)NUDPrice.Value,
-            //                    RBBuy.Checked ? "Buy" : "Sell",
-            //                    (double)NUDMarketOrderQuantity.Value
-            //                    );
-
-            //    log.Info("Cancel order [" + IDInput + "].");
-
-            //    if (outcome.GetType() == orderResp.GetType())
-            //        log.Info((OrderResponse)outcome);
-            //    else if (outcome.GetType() == orderErr.GetType())
-            //        log.Error((BaseError)outcome);
-            //    else
-            //        log.Error("Unknown return type [" + outcome.GetType().ToString() + "]");
-
-            //}
-            //catch (Exception exc)
-            //{
-            //    log.Error("Exception[" + exc.Message.ToString() + "]");
-            //}
-
-            //log.Info("btnClose_Click End!");
-        }
+        
 
         #endregion Button handlers
 
@@ -151,6 +121,12 @@ namespace BitMEX.TestForm
         {
             
             PrepareConnections((double)NUDMaxExp.Value, (double)NUDLeverage.Value, (int)NUDDepth.Value, (int)NUDZonesize.Value, (double)NUDMinProfit.Value);
+
+            if (calc != null)
+            {
+                RefreshLabels();
+            }
+                
         }
 
         private void DBLogOperation(string operation, object obj)
@@ -274,17 +250,15 @@ namespace BitMEX.TestForm
             if (calc != null)
             {
                 long r = calc.Evaluate();
-                lbl5.Text = "Return code:" + r.ToString();
-                lbl2.Text = "L:" + connLong.LastKnownRateLimit.ToString();
-                lbl3.Text = "S:" + connShort.LastKnownRateLimit.ToString();
-                lbl1.Text = "Status:" + calc.GetStatus().ToString();
-                lbl4.Text = "LastPrice:" + calc.GetLastPrice().ToString();
+                
+                RefreshLabels(r.ToString());
 
-                if (calc.GetStatus().ToString() == "Finish")
-                {
-                    calc.GetLastPrice();
-                    calc = new Calculator("XBTUSD", 0.1, 1, 4, 20, 0.02, connLong, connShort);
-                }  
+                //if (calc.GetStatus().ToString() == "Finish")
+                //    btn
+                //{
+                //    calc.GetLastPrice();
+                //    PrepareConnections((double)NUDMaxExp.Value, (double)NUDLeverage.Value, (int)NUDDepth.Value, (int)NUDZonesize.Value, (double)NUDMinProfit.Value);
+                //}  
             }
             else
                 lbl1.Text = "Status:Disconnected";
@@ -305,34 +279,48 @@ namespace BitMEX.TestForm
 
         private void btn6_Click(object sender, EventArgs e)
         {
-            if (calc == null)
+            try
             {
-                PrepareConnections((double)NUDMaxExp.Value, (double)NUDLeverage.Value, (int)NUDDepth.Value, (int)NUDZonesize.Value, (double)NUDMinProfit.Value);
-                lblConnectionStatus.Text = NUDMaxExp.Value.ToString() + "-" + NUDLeverage.Value.ToString() + "-" + NUDDepth.Value.ToString() + "-" + NUDZonesize.Value.ToString() + "-" + NUDMinProfit.Value.ToString() + "-";
-            }
+                if (calc == null)
+                {
+                    PrepareConnections((double)NUDMaxExp.Value, (double)NUDLeverage.Value, (int)NUDDepth.Value, (int)NUDZonesize.Value, (double)NUDMinProfit.Value);
+                    lblConnectionStatus.Text = NUDMaxExp.Value.ToString() + "-" + NUDLeverage.Value.ToString() + "-" + NUDDepth.Value.ToString() + "-" + NUDZonesize.Value.ToString() + "-" + NUDMinProfit.Value.ToString() + "-";
+                }
                 
+                double price;
+                double usize;
 
-            double price;
-            double usize;
+                price = calc.GetPrevClosePrice();
+                
+                if (price == 0)
+                    price = (double)NUDDepth.Value;
 
-            price = calc.GetLastPrice();
-
-            if (price == 0)
-                price = (double)NUDDepth.Value;
-            
-            if (price > 0)
-            {
-                usize = calc.GetUnitSizeForPrice(price);
-                connLong.MarketOrder("XBTUSD", MordoR.GenerateGUID(), long.Parse(usize.ToString()));
+                if (price > 0)
+                {
+                    usize = calc.GetUnitSizeForPrice(price);
+                    connLong.MarketOrder("XBTUSD", MordoR.GenerateGUID(), long.Parse(usize.ToString()));
+                    lblLastPrice.Text = "Last price:" + price.ToString();
+                    lblUS.Text = "Unit size:" + usize.ToString();
+                }
             }
+            catch (Exception exc)
+            {
+                MessageBox.Show(exc.Message);
+            }
+            
+        }
+
+        public void RefreshLabels(string evalReturnCode = "")
+        {
+            lbl2.Text = "RLim [L:" + connLong.LastKnownRateLimit.ToString() + "] & [S:" + connShort.LastKnownRateLimit.ToString() + "]";
+            lbl1.Text = "Status:" + calc.GetStatus().ToString();
+            lbl4.Text = "PrevClosePrice:" + calc.GetPrevClosePrice().ToString();
+            lbl5.Text = "Return code:" + evalReturnCode;
         }
 
         private void btn5_Click(object sender, EventArgs e)
         {
-            lbl2.Text = "L:" + connLong.LastKnownRateLimit.ToString();
-            lbl3.Text = "S:" + connShort.LastKnownRateLimit.ToString();
-            lbl1.Text = "Status:" + calc.GetStatus().ToString();
-            lbl4.Text = "LastPrice:" + calc.GetLastPrice().ToString();
+            
         }
 
         private void btn7_Click(object sender, EventArgs e)
@@ -353,6 +341,17 @@ namespace BitMEX.TestForm
                 Heartbeat.Start();
                 LabelOnOff.Text = "ON";
             }
+        }
+
+        // Market Order
+        private void btn3_Click(object sender, EventArgs e)
+        {
+            
+        }
+
+        private void connectToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+
         }
     }
 }

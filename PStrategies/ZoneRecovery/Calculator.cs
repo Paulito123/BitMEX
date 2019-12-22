@@ -526,6 +526,8 @@
                 return 9;
             }
 
+            MessageBox.Show("NrOfAppOrders: " + ApplicationOrders.Count().ToString());
+
             return 0;
         }
 
@@ -570,51 +572,65 @@
                             // ----------
                             exitCode = 3;
                             // ----------
-
                             List<OrderResponse> ServerOrders = new List<OrderResponse>();
 
-                            string l;
-                            string s;
-
-                            // Get the clOrdIds that are supposed to be live
-                            if(ApplicationOrders.Where(p => ((OrderResponse)p.ServerResponseInitial).Account == AccountLong).Count() > 0)
-                            {
-                                l = string.Join(",", ApplicationOrders.Where(p => ((OrderResponse)p.ServerResponseInitial).Account == AccountLong).Select(p => p.ClOrdId));
-                                var ol = Connections[AccountLong].GetOrdersForCSId(l);
-
-                                // Add OrderResponses to ServerOrders
-                                if (ol is List<OrderResponse>)
-                                    ServerOrders.AddRange((List<OrderResponse>)ol);
-                                else
-                                    throw new Exception("Error: Cannot update OrderResponse Long");
-                            }
-
-                            // Get the clOrdIds that are supposed to be live
-                            if (ApplicationOrders.Where(p => ((OrderResponse)p.ServerResponseInitial).Account == AccountShort).Count() > 0)
-                            {
-                                s = string.Join(",", ApplicationOrders.Where(p => ((OrderResponse)p.ServerResponseInitial).Account == AccountShort).Select(p => p.ClOrdId));
-                                var os = Connections[AccountShort].GetOrdersForCSId(s);
-
-                                // Add OrderResponses to ServerOrders
-                                if (os is List<OrderResponse>)
-                                    ServerOrders.AddRange((List<OrderResponse>)os);
-                                else
-                                    throw new Exception("Error: Cannot update OrderResponse Short");
-                            }
-
-                            MessageBox.Show("ServerOrders.Count()=" + ServerOrders.Count().ToString());
-                            
-                            if (ServerOrders.Where(o => o.OrdStatus == "Filled").Count() > 0)
+                            // Cancel resting orders
+                            if (ApplicationOrders != null)
                             {
                                 // ----------
                                 exitCode = 4;
+                                // ----------
+                                string l;
+                                string s;
+
+                                MessageBox.Show(ApplicationOrders.Select(p => ((OrderResponse)p.ServerResponseInitial).Account).First().ToString());
+                                MessageBox.Show(ApplicationOrders.Count().ToString());
+
+                                // Get the clOrdIds that are supposed to be live
+                                if (ApplicationOrders.Where(p => ((OrderResponse)p.ServerResponseInitial).Account == AccountLong).Count() > 0)
+                                {
+                                    l = string.Join(",", ApplicationOrders.Where(p => ((OrderResponse)p.ServerResponseInitial).Account == AccountLong).Select(p => p.ClOrdId));
+                                    var ol = Connections[AccountLong].GetOrdersForCSId(l);
+
+                                    // Add OrderResponses to ServerOrders
+                                    if (ol is List<OrderResponse>)
+                                        ServerOrders.AddRange((List<OrderResponse>)ol);
+                                    else
+                                        throw new Exception("Error: Cannot update OrderResponse Long");
+                                }
+
+                                // Get the clOrdIds that are supposed to be live
+                                if (ApplicationOrders.Where(p => ((OrderResponse)p.ServerResponseInitial).Account == AccountShort).Count() > 0)
+                                {
+                                    s = string.Join(",", ApplicationOrders.Where(p => ((OrderResponse)p.ServerResponseInitial).Account == AccountShort).Select(p => p.ClOrdId));
+                                    var os = Connections[AccountShort].GetOrdersForCSId(s);
+
+                                    // Add OrderResponses to ServerOrders
+                                    if (os is List<OrderResponse>)
+                                        ServerOrders.AddRange((List<OrderResponse>)os);
+                                    else
+                                        throw new Exception("Error: Cannot update OrderResponse Short");
+                                }
+                            }
+
+                            if (ServerOrders.Count() == 0)
+                            {
+                                // ----------
+                                exitCode = 5;
+                                // ----------
+
+                            }
+                            else if (ServerOrders.Where(o => o.OrdStatus == "Filled").Count() > 0)
+                            {
+                                // ----------
+                                exitCode = 6;
                                 // ----------
 
                                 // Synchronize the internal positions
                                 SyncPositions();
 
                                 timeOutMS = 5000;
-                                    
+
                                 // Match the orders on the server with the orders known in the application
                                 foreach (ZoneRecoveryOrder ao in ApplicationOrders)
                                 {
@@ -643,7 +659,7 @@
                                     // Throw an exception if not all orders could have been canceled
                                     if (!cancelTP || !cancelTL)
                                         throw new Exception("Unable to cancel orders.");
-                                        
+
                                     // Go one step forward in the Calculator status.
                                     TakeStepForward();
 
@@ -663,12 +679,12 @@
                                     // Throw an exception if not all orders could have been canceled
                                     if (!cancelRev)
                                         throw new Exception("Unable to cancel orders.");
-                                    
+
                                     // Reset the Calculator internal variables
                                     InitializeCalculator();
 
                                 }
-                                else if (TPStatus == "Filled" && TLStatus == "New" && REVStatus == "New")       
+                                else if (TPStatus == "Filled" && TLStatus == "New" && REVStatus == "New")
                                 {
                                     // ----------
                                     exitCode = 7;
@@ -676,7 +692,7 @@
                                     // Profit side taken without loss side
 
                                 }
-                                else if (TPStatus == "New" && TLStatus == "Filled" && REVStatus == "New")       
+                                else if (TPStatus == "New" && TLStatus == "Filled" && REVStatus == "New")
                                 {
                                     // ----------
                                     exitCode = 8;
@@ -684,7 +700,7 @@
                                     // Loss side taken without profit side
 
                                 }
-                                else if (TPStatus == "Filled" && (TLStatus == "New" || TLStatus == "N/A") && REVStatus == "Filled")    
+                                else if (TPStatus == "Filled" && (TLStatus == "New" || TLStatus == "N/A") && REVStatus == "Filled")
                                 {
                                     // ----------
                                     exitCode = 9;
@@ -692,7 +708,7 @@
                                     // Profit and reverse side taken without loss side
 
                                 }
-                                else if (TPStatus == "New" && TLStatus == "Filled" && REVStatus == "Filled")    
+                                else if (TPStatus == "New" && TLStatus == "Filled" && REVStatus == "Filled")
                                 {
                                     // ----------
                                     exitCode = 10;
@@ -700,7 +716,7 @@
                                     // Profit side take without loss side
 
                                 }
-                                else if (TPStatus == "Filled" && TLStatus == "Filled" && REVStatus == "Filled") 
+                                else if (TPStatus == "Filled" && TLStatus == "Filled" && REVStatus == "Filled")
                                 {
                                     // ----------
                                     exitCode = 11;
@@ -863,7 +879,7 @@
             {
                 var a = Connections[Connections.Keys.First()].GetPositionsForSymbols(new string[] { Symbol });
                 if (a is List<PositionResponse>)
-                    price = (double)((List<PositionResponse>)a).First().LastPrice;
+                    price = (double)((List<PositionResponse>)a).First().PrevClosePrice;
                 else
                     return 0;
             }
@@ -889,16 +905,16 @@
         /// Get the last price know on the server through Position object.
         /// </summary>
         /// <returns>Last price as double</returns>
-        public double GetLastPrice()
+        public double GetPrevClosePrice()
         {
             // Synchronize the positions to get the last price.
             SyncPositions();
 
             // Return the last price
-            if (Positions[AccountLong] != null && Positions[AccountLong].LastPrice != null)
-                return (double)Positions[AccountLong].LastPrice;
-            else if (Positions[AccountShort] != null && Positions[AccountShort].LastPrice != null)
-                return (double)Positions[AccountShort].LastPrice;
+            if (Positions[AccountLong] != null && Positions[AccountLong].PrevClosePrice != null)
+                return (double)Positions[AccountLong].PrevClosePrice;
+            else if (Positions[AccountShort] != null && Positions[AccountShort].PrevClosePrice != null)
+                return (double)Positions[AccountShort].PrevClosePrice;
             else
                 return 0;
         }
