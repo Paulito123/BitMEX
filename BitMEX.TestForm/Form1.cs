@@ -23,7 +23,9 @@ namespace BitMEX.TestForm
         private Dictionary<long, MordoR> Connections;
         ILog log;
         string guid;
-        
+
+        private BindingSource bs;
+        private long ID = 0;
 
         // TESTING
 
@@ -38,6 +40,32 @@ namespace BitMEX.TestForm
         {
             InitializeComponent();
             InitForm();
+
+            bs = new BindingSource();
+            dGV.AutoGenerateColumns = false;
+            dGV.AutoSize = true;
+            dGV.AllowUserToAddRows = false;
+            dGV.AllowUserToDeleteRows = false;
+            dGV.AllowUserToResizeColumns = false;
+            dGV.AllowUserToResizeRows = false;
+            dGV.DataSource = bs;
+
+            DataGridViewColumn column = new DataGridViewTextBoxColumn();
+            column.DataPropertyName = "Account";
+            column.Name = "Account";
+            dGV.Columns.Add(column);
+            
+            column = new DataGridViewTextBoxColumn();
+            column.DataPropertyName = "OrderQty";
+            column.Name = "OrderQty";
+            dGV.Columns.Add(column);
+
+            column = new DataGridViewTextBoxColumn();
+            column.DataPropertyName = "ClOrdId";
+            column.Name = "ClOrdId";
+            column.Visible = false;                 //this.dataGridView1.Columns["CustomerID"].Visible = false;
+            dGV.Columns.Add(column);
+
         }
 
         public void PrepareConnections(double maxExp, double leverage,int maxDepth, int zoneSize, double minProfit)
@@ -272,11 +300,6 @@ namespace BitMEX.TestForm
 
         #endregion Timer handlers
 
-        private void btn2_Click(object sender, EventArgs e)
-        {
-
-        }
-
         private void btn6_Click(object sender, EventArgs e)
         {
             try
@@ -352,6 +375,23 @@ namespace BitMEX.TestForm
         private void connectToolStripMenuItem_Click(object sender, EventArgs e)
         {
 
+        }
+
+        private void btn8_Click(object sender, EventArgs e)
+        {
+            ID++;
+            bs.Add(new OrderResponse { Account = 1234, OrderQty = 1, ClOrdId = "A-" + ID.ToString() });
+        }
+
+        private void btn2_Click(object sender, EventArgs e)
+        {
+            var obj = bs.List.OfType<OrderResponse>().ToList().Find(f => f.ClOrdId == textBox1.Text);
+            var foundIndex = bs.IndexOf(obj);
+            
+            if (foundIndex > -1)
+                bs.List.RemoveAt(foundIndex);
+            else
+                MessageBox.Show("Not found.");
         }
     }
 }

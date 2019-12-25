@@ -1,35 +1,53 @@
 ﻿using System;
+using System.Windows.Forms;
 
 namespace MoneyTron
 {
     interface IMTMainForm
     {
-        string AccountATitle { get; set; }
-        string AccountBTitle { get; set; }
         string AccountAID { get; set; }
         string AccountBID { get; set; }
         string ConnStatusA { get; set; }
         string ConnStatusB { get; set; }
         string ConnStartA { get; set; }
         string ConnStartB { get; set; }
-        string MarkPriceA { get; set; }
-        string MarkPriceB { get; set; }
-        string IndexPriceA { get; set; }
-        string IndexPriceB { get; set; }
+        string Bid { get; set; }
+        string Ask { get; set; }
+        string BidAmount { get; set; }
+        string AskAmount { get; set; }
         string TotalFundsA { get; set; }
         string TotalFundsB { get; set; }
         string AvailableFundsA { get; set; }
         string AvailableFundsB { get; set; }
-        string TabPosSTitle { get; set; }
-        string TabPosLTitle { get; set; }
-        string TabOrdersSTitle { get; set; }
-        string TabOrdersLTitle { get; set; }
+        string MarginBalanceA { get; set; }
+        string MarginBalanceB { get; set; }
+        string TabPosBTitle { get; set; }
+        string TabPosATitle { get; set; }
+        string TabOrdersATitle { get; set; }
+        string TabOrdersBTitle { get; set; }
         string PingL { get; set; }
         string PingS { get; set; }
 
-        Action OnInit { get; set; }
-        Action OnStart { set; }
-        Action OnStop { set; }
+        // For testing
+        string DebugOutput { get; set; }
+
+        BindingSource bSRCOrdersA { get; set; }
+        BindingSource bSRCOrdersB { get; set; }
+        BindingSource bSRCPosA { get; set; }
+        BindingSource bSRCPosB { get; set; }
+
+        Action OnInitA { get; set; }
+        Action OnStartA { set; }
+        Action OnStopA { set; }
+        Action OnInitB { get; set; }
+        Action OnStartB { set; }
+        Action OnStopB { set; }
+
+        void Trades1Min(string value, Side side);
+        void Trades5Min(string value, Side side);
+        void Trades15Min(string value, Side side);
+        void Trades1Hour(string value, Side side);
+        void Trades24Hours(string value, Side side);
 
         void StatusA(string value, StatusType type);
         void StatusB(string value, StatusType type);

@@ -1,27 +1,43 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Reactive.Linq;
 using System.Reactive.Concurrency;
 using System.Threading.Tasks;
+using System.Windows.Forms;
 using Bitmex.Client.Websocket;
 using Bitmex.Client.Websocket.Client;
 using Bitmex.Client.Websocket.Communicator;
 using Bitmex.Client.Websocket.Requests;
 using Bitmex.Client.Websocket.Responses;
-using Bitmex.Client.Websocket.Responses.Books;
+using Bitmex.Client.Websocket.Responses.Orders;
 using Bitmex.Client.Websocket.Responses.Trades;
 using Bitmex.Client.Websocket.Responses.Positions;
+using Bitmex.Client.Websocket.Responses.Executions;
+using Bitmex.Client.Websocket.Responses.Books;
+using Bitmex.Client.Websocket.Responses.Margins;
 using Bitmex.Client.Websocket.Websockets;
+using Bitmex.Client.Websocket.Utils;
 using Websocket.Client;
+using MoneyTron.ResponseHandlers;
+using Serilog;
 
 namespace MoneyTron.Presenter
 {
     class MTMainPresenter
     {
         private readonly IMTMainForm _view;
-        
+
+        private OrderBookStatsComputer _orderBookStatsComputer;
+        private TradeStatsComputer _tradeStatsComputer;
+
+        private Dictionary<MTAccount, long> Accounts;
+
+        private BindingSource bSRCOrdersA = new BindingSource();
+        private BindingSource bSRCOrdersB = new BindingSource();
+        private BindingSource bSRCPosA = new BindingSource();
+        private BindingSource bSRCPosB = new BindingSource();
+
         private IBitmexCommunicator _communicatorA;
         private IBitmexCommunicator _communicatorB;
         private BitmexWebsocketClient _clientA;
@@ -43,45 +59,55 @@ namespace MoneyTron.Presenter
         {
             _view = view;
 
+            ConfigureAccounts();
             HandleCommands();
+        }
+
+        private void ConfigureAccounts()
+        {
+            Accounts = new Dictionary<MTAccount, long>();
+            Accounts.Add(MTAccount.A, 51091);
+            Accounts.Add(MTAccount.B, 170591);
         }
 
         private void HandleCommands()
         {
-            _view.OnInit = OnInit;
-            _view.OnStart = async () => await OnStart();
-            _view.OnStop = OnStop;
+            _view.OnInitA = OnInitA;
+            _view.OnStartA = async () => await OnStartA();
+            _view.OnStopA = OnStopA;
+            _view.OnInitB = OnInitB;
+            _view.OnStartB = async () => await OnStartB();
+            _view.OnStopB = OnStopB;
         }
 
-        private void OnInit()
+        private void OnInitA()
         {
-            Clear();
+            Clear(MTAccount.A);
         }
 
-        private async Task OnStart()
+        private void OnInitB()
         {
-            var pair = _defaultPair;
-            pair = pair.ToUpper();
-          
+            Clear(MTAccount.B);
+        }
+
+        private async Task OnStartA()
+        {
+            var pair = _defaultPair.ToUpper();
+
+            _tradeStatsComputer = new TradeStatsComputer();
+            _orderBookStatsComputer = new OrderBookStatsComputer();
+
             var url = BitmexValues.ApiWebsocketTestnetUrl;
             _communicatorA = new BitmexWebsocketCommunicator(url);
-            _communicatorB = new BitmexWebsocketCommunicator(url);
             _clientA = new BitmexWebsocketClient(_communicatorA);
-            _clientB = new BitmexWebsocketClient(_communicatorB);
 
             Subscribe(_clientA, MTAccount.A);
-            Subscribe(_clientB, MTAccount.B);
 
             _communicatorA.ReconnectionHappened.Subscribe(async type =>
             {
                 _view.StatusA($"Reconnected (type: {type})", StatusType.Info);
-                await SendSubscriptions(_clientA, pair);
-            });
-
-            _communicatorB.ReconnectionHappened.Subscribe(async type =>
-            {
-                _view.StatusB($"Reconnected (type: {type})", StatusType.Info);
-                await SendSubscriptions(_clientB, pair);
+                _view.ConnStartA = System.DateTime.Now.ToString("dd-MM-yy HH:mm:ss");
+                await SendSubscriptions(_clientA, pair, MTAccount.A);
             });
 
             _communicatorA.DisconnectionHappened.Subscribe(type =>
@@ -93,7 +119,29 @@ namespace MoneyTron.Presenter
                 }
                 _view.StatusA($"Disconnected (type: {type})", StatusType.Warning);
             });
+            
+            await _communicatorA.Start();
 
+            StartPingCheckA(_clientA);
+        }
+
+        private async Task OnStartB()
+        {
+            var pair = _defaultPair.ToUpper();
+
+            var url = BitmexValues.ApiWebsocketTestnetUrl;
+            _communicatorB = new BitmexWebsocketCommunicator(url);
+            _clientB = new BitmexWebsocketClient(_communicatorB);
+            
+            Subscribe(_clientB, MTAccount.B);
+            
+            _communicatorB.ReconnectionHappened.Subscribe(async type =>
+            {
+                _view.StatusB($"Reconnected (type: {type})", StatusType.Info);
+                _view.ConnStartB = System.DateTime.Now.ToString("dd-MM-yy HH:mm:ss");
+                await SendSubscriptions(_clientB, pair, MTAccount.B);
+            });
+            
             _communicatorB.DisconnectionHappened.Subscribe(type =>
             {
                 if (type == DisconnectionType.Error)
@@ -103,64 +151,287 @@ namespace MoneyTron.Presenter
                 }
                 _view.StatusB($"Disconnected (type: {type})", StatusType.Warning);
             });
-
-            await _communicatorA.Start();
+            
             await _communicatorB.Start();
-
-            StartPingCheck(_clientA, MTAccount.A);
-            StartPingCheck(_clientB, MTAccount.B);
+            
+            StartPingCheckB(_clientB);
         }
 
-        private void OnStop()
+        private void OnStopA()
         {
-            _pingSubscriptionA.Dispose();
-            _pingSubscriptionB.Dispose();
-            _clientA.Dispose();
-            _clientB.Dispose();
-            _communicatorA.Dispose();
-            _communicatorB.Dispose();
+            if (_pingSubscriptionA != null)
+                _pingSubscriptionA.Dispose();
+            if (_clientA != null)
+                _clientA.Dispose();
+            if (_communicatorA != null)
+                _communicatorA.Dispose();
             _clientA = null;
-            _clientB = null;
             _communicatorA = null;
+            Clear(MTAccount.A);
+        }
+
+        private void OnStopB()
+        {
+            if (_pingSubscriptionB != null)
+                _pingSubscriptionB.Dispose();
+            if (_clientB != null)
+                _clientB.Dispose();
+            if (_communicatorB != null)
+                _communicatorB.Dispose();
+            _clientB = null;
             _communicatorB = null;
-            Clear();
+            Clear(MTAccount.B);
         }
 
         private void Subscribe(BitmexWebsocketClient client, MTAccount acc)
         {
+            client.Streams.MarginStream.ObserveOn(TaskPoolScheduler.Default).Subscribe(HandleMargin);
+            client.Streams.OrderStream.ObserveOn(TaskPoolScheduler.Default).Subscribe(HandleOrderResponse);
+
+            client.Streams.AuthenticationStream.ObserveOn(TaskPoolScheduler.Default).Subscribe();
+            client.Streams.ErrorStream.ObserveOn(TaskPoolScheduler.Default).Subscribe(HandleErrorResponse);
+
             if (acc == MTAccount.A)
             {
-                //client.Streams.InfoStream.ObserveOn(TaskPoolScheduler.Default).Subscribe();
-                client.Streams.PositionStream.ObserveOn(TaskPoolScheduler.Default).Subscribe(HandlePositionsA);
-                //client.Streams.TradesStream.ObserveOn(TaskPoolScheduler.Default).Subscribe(HandleTrades);
-                //client.Streams.BookStream.ObserveOn(TaskPoolScheduler.Default).Subscribe(HandleOrderBook);
+                client.Streams.PositionStream.ObserveOn(TaskPoolScheduler.Default).Subscribe(HandlePositionResponseA);
+                client.Streams.ExecutionStream.ObserveOn(TaskPoolScheduler.Default).Subscribe(HandleExecutionResponseA);
+                client.Streams.TradesStream.ObserveOn(TaskPoolScheduler.Default).Subscribe(HandleTrades);
+                client.Streams.BookStream.ObserveOn(TaskPoolScheduler.Default).Subscribe(HandleOrderBook);
                 client.Streams.PongStream.ObserveOn(TaskPoolScheduler.Default).Subscribe(HandlePongA);
             }
             else
             {
-                //client.Streams.InfoStream.ObserveOn(TaskPoolScheduler.Default).Subscribe();
-                client.Streams.PositionStream.ObserveOn(TaskPoolScheduler.Default).Subscribe(HandlePositionsB);
-                //client.Streams.TradesStream.ObserveOn(TaskPoolScheduler.Default).Subscribe(HandleTrades);
-                //client.Streams.BookStream.ObserveOn(TaskPoolScheduler.Default).Subscribe(HandleOrderBook);
+                client.Streams.PositionStream.ObserveOn(TaskPoolScheduler.Default).Subscribe(HandlePositionResponseB);
+                client.Streams.ExecutionStream.ObserveOn(TaskPoolScheduler.Default).Subscribe(HandleExecutionResponseB);
                 client.Streams.PongStream.ObserveOn(TaskPoolScheduler.Default).Subscribe(HandlePongB);
             }
+        }
+
+        /// <summary>
+        /// Send the requests for the subscriptions needed.
+        /// </summary>
+        /// <param name="client"></param>
+        /// <param name="pair"></param>
+        /// <param name="acc"></param>
+        /// <returns></returns>
+        private async Task SendSubscriptions(BitmexWebsocketClient client, string pair, MTAccount acc)
+        {
+            if (acc == MTAccount.A)
+            {
+                await client.Send(new AuthenticationRequest("QbpGewiOyIYMbyQ-ieaTKfOJ", "FqGOSAewtkMBIuiIQHI47dxc6vBm3zqARSEr4Qif8K8N5eHf"));
+                //await client.Authenticate("QbpGewiOyIYMbyQ-ieaTKfOJ", "FqGOSAewtkMBIuiIQHI47dxc6vBm3zqARSEr4Qif8K8N5eHf");
+                //await client.Send(new TradesSubscribeRequest(pair));
+                //await client.Send(new BookSubscribeRequest(pair));
+            }
+            else
+            {
+                await client.Send(new AuthenticationRequest("QbpGewiOyIYMbyQ-ieaTKfOJ", "FqGOSAewtkMBIuiIQHI47dxc6vBm3zqARSEr4Qif8K8N5eHf"));
+                //await client.Authenticate("xEuMT-y7ffwxrvHA2yDwL1bZ", "3l0AmJz7l3P47-gK__LwgZQQ23uOKCFhYJG4HeTLlGXadRm6");
+            }
+
+            await client.Send(new OrderSubscribeRequest());
+            await client.Send(new PositionSubscribeRequest());
+            await client.Send(new MarginSubscribeRequest());
+            //await client.Send(new ExecutionSubscribeRequest());
+        }
+
+        private void HandleErrorResponse(ErrorResponse response)
+        {
 
         }
 
-        private async Task SendSubscriptions(BitmexWebsocketClient client, string pair)
+        private void HandleOrderResponse(OrderResponse response)
         {
-            await client.Send(new TradesSubscribeRequest(pair));
-            //await client.Send(new BookSubscribeRequest(pair));
+            //_view.DebugOutput = response.Data.ToString();
+            var acc = response.Data.First().Account;
+
+            if (response.Action == BitmexAction.Undefined)
+                return;
+            else if (response.Action == BitmexAction.Partial)
+            {
+                BindingSource bs = new BindingSource();
+
+                foreach (Order o in response.Data)
+                {
+                    Log.Information("[Partial]:" + o.ToString());
+                    bs.Add(o);
+                }
+                
+                if (bs != null && bs.Count > 0)
+                {
+                    if (acc == Accounts[MTAccount.A])
+                        _view.bSRCOrdersA = bs;
+                    else if (acc == Accounts[MTAccount.B])
+                        _view.bSRCOrdersB = bs;
+                } 
+            }
+            else if (response.Action == BitmexAction.Insert)
+            {
+                if (acc == Accounts[MTAccount.A])
+                {
+                    BindingSource bs = _view.bSRCOrdersA;
+
+                    foreach (Order o in response.Data)
+                    {
+                        Log.Information("[Insert]:" + o.ToString());
+                        bs.Add(o);
+                    }
+
+                    if (bs != null && bs.Count > 0)
+                        _view.bSRCOrdersA = bs;
+                }
+                else if (acc == Accounts[MTAccount.B])
+                {
+                    BindingSource bs = _view.bSRCOrdersB;
+
+                    foreach (Order o in response.Data)
+                    {
+                        Log.Information("[Insert]:" + o.ToString());
+                        _view.bSRCOrdersB.Add(o);
+                    }
+
+                    if (bs != null && bs.Count > 0)
+                        _view.bSRCOrdersB = bs;
+                }
+            }
+            else if (response.Action == BitmexAction.Delete)
+            {
+                if (acc == Accounts[MTAccount.A])
+                {
+                    BindingSource bs = _view.bSRCOrdersA;
+
+                    foreach (Order o in response.Data)
+                    {
+                        Log.Information("[Delete]:" + o.ToString());
+                        var obj = bs.List.OfType<Order>().ToList().Find(f => f.OrderId == o.OrderId);
+                        var foundIndex = bs.IndexOf(obj);
+                        bs.RemoveAt(foundIndex);
+                    }
+
+                    if (bs != null && bs.Count > 0)
+                        _view.bSRCOrdersA = bs;
+                }
+                else if (acc == Accounts[MTAccount.B])
+                {
+                    BindingSource bs = _view.bSRCOrdersB;
+
+                    foreach (Order o in response.Data)
+                    {
+                        Log.Information("[Delete]:" + o.ToString());
+                        var obj = bs.List.OfType<Order>().ToList().Find(f => f.OrderId == o.OrderId);
+                        var foundIndex = bs.IndexOf(obj);
+                        bs.RemoveAt(foundIndex);
+                    }
+
+                    if (bs != null && bs.Count > 0)
+                        _view.bSRCOrdersB = bs;
+                }
+            }
+            else if (response.Action == BitmexAction.Update)
+            {
+                if (acc == Accounts[MTAccount.A])
+                {
+                    BindingSource bs = _view.bSRCOrdersA;
+
+                    foreach (Order o in response.Data)
+                    {
+                        Log.Information("[Update]:" + o.ToString());
+                        var obj = _view.bSRCOrdersA.List.OfType<Order>().ToList().Find(f => f.OrderId == o.OrderId);
+                        var foundIndex = _view.bSRCOrdersA.IndexOf(obj);
+                        _view.bSRCOrdersA.RemoveAt(foundIndex);
+                        _view.bSRCOrdersA.Add(o);
+                    }
+
+                    if (bs != null && bs.Count > 0)
+                        _view.bSRCOrdersA = bs;
+                }
+                else if (acc == Accounts[MTAccount.B])
+                {
+                    BindingSource bs = _view.bSRCOrdersB;
+
+                    foreach (Order o in response.Data)
+                    {
+                        Log.Information("[Update]:" + o.ToString());
+                        var obj = _view.bSRCOrdersB.List.OfType<Order>().ToList().Find(f => f.OrderId == o.OrderId);
+                        var foundIndex = _view.bSRCOrdersB.IndexOf(obj);
+                        _view.bSRCOrdersB.RemoveAt(foundIndex);
+                        _view.bSRCOrdersB.Add(o);
+                    }
+
+                    if (bs != null && bs.Count > 0)
+                        _view.bSRCOrdersB = bs;
+                }
+            }
+
+            if (acc == Accounts[MTAccount.A])
+                _view.TabOrdersATitle = "Orders [" + _view.bSRCOrdersA.Count.ToString() + "]";
+            else if (acc == Accounts[MTAccount.B])
+                _view.TabOrdersBTitle = "Orders [" + _view.bSRCOrdersB.Count.ToString() + "]";
         }
 
-        private void HandlePositionsA(PositionResponse response)
+        private void HandlePositionResponseA(PositionResponse response)
         {
-            
+            //_view.DebugOutput = response.Data.ToString();
         }
 
-        private void HandlePositionsB(PositionResponse response)
+        private void HandlePositionResponseB(PositionResponse response)
         {
+            //_view.DebugOutput = response.Data.ToString();
+        }
 
+        private void HandleExecutionResponseA(ExecutionResponse response)
+        {
+            //_view.DebugOutput = response.Data.ToString();
+        }
+
+        private void HandleExecutionResponseB(ExecutionResponse response)
+        {
+            //_view.DebugOutput = response.Data.ToString();
+        }
+
+        private void HandleMargin(MarginResponse response)
+        {
+            if (response.Action == BitmexAction.Partial || response.Action == BitmexAction.Insert || response.Action == BitmexAction.Update)
+            {
+                foreach(Margin m in response.Data)
+                {
+                    if (m.Account == Accounts[MTAccount.A])
+                    {
+                        if (m.WalletBalance > 0)
+                            _view.TotalFundsA = BitmexConverter.ConvertToBtc("XBt", m.WalletBalance ?? 0).ToString();
+                        if (m.MarginBalance > 0)
+                            _view.AvailableFundsA = BitmexConverter.ConvertToBtc("XBt", m.MarginBalance ?? 0).ToString();
+                        if (m.AvailableMargin > 0)
+                            _view.MarginBalanceA = BitmexConverter.ConvertToBtc("XBt", m.AvailableMargin ?? 0).ToString();
+                        _view.AccountAID = m.Account.ToString();
+                    }
+                    else if (m.Account == Accounts[MTAccount.B])
+                    {
+                        if (m.WalletBalance > 0)
+                            _view.TotalFundsB = BitmexConverter.ConvertToBtc("XBt", m.WalletBalance ?? 0).ToString();
+                        if (m.MarginBalance > 0)
+                            _view.AvailableFundsB = BitmexConverter.ConvertToBtc("XBt", m.MarginBalance ?? 0).ToString();
+                        if (m.AvailableMargin > 0)
+                            _view.MarginBalanceB = BitmexConverter.ConvertToBtc("XBt", m.AvailableMargin ?? 0).ToString();
+                        _view.AccountBID = m.Account.ToString();
+                    }
+                }
+            }
+        }
+
+        private void HandleOrderBook(BookResponse response)
+        {
+            _orderBookStatsComputer.HandleOrderBook(response);
+
+            var stats = _orderBookStatsComputer.GetStats();
+            if (stats == OrderBookStats.NULL)
+                return;
+
+            _view.Bid = stats.Bid.ToString("#.0");
+            _view.Ask = stats.Ask.ToString("#.0");
+
+            _view.BidAmount = $"{stats.BidAmountPerc:###}%{Environment.NewLine}{FormatToMilions(stats.BidAmount)}";
+            _view.AskAmount = $"{stats.AskAmountPerc:###}%{Environment.NewLine}{FormatToMilions(stats.AskAmount)}";
         }
 
         private void HandleTrades(TradeResponse response)
@@ -168,76 +439,58 @@ namespace MoneyTron.Presenter
             if (response.Action != BitmexAction.Insert && response.Action != BitmexAction.Partial)
                 return;
 
-            //foreach (var trade in response.Data)
-            //{
-            //    Log.Information($"Received [{trade.Side}] trade, price: {trade.Price}, amount: {trade.Size}");
-            //    _tradeStatsComputer.HandleTrade(trade);
-            //}
+            foreach (var trade in response.Data)
+            {
+                //Log.Information($"Received [{trade.Side}] trade, price: {trade.Price}, amount: {trade.Size}");
+                _tradeStatsComputer.HandleTrade(trade);
+            }
 
-            //FormatTradesStats(_view.Trades1Min, _tradeStatsComputer.GetStatsFor(1));
-            //FormatTradesStats(_view.Trades5Min, _tradeStatsComputer.GetStatsFor(5));
-            //FormatTradesStats(_view.Trades15Min, _tradeStatsComputer.GetStatsFor(15));
-            //FormatTradesStats(_view.Trades1Hour, _tradeStatsComputer.GetStatsFor(60));
-            //FormatTradesStats(_view.Trades24Hours, _tradeStatsComputer.GetStatsFor(60 * 24));
+            FormatTradesStats(_view.Trades1Min, _tradeStatsComputer.GetStatsFor(1));
+            FormatTradesStats(_view.Trades5Min, _tradeStatsComputer.GetStatsFor(5));
+            FormatTradesStats(_view.Trades15Min, _tradeStatsComputer.GetStatsFor(15));
+            FormatTradesStats(_view.Trades1Hour, _tradeStatsComputer.GetStatsFor(60));
+            FormatTradesStats(_view.Trades24Hours, _tradeStatsComputer.GetStatsFor(60 * 24));
         }
 
-        //private void FormatTradesStats(Action<string, Side> setAction, TradeStats trades)
-        //{
-        //    if (trades == TradeStats.NULL)
-        //        return;
-
-        //    if (trades.BuysPerc >= trades.SellsPerc)
-        //    {
-        //        setAction($"{trades.BuysPerc:###}% buys{Environment.NewLine}{trades.TotalCount}", Side.Buy);
-        //        return;
-        //    }
-        //    setAction($"{trades.SellsPerc:###}% sells{Environment.NewLine}{trades.TotalCount}", Side.Sell);
-        //}
-
-        //private void HandleOrderBook(BookResponse response)
-        //{
-        //    _orderBookStatsComputer.HandleOrderBook(response);
-
-        //    var stats = _orderBookStatsComputer.GetStats();
-        //    if (stats == OrderBookStats.NULL)
-        //        return;
-
-        //    _view.Bid = stats.Bid.ToString("#.0");
-        //    _view.Ask = stats.Ask.ToString("#.0");
-
-        //    _view.BidAmount = $"{stats.BidAmountPerc:###}%{Environment.NewLine}{FormatToMilions(stats.BidAmount)}";
-        //    _view.AskAmount = $"{stats.AskAmountPerc:###}%{Environment.NewLine}{FormatToMilions(stats.AskAmount)}";
-        //}
-
-        //private string FormatToMilions(double amount)
-        //{
-        //    var milions = amount / 1000000;
-        //    return $"{_currency}{milions:#.00} M";
-        //}
-
-        private void StartPingCheck(BitmexWebsocketClient client, MTAccount acc)
+        private void FormatTradesStats(Action<string, Side> setAction, TradeStats trades)
         {
-            if (acc == MTAccount.A)
+            if (trades == TradeStats.NULL)
+                return;
+
+            if (trades.BuysPerc >= trades.SellsPerc)
             {
-                _pingSubscriptionA = Observable
-                    .Interval(TimeSpan.FromSeconds(5))
-                    .Subscribe(async x =>
-                    {
-                        _pingRequestA = DateTime.UtcNow;
-                        await client.Send(new PingRequest());
-                    });
+                setAction($"{trades.BuysPerc:###}% buys{Environment.NewLine}{trades.TotalCount}", Side.Buy);
+                return;
             }
-            else
-            {
-                _pingSubscriptionB = Observable
-                    .Interval(TimeSpan.FromSeconds(5))
-                    .Subscribe(async x =>
-                    {
-                        _pingRequestB = DateTime.UtcNow;
-                        await client.Send(new PingRequest());
-                    });
-            }
-            
+            setAction($"{trades.SellsPerc:###}% sells{Environment.NewLine}{trades.TotalCount}", Side.Sell);
+        }
+
+        private string FormatToMilions(double amount)
+        {
+            var milions = amount / 1000000;
+            return $"{_currency}{milions:#.00} M";
+        }
+
+        private void StartPingCheckA(BitmexWebsocketClient client)
+        {
+            _pingSubscriptionA = Observable
+                .Interval(TimeSpan.FromSeconds(5))
+                .Subscribe(async x =>
+                {
+                    _pingRequestA = DateTime.UtcNow;
+                    await client.Send(new PingRequest());
+                });
+        }
+
+        private void StartPingCheckB(BitmexWebsocketClient client)
+        {
+            _pingSubscriptionB = Observable
+                .Interval(TimeSpan.FromSeconds(5))
+                .Subscribe(async x =>
+                {
+                    _pingRequestB = DateTime.UtcNow;
+                    await client.Send(new PingRequest());
+                });
         }
 
         private void HandlePongA(PongResponse pong)
@@ -267,30 +520,48 @@ namespace MoneyTron.Presenter
             }
         }
 
-        private void Clear()
+        private void Clear(MTAccount acc)
         {
-            _view.AccountAID = string.Empty;
-            _view.AccountBID = string.Empty;
-            _view.AccountATitle = string.Empty;
-            _view.AccountBTitle = string.Empty;
-            _view.AvailableFundsA = string.Empty;
-            _view.AvailableFundsB = string.Empty;
-            _view.ConnStartA = string.Empty;
-            _view.ConnStartB = string.Empty;
-            _view.ConnStatusA = string.Empty;
-            _view.ConnStatusB = string.Empty;
-            _view.IndexPriceA = string.Empty;
-            _view.IndexPriceB = string.Empty;
-            _view.MarkPriceA = string.Empty;
-            _view.MarkPriceB = string.Empty;
-            _view.PingL = string.Empty;
-            _view.PingS = string.Empty;
-            _view.TabOrdersLTitle = "Orders [0]";
-            _view.TabOrdersSTitle = "Orders [0]";
-            _view.TabPosLTitle = "Positions [0]";
-            _view.TabPosSTitle = "Positions [0]";
-            _view.TotalFundsA = string.Empty;
-            _view.TotalFundsB = string.Empty;
+            _view.DebugOutput = "...";
+
+            if (acc == MTAccount.A)
+            {
+                _view.AccountAID = string.Empty;
+                _view.AvailableFundsA = string.Empty;
+                _view.ConnStartA = string.Empty;
+                _view.ConnStatusA = string.Empty;
+                _view.PingL = string.Empty;
+                _view.TabOrdersATitle = "Orders [0]";
+                _view.TabPosATitle = "Positions [0]";
+                _view.TotalFundsA = string.Empty;
+                _view.MarginBalanceA = string.Empty;
+                _view.bSRCOrdersA = new BindingSource();
+                _view.bSRCPosA = new BindingSource();
+
+                _view.Bid = string.Empty;
+                _view.Ask = string.Empty;
+                _view.BidAmount = string.Empty;
+                _view.AskAmount = string.Empty;
+                _view.Trades1Min(string.Empty, Side.Buy);
+                _view.Trades5Min(string.Empty, Side.Buy);
+                _view.Trades15Min(string.Empty, Side.Buy);
+                _view.Trades1Hour(string.Empty, Side.Buy);
+                _view.Trades24Hours(string.Empty, Side.Buy);
+            }
+            else
+            {
+                _view.AccountBID = string.Empty;
+                _view.AvailableFundsB = string.Empty;
+                _view.ConnStartB = string.Empty;
+                _view.ConnStatusB = string.Empty;
+                _view.PingS = string.Empty;
+                _view.TabOrdersBTitle = "Orders [0]";
+                _view.TabPosBTitle = "Positions [0]";
+                _view.TotalFundsB = string.Empty;
+                _view.MarginBalanceB = string.Empty;
+                _view.bSRCOrdersB = new BindingSource();
+                _view.bSRCPosB = new BindingSource();
+            }
         }
     }
 }

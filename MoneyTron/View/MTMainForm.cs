@@ -16,153 +16,243 @@ namespace MoneyTron
     {
         //private Dictionary<long, MordoR> Conns;
 
-        public string AccountATitle
-        {
-            get => labelAAccount.Text;
-            set => SetLabelOnGuiThread(labelAAccount, value);
-        }
-
-        public string AccountBTitle
-        {
-            get => labelBAccount.Text;
-            set => SetLabelOnGuiThread(labelBAccount, value);
-        }
-
         public string AccountAID
         {
-            get => lblLAccountID.Text;
-            set => SetLabelOnGuiThread(lblLAccountID, value);
+            get => lblAAccountID.Text;
+            set => SetLabelOnGuiThread(lblAAccountID, value);
         }
 
         public string AccountBID
         {
-            get => lblSAccountID.Text;
-            set => SetLabelOnGuiThread(lblSAccountID, value);
+            get => lblBAccountID.Text;
+            set => SetLabelOnGuiThread(lblBAccountID, value);
+        }
+
+        public string Bid
+        {
+            get => lblBid.Text;
+            set => SetLabelOnGuiThread(lblBid, value);
+        }
+
+        public string Ask
+        {
+            get => lblAsk.Text;
+            set => SetLabelOnGuiThread(lblAsk, value);
+        }
+        
+        public string BidAmount
+        {
+            get => lblBidAmount.Text;
+            set => SetLabelOnGuiThread(lblBidAmount, value);
+        }
+
+        public string AskAmount
+        {
+            get => lblAskAmount.Text;
+            set => SetLabelOnGuiThread(lblAskAmount, value);
+        }
+
+        public string Trades1Min
+        {
+            get => lblTrades1Min.Text;
+            set => SetLabelOnGuiThread(lblTrades1Min, value);
+        }
+        public string Trades5Min
+        {
+            get => lblTrades5Min.Text;
+            set => SetLabelOnGuiThread(lblTrades5Min, value);
+        }
+        public string Trades15Min
+        {
+            get => lblTrades15Min.Text;
+            set => SetLabelOnGuiThread(lblTrades15Min, value);
+        }
+        public string Trades1Hour
+        {
+            get => lblTrades1Hour.Text;
+            set => SetLabelOnGuiThread(lblTrades1Hour, value);
+        }
+        public string Trades24Hours
+        {
+            get => lblTrades24Hours.Text;
+            set => SetLabelOnGuiThread(lblTrades24Hours, value);
         }
 
         public string ConnStatusA
         {
-            get => lblLConnStatus.Text;
-            set => SetLabelOnGuiThread(lblLConnStatus, value);
+            get => lblAConnStatus.Text;
+            set => SetLabelOnGuiThread(lblAConnStatus, value);
         }
 
         public string ConnStatusB
         {
-            get => lblSConnStatus.Text;
-            set => SetLabelOnGuiThread(lblSConnStatus, value);
+            get => lblBConnStatus.Text;
+            set => SetLabelOnGuiThread(lblBConnStatus, value);
         }
 
         public string ConnStartA
         {
-            get => lblLConnStart.Text;
-            set => SetLabelOnGuiThread(lblLConnStart, value);
+            get => lblAConnStart.Text;
+            set => SetLabelOnGuiThread(lblAConnStart, value);
         }
 
         public string ConnStartB
         {
-            get => lblSConnStart.Text;
-            set => SetLabelOnGuiThread(lblSConnStart, value);
-        }
-
-        public string MarkPriceA
-        {
-            get => lblLMarkPrice.Text;
-            set => SetLabelOnGuiThread(lblLMarkPrice, value);
-        }
-
-        public string MarkPriceB
-        {
-            get => lblSMarkPrice.Text;
-            set => SetLabelOnGuiThread(lblSMarkPrice, value);
-        }
-
-        public string IndexPriceA
-        {
-            get => lblLIndexPrice.Text;
-            set => SetLabelOnGuiThread(lblLIndexPrice, value);
-        }
-
-        public string IndexPriceB
-        {
-            get => lblSIndexPrice.Text;
-            set => SetLabelOnGuiThread(lblSIndexPrice, value);
+            get => lblBConnStart.Text;
+            set => SetLabelOnGuiThread(lblBConnStart, value);
         }
 
         public string TotalFundsA
         {
-            get => lblLTotalFunds.Text;
-            set => SetLabelOnGuiThread(lblLTotalFunds, value);
+            get => lblATotalFunds.Text;
+            set => SetLabelOnGuiThread(lblATotalFunds, value);
         }
 
         public string TotalFundsB
         {
-            get => lblSTotalFunds.Text;
-            set => SetLabelOnGuiThread(lblSTotalFunds, value);
+            get => lblBTotalFunds.Text;
+            set => SetLabelOnGuiThread(lblBTotalFunds, value);
         }
 
         public string AvailableFundsA
         {
-            get => lblLAvailableFunds.Text;
-            set => SetLabelOnGuiThread(lblLAvailableFunds, value);
+            get => lblAAvailableFunds.Text;
+            set => SetLabelOnGuiThread(lblAAvailableFunds, value);
         }
 
         public string AvailableFundsB
         {
-            get => lblSAvailableFunds.Text;
-            set => SetLabelOnGuiThread(lblSAvailableFunds, value);
+            get => lblBAvailableFunds.Text;
+            set => SetLabelOnGuiThread(lblBAvailableFunds, value);
+        }
+        
+        public string MarginBalanceA
+        {
+            get => lblMarginBalanceA.Text;
+            set => SetLabelOnGuiThread(lblMarginBalanceA, value);
         }
 
-        public string TabPosSTitle
+        public string MarginBalanceB
         {
-            get => tabPagePosShort.Text;
-            set => SetTabTitleOnGuiThread(tabPagePosShort, value);
+            get => lblMarginBalanceB.Text;
+            set => SetLabelOnGuiThread(lblMarginBalanceB, value);
         }
 
-        public string TabPosLTitle
+        public string TabPosBTitle
         {
-            get => tabPagePosLong.Text;
-            set => SetTabTitleOnGuiThread(tabPagePosLong, value);
+            get => tabPagePosB.Text;
+            set => SetTabTitleOnGuiThread(tabPagePosB, value);
         }
 
-        public string TabOrdersSTitle
+        public string TabPosATitle
         {
-            get => tabPageOrdersShort.Text;
-            set => SetTabTitleOnGuiThread(tabPageOrdersShort, value);
+            get => tabPagePosA.Text;
+            set => SetTabTitleOnGuiThread(tabPagePosA, value);
         }
 
-        public string TabOrdersLTitle
+        public string TabOrdersBTitle
         {
-            get => tabPageOrdersLong.Text;
-            set => SetTabTitleOnGuiThread(tabPageOrdersLong, value);
+            get => tabPageOrdersB.Text;
+            set => SetTabTitleOnGuiThread(tabPageOrdersB, value);
+        }
+
+        public string TabOrdersATitle
+        {
+            get => tabPageOrdersA.Text;
+            set => SetTabTitleOnGuiThread(tabPageOrdersA, value);
         }
 
         public string PingL
         {
-            get => lblPingL.Text;
-            set => SetLabelOnGuiThread(lblPingL, value);
+            get => lblPingA.Text;
+            set => SetLabelOnGuiThread(lblPingA, value);
         }
 
         public string PingS
         {
-            get => lblPingS.Text;
-            set => SetLabelOnGuiThread(lblPingS, value);
+            get => lblPingB.Text;
+            set => SetLabelOnGuiThread(lblPingB, value);
+        }
+
+        // For testing
+        public string DebugOutput
+        {
+            get => lblDebug.Text;
+            set => SetLabelOnGuiThread(lblDebug, value);
         }
 
         public void StatusA(string value, StatusType type)
         {
-            SetLabelOnGuiThread(lblLConnStatus, value);
-            lblLConnStatus.ForeColor = GetForeColorFor(type);
+            SetLabelOnGuiThread(lblAConnStatus, value);
+            lblAConnStatus.ForeColor = GetForeColorFor(type);
         }
 
         public void StatusB(string value, StatusType type)
         {
-            SetLabelOnGuiThread(lblSConnStatus, value);
-            lblSConnStatus.ForeColor = GetForeColorFor(type);
+            SetLabelOnGuiThread(lblBConnStatus, value);
+            lblBConnStatus.ForeColor = GetForeColorFor(type);
         }
 
-        public Action OnInit { get; set; }
-        public Action OnStart { get; set; }
-        public Action OnStop { get; set; }
+        void IMTMainForm.Trades1Min(string value, Side side)
+        {
+            Trades1Min = value;
+            lblTrades1Min.ForeColor = GetForeColorFor(side);
+        }
+
+        void IMTMainForm.Trades5Min(string value, Side side)
+        {
+            Trades5Min = value;
+            lblTrades5Min.ForeColor = GetForeColorFor(side);
+        }
+
+        void IMTMainForm.Trades15Min(string value, Side side)
+        {
+            Trades15Min = value;
+            lblTrades15Min.ForeColor = GetForeColorFor(side);
+        }
+
+        void IMTMainForm.Trades1Hour(string value, Side side)
+        {
+            Trades1Hour = value;
+            lblTrades1Hour.ForeColor = GetForeColorFor(side);
+        }
+
+        void IMTMainForm.Trades24Hours(string value, Side side)
+        {
+            Trades24Hours = value;
+            lblTrades24Hours.ForeColor = GetForeColorFor(side);
+        }
+
+        public BindingSource bSRCOrdersA
+        {
+            get => (BindingSource)dGVOrdersA.DataSource;
+            set => SetBindingSRCOnGuiThread(dGVOrdersA, value);
+        }
+
+        public BindingSource bSRCOrdersB
+        {
+            get => (BindingSource)dGVOrdersB.DataSource;
+            set => SetBindingSRCOnGuiThread(dGVOrdersB, value);
+        }
+
+        public BindingSource bSRCPosA
+        {
+            get => (BindingSource)dGVPosA.DataSource;
+            set => SetBindingSRCOnGuiThread(dGVPosA, value);
+        }
+
+        public BindingSource bSRCPosB
+        {
+            get => (BindingSource)dGVPosB.DataSource;
+            set => SetBindingSRCOnGuiThread(dGVPosB, value);
+        }
+
+        public Action OnInitA { get; set; }
+        public Action OnStartA { get; set; }
+        public Action OnStopA { get; set; }
+        public Action OnInitB { get; set; }
+        public Action OnStartB { get; set; }
+        public Action OnStopB { get; set; }
 
         private Color GetForeColorFor(Side side)
         {
@@ -187,14 +277,117 @@ namespace MoneyTron
         public MTMainForm()
         {
             InitializeComponent();
+            InitDataGrids();
+        }
+
+        private void InitDataGrids()
+        {
+            InitOrdersDataGrid(dGVOrdersA);
+            InitOrdersDataGrid(dGVOrdersB);
+            InitPositionsDataGrid(dGVPosA);
+            InitPositionsDataGrid(dGVPosB);
+        }
+
+        private void InitOrdersDataGrid(DataGridView dgv)
+        {
+            dgv.AutoGenerateColumns = false;
+            dgv.AutoSize = true;
+            dgv.AllowUserToAddRows = false;
+            dgv.AllowUserToDeleteRows = false;
+            dgv.AllowUserToResizeColumns = false;
+            dgv.AllowUserToResizeRows = false;
+            dgv.RowHeadersVisible = false;
+
+            DataGridViewColumn column = new DataGridViewTextBoxColumn();
+
+            column = new DataGridViewTextBoxColumn();
+            column.DataPropertyName = "OrderId";
+            column.Name = "OrderId";
+            column.Visible = false;
+            dgv.Columns.Add(column);
+
+            column = new DataGridViewTextBoxColumn();
+            column.DataPropertyName = "OrderQty";
+            column.Name = "Quantity";
+            dgv.Columns.Add(column);
+
+            column = new DataGridViewTextBoxColumn();
+            column.DataPropertyName = "Price";
+            column.Name = "Price";
+            dgv.Columns.Add(column);
+
+            column = new DataGridViewTextBoxColumn();
+            column.DataPropertyName = "ordStatus";
+            column.Name = "Status";
+            dgv.Columns.Add(column);
+
+            column = new DataGridViewTextBoxColumn();
+            column.DataPropertyName = "timestamp";
+            column.Name = "Time";
+            dgv.Columns.Add(column);
+
+            //column = new DataGridViewTextBoxColumn();
+            //column.DataPropertyName = "ClOrdId";
+            //column.Name = "ClOrdId";
+            //column.Visible = false;                 //this.dataGridView1.Columns["CustomerID"].Visible = false;
+            //dgv.Columns.Add(column);
+        }
+
+        private void InitPositionsDataGrid(DataGridView dgv)
+        {
+            dgv.AutoGenerateColumns = false;
+            dgv.AutoSize = true;
+            dgv.AllowUserToAddRows = false;
+            dgv.AllowUserToDeleteRows = false;
+            dgv.AllowUserToResizeColumns = false;
+            dgv.AllowUserToResizeRows = false;
+            dgv.RowHeadersVisible = false;
+
+            DataGridViewColumn column = new DataGridViewTextBoxColumn();
+
+            column = new DataGridViewTextBoxColumn();
+            column.DataPropertyName = "symbol";
+            column.Name = "Symbol";
+            dgv.Columns.Add(column);
+
+            column = new DataGridViewTextBoxColumn();
+            column.DataPropertyName = "currentQty";
+            column.Name = "Quantity";
+            dgv.Columns.Add(column);
+
+            column = new DataGridViewTextBoxColumn();
+            column.DataPropertyName = "price";
+            column.Name = "Price";
+            dgv.Columns.Add(column);
+
+            column = new DataGridViewTextBoxColumn();
+            column.DataPropertyName = "avgEntryPrice";
+            column.Name = "Avg Price";
+            dgv.Columns.Add(column);
+
+            column = new DataGridViewTextBoxColumn();
+            column.DataPropertyName = "liquidationPrice";
+            column.Name = "Liq Price";
+            dgv.Columns.Add(column);
+
+            //column = new DataGridViewTextBoxColumn();
+            //column.DataPropertyName = "timestamp";
+            //column.Name = "Time";
+            //dgv.Columns.Add(column);
+
+            //column = new DataGridViewTextBoxColumn();
+            //column.DataPropertyName = "ClOrdId";
+            //column.Name = "ClOrdId";
+            //column.Visible = false;                 //this.dataGridView1.Columns["CustomerID"].Visible = false;
+            //dgv.Columns.Add(column);
         }
 
         private void Form1_Load(object sender, EventArgs e)
         {
-            OnInit?.Invoke();
+            OnInitA?.Invoke();
+            OnInitB?.Invoke();
             disconnectToolStripMenuItem.Enabled = false;
-            labelAAccount.Text = "Not connected";
-            labelBAccount.Text = "Not connected";
+
         }
 
         /// <summary>
@@ -204,8 +397,8 @@ namespace MoneyTron
         /// <param name="e"></param>
         private void connectToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            labelAAccount.Text = "BitMEX - Long";
-            labelBAccount.Text = "BitMEX - Short";
+            OnStartA?.Invoke();
+            OnStartB?.Invoke();
             connectToolStripMenuItem.Enabled = false;
             disconnectToolStripMenuItem.Enabled = true;
         }
@@ -217,10 +410,27 @@ namespace MoneyTron
         /// <param name="e"></param>
         private void disconnectToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            labelAAccount.Text = "Not connected";
-            labelBAccount.Text = "Not connected";
+            OnStopA?.Invoke();
+            OnStopB?.Invoke();
             connectToolStripMenuItem.Enabled = true;
             disconnectToolStripMenuItem.Enabled = false;
+        }
+
+        private void SetBindingSRCOnGuiThread(DataGridView dgv, BindingSource value)
+        {
+            if (dgv.DataBindings.Equals(value))
+                return;
+
+            if (!InvokeRequired)
+            {
+                dgv.DataSource = value;
+                return;
+            }
+
+            this.Invoke(new Action(() =>
+            {
+                dgv.DataSource = value;
+            }));
         }
 
         private void SetLabelOnGuiThread(Label lb, string value)

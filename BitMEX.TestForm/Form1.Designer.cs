@@ -60,18 +60,18 @@
             this.btn6 = new System.Windows.Forms.Button();
             this.lblLastPrice = new System.Windows.Forms.Label();
             this.lblUS = new System.Windows.Forms.Label();
-            this.LabelMainOutput = new System.Windows.Forms.Label();
             this.Heartbeat = new System.Windows.Forms.Timer(this.components);
             this.TimerTest = new System.Windows.Forms.Timer(this.components);
             this.menuStrip1 = new System.Windows.Forms.MenuStrip();
             this.connectionsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.bitMEXToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.testToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.liveToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.connectToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.disconnectToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.liveToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.connectToolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
             this.disconnectToolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
+            this.dGV = new System.Windows.Forms.DataGridView();
             this.tableLayoutPanel1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.NUDMaxExp)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.NUDLeverage)).BeginInit();
@@ -79,6 +79,7 @@
             ((System.ComponentModel.ISupportInitialize)(this.NUDMinProfit)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.NUDZonesize)).BeginInit();
             this.menuStrip1.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.dGV)).BeginInit();
             this.SuspendLayout();
             // 
             // tableLayoutPanel1
@@ -180,8 +181,9 @@
             this.btn8.Name = "btn8";
             this.btn8.Size = new System.Drawing.Size(123, 23);
             this.btn8.TabIndex = 18;
-            this.btn8.Text = "Test 8";
+            this.btn8.Text = "Add";
             this.btn8.UseVisualStyleBackColor = true;
+            this.btn8.Click += new System.EventHandler(this.btn8_Click);
             // 
             // lblStopOrder
             // 
@@ -286,7 +288,7 @@
             this.btn2.Name = "btn2";
             this.btn2.Size = new System.Drawing.Size(123, 23);
             this.btn2.TabIndex = 1;
-            this.btn2.Text = "Test 2";
+            this.btn2.Text = "Remove";
             this.btn2.UseVisualStyleBackColor = true;
             this.btn2.Click += new System.EventHandler(this.btn2_Click);
             // 
@@ -487,15 +489,6 @@
             this.lblUS.TabIndex = 9;
             this.lblUS.Text = "Unit size:";
             // 
-            // LabelMainOutput
-            // 
-            this.LabelMainOutput.AutoSize = true;
-            this.LabelMainOutput.Location = new System.Drawing.Point(9, 310);
-            this.LabelMainOutput.Name = "LabelMainOutput";
-            this.LabelMainOutput.Size = new System.Drawing.Size(16, 13);
-            this.LabelMainOutput.TabIndex = 9;
-            this.LabelMainOutput.Text = "...";
-            // 
             // Heartbeat
             // 
             this.Heartbeat.Interval = 2000;
@@ -529,7 +522,7 @@
             this.testToolStripMenuItem,
             this.liveToolStripMenuItem});
             this.bitMEXToolStripMenuItem.Name = "bitMEXToolStripMenuItem";
-            this.bitMEXToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.bitMEXToolStripMenuItem.Size = new System.Drawing.Size(112, 22);
             this.bitMEXToolStripMenuItem.Text = "BitMEX";
             // 
             // testToolStripMenuItem
@@ -538,8 +531,21 @@
             this.connectToolStripMenuItem,
             this.disconnectToolStripMenuItem});
             this.testToolStripMenuItem.Name = "testToolStripMenuItem";
-            this.testToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.testToolStripMenuItem.Size = new System.Drawing.Size(95, 22);
             this.testToolStripMenuItem.Text = "Test";
+            // 
+            // connectToolStripMenuItem
+            // 
+            this.connectToolStripMenuItem.Name = "connectToolStripMenuItem";
+            this.connectToolStripMenuItem.Size = new System.Drawing.Size(133, 22);
+            this.connectToolStripMenuItem.Text = "Connect";
+            this.connectToolStripMenuItem.Click += new System.EventHandler(this.connectToolStripMenuItem_Click);
+            // 
+            // disconnectToolStripMenuItem
+            // 
+            this.disconnectToolStripMenuItem.Name = "disconnectToolStripMenuItem";
+            this.disconnectToolStripMenuItem.Size = new System.Drawing.Size(133, 22);
+            this.disconnectToolStripMenuItem.Text = "Disconnect";
             // 
             // liveToolStripMenuItem
             // 
@@ -547,41 +553,36 @@
             this.connectToolStripMenuItem1,
             this.disconnectToolStripMenuItem1});
             this.liveToolStripMenuItem.Name = "liveToolStripMenuItem";
-            this.liveToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.liveToolStripMenuItem.Size = new System.Drawing.Size(95, 22);
             this.liveToolStripMenuItem.Text = "Live";
-            // 
-            // connectToolStripMenuItem
-            // 
-            this.connectToolStripMenuItem.Name = "connectToolStripMenuItem";
-            this.connectToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
-            this.connectToolStripMenuItem.Text = "Connect";
-            this.connectToolStripMenuItem.Click += new System.EventHandler(this.connectToolStripMenuItem_Click);
-            // 
-            // disconnectToolStripMenuItem
-            // 
-            this.disconnectToolStripMenuItem.Name = "disconnectToolStripMenuItem";
-            this.disconnectToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
-            this.disconnectToolStripMenuItem.Text = "Disconnect";
             // 
             // connectToolStripMenuItem1
             // 
             this.connectToolStripMenuItem1.Name = "connectToolStripMenuItem1";
-            this.connectToolStripMenuItem1.Size = new System.Drawing.Size(180, 22);
+            this.connectToolStripMenuItem1.Size = new System.Drawing.Size(133, 22);
             this.connectToolStripMenuItem1.Text = "Connect";
             // 
             // disconnectToolStripMenuItem1
             // 
             this.disconnectToolStripMenuItem1.Name = "disconnectToolStripMenuItem1";
-            this.disconnectToolStripMenuItem1.Size = new System.Drawing.Size(180, 22);
+            this.disconnectToolStripMenuItem1.Size = new System.Drawing.Size(133, 22);
             this.disconnectToolStripMenuItem1.Text = "Disconnect";
+            // 
+            // dGV
+            // 
+            this.dGV.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            this.dGV.Location = new System.Drawing.Point(12, 305);
+            this.dGV.Name = "dGV";
+            this.dGV.Size = new System.Drawing.Size(776, 133);
+            this.dGV.TabIndex = 11;
             // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(800, 450);
+            this.Controls.Add(this.dGV);
             this.Controls.Add(this.tableLayoutPanel1);
-            this.Controls.Add(this.LabelMainOutput);
             this.Controls.Add(this.menuStrip1);
             this.MainMenuStrip = this.menuStrip1;
             this.Name = "Form1";
@@ -597,6 +598,7 @@
             ((System.ComponentModel.ISupportInitialize)(this.NUDZonesize)).EndInit();
             this.menuStrip1.ResumeLayout(false);
             this.menuStrip1.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.dGV)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -630,7 +632,6 @@
         private System.Windows.Forms.Label LabelOnOff;
         private System.Windows.Forms.Label lblUS;
         private System.Windows.Forms.Label lbl5;
-        private System.Windows.Forms.Label LabelMainOutput;
         private System.Windows.Forms.Label lbl4;
         private System.Windows.Forms.TextBox textBox1;
         private System.Windows.Forms.Label label8;
@@ -647,6 +648,7 @@
         private System.Windows.Forms.ToolStripMenuItem liveToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem connectToolStripMenuItem1;
         private System.Windows.Forms.ToolStripMenuItem disconnectToolStripMenuItem1;
+        private System.Windows.Forms.DataGridView dGV;
     }
 }
 

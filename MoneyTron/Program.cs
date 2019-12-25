@@ -1,9 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+using System.IO;
+using System.Reflection;
 using System.Windows.Forms;
 using MoneyTron.Presenter;
+using Serilog;
+using Serilog.Events;
 
 namespace MoneyTron
 {
@@ -20,24 +21,24 @@ namespace MoneyTron
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 
-            //InitLogging();
+            InitLogging();
 
             var mainForm = new MTMainForm();
             _presenter = new MTMainPresenter(mainForm);
 
             Application.Run(mainForm);
         }
-        
-        //private static void InitLogging()
-        //{
-        //    var executingDir = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location);
-        //    var logPath = Path.Combine(executingDir, "logs", "verbose.log");
-        //    Log.Logger = new LoggerConfiguration()
-        //        .MinimumLevel.Verbose()
-        //        .WriteTo.File(logPath, rollingInterval: RollingInterval.Day)
-        //        //.WriteTo.Console(LogEventLevel.Information)
-        //        .WriteTo.Debug(LogEventLevel.Debug)
-        //        .CreateLogger();
-        //}
+
+        private static void InitLogging()
+        {
+            var executingDir = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location);
+            var logPath = Path.Combine(executingDir, "logs", "verbose.log");
+            Log.Logger = new LoggerConfiguration()
+                .MinimumLevel.Verbose()
+                .WriteTo.File(logPath, rollingInterval: RollingInterval.Day)
+                //.WriteTo.Console(LogEventLevel.Information)
+                .WriteTo.Debug(LogEventLevel.Debug)
+                .CreateLogger();
+        }
     }
 }
