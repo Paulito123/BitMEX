@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Windows.Forms;
+using Bitmex.Client.Websocket.Responses.Orders;
+using Bitmex.Client.Websocket.Responses.Positions;
 
 namespace MoneyTron
 {
@@ -28,6 +30,7 @@ namespace MoneyTron
         string PingL { get; set; }
         string PingS { get; set; }
 
+
         // For testing
         string DebugOutput { get; set; }
 
@@ -42,7 +45,12 @@ namespace MoneyTron
         Action OnInitB { get; set; }
         Action OnStartB { set; }
         Action OnStopB { set; }
-
+        /*
+        void UpdateOrdersA(Order o, MTActionType mtt);
+        void UpdateOrdersB(Order o, MTActionType mtt);
+        void UpdatePositionA(Position o, MTActionType mtt);
+        void UpdatePositionB(Position o, MTActionType mtt);
+        */
         void Trades1Min(string value, Side side);
         void Trades5Min(string value, Side side);
         void Trades15Min(string value, Side side);
@@ -71,5 +79,12 @@ namespace MoneyTron
     {
         A,
         B
+    }
+
+    public enum MTActionType
+    {
+        Insert,
+        Update,
+        Delete
     }
 }

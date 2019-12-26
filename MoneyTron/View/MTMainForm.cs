@@ -7,8 +7,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Collections;
 using BitMEX.Client;
 using BitMEX.Model;
+using Bitmex.Client.Websocket.Responses.Orders;
 
 namespace MoneyTron
 {
@@ -223,6 +225,20 @@ namespace MoneyTron
             lblTrades24Hours.ForeColor = GetForeColorFor(side);
         }
 
+        //// https://docs.microsoft.com/en-us/dotnet/framework/winforms/controls/reflect-data-source-updates-in-a-wf-control-with-the-bindingsource
+        //public ArrayList OrdersA
+        //{
+        //    get => (ArrayList)bSRCOrdersA.DataSource;
+        //    set => SetBindingSRCOnGuiThread(bSRCOrdersA, value);
+
+        //}
+
+        //void IMTMainForm.UpdateOrdersA(Order o, MTActionType mtt)
+        //{
+        //    Trades24Hours = value;
+        //    lblTrades24Hours.ForeColor = GetForeColorFor(side);
+        //}
+
         public BindingSource bSRCOrdersA
         {
             get => (BindingSource)dGVOrdersA.DataSource;
@@ -416,20 +432,20 @@ namespace MoneyTron
             disconnectToolStripMenuItem.Enabled = false;
         }
 
-        private void SetBindingSRCOnGuiThread(DataGridView dgv, BindingSource value)
+        private void SetBindingSRCOnGuiThread(DataGridView dgv, BindingSource bs)
         {
-            if (dgv.DataBindings.Equals(value))
+            if (dgv.DataBindings.Equals(bs))
                 return;
 
             if (!InvokeRequired)
             {
-                dgv.DataSource = value;
+                dgv.DataSource = bs;
                 return;
             }
 
             this.Invoke(new Action(() =>
             {
-                dgv.DataSource = value;
+                dgv.DataSource = bs;
             }));
         }
 

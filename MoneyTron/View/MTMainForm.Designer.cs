@@ -963,8 +963,7 @@
             this.Controls.Add(this.tableLayoutPanel8);
             this.Controls.Add(this.menuStrip1);
             this.MainMenuStrip = this.menuStrip1;
-            this.MaximumSize = new System.Drawing.Size(1100, 600);
-            this.MinimumSize = new System.Drawing.Size(800, 570);
+            this.MinimumSize = new System.Drawing.Size(1100, 570);
             this.Name = "MTMainForm";
             this.Text = "MoneyTron";
             this.Load += new System.EventHandler(this.Form1_Load);
