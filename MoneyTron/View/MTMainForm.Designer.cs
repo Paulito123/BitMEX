@@ -28,7 +28,10 @@
         /// </summary>
         private void InitializeComponent()
         {
-            this.components = new System.ComponentModel.Container();
+            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle1 = new System.Windows.Forms.DataGridViewCellStyle();
+            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle2 = new System.Windows.Forms.DataGridViewCellStyle();
+            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle3 = new System.Windows.Forms.DataGridViewCellStyle();
+            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle4 = new System.Windows.Forms.DataGridViewCellStyle();
             this.menuStrip1 = new System.Windows.Forms.MenuStrip();
             this.connectionsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.liveToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -60,7 +63,6 @@
             this.label5 = new System.Windows.Forms.Label();
             this.label7 = new System.Windows.Forms.Label();
             this.label1 = new System.Windows.Forms.Label();
-            this.button1 = new System.Windows.Forms.Button();
             this.tableLayoutPanel4 = new System.Windows.Forms.TableLayoutPanel();
             this.tableLayoutPanel6 = new System.Windows.Forms.TableLayoutPanel();
             this.tableLayoutPanel7 = new System.Windows.Forms.TableLayoutPanel();
@@ -84,7 +86,6 @@
             this.dGVPosB = new System.Windows.Forms.DataGridView();
             this.tabPageOrdersB = new System.Windows.Forms.TabPage();
             this.dGVOrdersB = new System.Windows.Forms.DataGridView();
-            this.lblDebug = new System.Windows.Forms.Label();
             this.tableLayoutPanel8 = new System.Windows.Forms.TableLayoutPanel();
             this.panel9 = new System.Windows.Forms.Panel();
             this.label8 = new System.Windows.Forms.Label();
@@ -103,7 +104,6 @@
             this.lblTrades1Min = new System.Windows.Forms.Label();
             this.lblBidAmount = new System.Windows.Forms.Label();
             this.lblBid = new System.Windows.Forms.Label();
-            this.timerListRefresh = new System.Windows.Forms.Timer(this.components);
             this.menuStrip1.SuspendLayout();
             this.tableLayoutPanel2.SuspendLayout();
             this.tableLayoutPanel3.SuspendLayout();
@@ -257,10 +257,20 @@
             // 
             // dGVPosA
             // 
+            this.dGVPosA.BackgroundColor = System.Drawing.Color.Honeydew;
             this.dGVPosA.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            dataGridViewCellStyle1.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleLeft;
+            dataGridViewCellStyle1.BackColor = System.Drawing.SystemColors.Window;
+            dataGridViewCellStyle1.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            dataGridViewCellStyle1.ForeColor = System.Drawing.SystemColors.ControlText;
+            dataGridViewCellStyle1.SelectionBackColor = System.Drawing.Color.Honeydew;
+            dataGridViewCellStyle1.SelectionForeColor = System.Drawing.SystemColors.ControlText;
+            dataGridViewCellStyle1.WrapMode = System.Windows.Forms.DataGridViewTriState.False;
+            this.dGVPosA.DefaultCellStyle = dataGridViewCellStyle1;
             this.dGVPosA.Dock = System.Windows.Forms.DockStyle.Fill;
             this.dGVPosA.Location = new System.Drawing.Point(3, 3);
             this.dGVPosA.Name = "dGVPosA";
+            this.dGVPosA.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
             this.dGVPosA.Size = new System.Drawing.Size(513, 157);
             this.dGVPosA.TabIndex = 0;
             // 
@@ -277,10 +287,20 @@
             // 
             // dGVOrdersA
             // 
+            this.dGVOrdersA.BackgroundColor = System.Drawing.Color.Honeydew;
             this.dGVOrdersA.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            dataGridViewCellStyle2.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleLeft;
+            dataGridViewCellStyle2.BackColor = System.Drawing.SystemColors.Window;
+            dataGridViewCellStyle2.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            dataGridViewCellStyle2.ForeColor = System.Drawing.SystemColors.ControlText;
+            dataGridViewCellStyle2.SelectionBackColor = System.Drawing.Color.Honeydew;
+            dataGridViewCellStyle2.SelectionForeColor = System.Drawing.SystemColors.ControlText;
+            dataGridViewCellStyle2.WrapMode = System.Windows.Forms.DataGridViewTriState.False;
+            this.dGVOrdersA.DefaultCellStyle = dataGridViewCellStyle2;
             this.dGVOrdersA.Dock = System.Windows.Forms.DockStyle.Fill;
             this.dGVOrdersA.Location = new System.Drawing.Point(3, 3);
             this.dGVOrdersA.Name = "dGVOrdersA";
+            this.dGVOrdersA.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
             this.dGVOrdersA.Size = new System.Drawing.Size(513, 157);
             this.dGVOrdersA.TabIndex = 0;
             // 
@@ -292,7 +312,6 @@
             this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 33.34F));
             this.tableLayoutPanel1.Controls.Add(this.panel1, 2, 0);
             this.tableLayoutPanel1.Controls.Add(this.panel2, 0, 0);
-            this.tableLayoutPanel1.Controls.Add(this.button1, 1, 0);
             this.tableLayoutPanel1.Dock = System.Windows.Forms.DockStyle.Left;
             this.tableLayoutPanel1.Location = new System.Drawing.Point(3, 3);
             this.tableLayoutPanel1.Name = "tableLayoutPanel1";
@@ -450,15 +469,6 @@
             this.label1.Size = new System.Drawing.Size(71, 13);
             this.label1.TabIndex = 0;
             this.label1.Text = "Account ID";
-            // 
-            // button1
-            // 
-            this.button1.Location = new System.Drawing.Point(178, 3);
-            this.button1.Name = "button1";
-            this.button1.Size = new System.Drawing.Size(169, 23);
-            this.button1.TabIndex = 4;
-            this.button1.Text = "Refresh";
-            this.button1.UseVisualStyleBackColor = true;
             // 
             // tableLayoutPanel4
             // 
@@ -682,10 +692,20 @@
             // 
             // dGVPosB
             // 
+            this.dGVPosB.BackgroundColor = System.Drawing.Color.SeaShell;
             this.dGVPosB.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            dataGridViewCellStyle3.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleLeft;
+            dataGridViewCellStyle3.BackColor = System.Drawing.SystemColors.Window;
+            dataGridViewCellStyle3.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            dataGridViewCellStyle3.ForeColor = System.Drawing.SystemColors.ControlText;
+            dataGridViewCellStyle3.SelectionBackColor = System.Drawing.Color.SeaShell;
+            dataGridViewCellStyle3.SelectionForeColor = System.Drawing.SystemColors.ControlText;
+            dataGridViewCellStyle3.WrapMode = System.Windows.Forms.DataGridViewTriState.False;
+            this.dGVPosB.DefaultCellStyle = dataGridViewCellStyle3;
             this.dGVPosB.Dock = System.Windows.Forms.DockStyle.Fill;
             this.dGVPosB.Location = new System.Drawing.Point(3, 3);
             this.dGVPosB.Name = "dGVPosB";
+            this.dGVPosB.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
             this.dGVPosB.Size = new System.Drawing.Size(513, 157);
             this.dGVPosB.TabIndex = 0;
             // 
@@ -702,22 +722,22 @@
             // 
             // dGVOrdersB
             // 
+            this.dGVOrdersB.BackgroundColor = System.Drawing.Color.SeaShell;
             this.dGVOrdersB.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            dataGridViewCellStyle4.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleLeft;
+            dataGridViewCellStyle4.BackColor = System.Drawing.SystemColors.Window;
+            dataGridViewCellStyle4.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            dataGridViewCellStyle4.ForeColor = System.Drawing.SystemColors.ControlText;
+            dataGridViewCellStyle4.SelectionBackColor = System.Drawing.Color.SeaShell;
+            dataGridViewCellStyle4.SelectionForeColor = System.Drawing.SystemColors.ControlText;
+            dataGridViewCellStyle4.WrapMode = System.Windows.Forms.DataGridViewTriState.False;
+            this.dGVOrdersB.DefaultCellStyle = dataGridViewCellStyle4;
             this.dGVOrdersB.Dock = System.Windows.Forms.DockStyle.Fill;
             this.dGVOrdersB.Location = new System.Drawing.Point(3, 3);
             this.dGVOrdersB.Name = "dGVOrdersB";
+            this.dGVOrdersB.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
             this.dGVOrdersB.Size = new System.Drawing.Size(513, 157);
             this.dGVOrdersB.TabIndex = 0;
-            // 
-            // lblDebug
-            // 
-            this.lblDebug.AutoSize = true;
-            this.lblDebug.ForeColor = System.Drawing.Color.White;
-            this.lblDebug.Location = new System.Drawing.Point(779, 17);
-            this.lblDebug.Name = "lblDebug";
-            this.lblDebug.Size = new System.Drawing.Size(16, 13);
-            this.lblDebug.TabIndex = 3;
-            this.lblDebug.Text = "...";
             // 
             // tableLayoutPanel8
             // 
@@ -746,7 +766,6 @@
             this.panel9.Controls.Add(this.label6);
             this.panel9.Controls.Add(this.label3);
             this.panel9.Controls.Add(this.lblAskAmount);
-            this.panel9.Controls.Add(this.lblDebug);
             this.panel9.Controls.Add(this.lblAsk);
             this.panel9.Controls.Add(this.lblTrades24Hours);
             this.panel9.Controls.Add(this.lblTrades1Hour);
@@ -956,11 +975,6 @@
             this.lblBid.TabIndex = 3;
             this.lblBid.Text = "0.0";
             // 
-            // timerListRefresh
-            // 
-            this.timerListRefresh.Interval = 1000;
-            this.timerListRefresh.Tick += new System.EventHandler(this.timerListRefresh_Tick);
-            // 
             // MTMainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -1041,7 +1055,6 @@
         private System.Windows.Forms.Label label17;
         private System.Windows.Forms.Label label18;
         private System.Windows.Forms.Label lblPingB;
-        private System.Windows.Forms.Label lblDebug;
         private System.Windows.Forms.TableLayoutPanel tableLayoutPanel8;
         private System.Windows.Forms.Panel panel9;
         private System.Windows.Forms.Label lblAsk;
@@ -1084,8 +1097,6 @@
         private System.Windows.Forms.Label label15;
         private System.Windows.Forms.Label lblMarginBalanceB;
         private System.Windows.Forms.Label label19;
-        private System.Windows.Forms.Button button1;
-        private System.Windows.Forms.Timer timerListRefresh;
     }
 }
 

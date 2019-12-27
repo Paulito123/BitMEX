@@ -175,14 +175,7 @@ namespace MoneyTron
             get => lblPingB.Text;
             set => SetLabelOnGuiThread(lblPingB, value);
         }
-
-        // For testing
-        public string DebugOutput
-        {
-            get => lblDebug.Text;
-            set => SetLabelOnGuiThread(lblDebug, value);
-        }
-
+        
         public void StatusA(string value, StatusType type)
         {
             SetLabelOnGuiThread(lblAConnStatus, value);
@@ -299,40 +292,39 @@ namespace MoneyTron
             dgv.AllowUserToResizeColumns = false;
             dgv.AllowUserToResizeRows = false;
             dgv.RowHeadersVisible = false;
+            dgv.DefaultCellStyle.Font = new Font(dgv.Font, FontStyle.Regular);
+            dgv.DefaultCellStyle.Alignment = DataGridViewContentAlignment.BottomCenter;
+            dgv.ReadOnly = true;
 
             DataGridViewColumn column = new DataGridViewTextBoxColumn();
-
-            column = new DataGridViewTextBoxColumn();
-            column.DataPropertyName = "OrderId";
-            column.Name = "OrderId";
-            column.Visible = false;
-            dgv.Columns.Add(column);
-
+            
             column = new DataGridViewTextBoxColumn();
             column.DataPropertyName = "OrderQty";
             column.Name = "Quantity";
+            column.AutoSizeMode = DataGridViewAutoSizeColumnMode.AllCells;
+            column.HeaderCell.Style.Alignment = DataGridViewContentAlignment.BottomCenter;
             dgv.Columns.Add(column);
 
             column = new DataGridViewTextBoxColumn();
             column.DataPropertyName = "Price";
             column.Name = "Price";
+            column.AutoSizeMode = DataGridViewAutoSizeColumnMode.AllCells;
+            column.HeaderCell.Style.Alignment = DataGridViewContentAlignment.BottomCenter;
             dgv.Columns.Add(column);
 
             column = new DataGridViewTextBoxColumn();
             column.DataPropertyName = "ordStatus";
             column.Name = "Status";
+            column.AutoSizeMode = DataGridViewAutoSizeColumnMode.AllCells;
+            column.HeaderCell.Style.Alignment = DataGridViewContentAlignment.BottomCenter;
             dgv.Columns.Add(column);
 
             column = new DataGridViewTextBoxColumn();
             column.DataPropertyName = "timestamp";
             column.Name = "Time";
+            column.AutoSizeMode = DataGridViewAutoSizeColumnMode.AllCells;
+            column.HeaderCell.Style.Alignment = DataGridViewContentAlignment.BottomCenter;
             dgv.Columns.Add(column);
-
-            //column = new DataGridViewTextBoxColumn();
-            //column.DataPropertyName = "ClOrdId";
-            //column.Name = "ClOrdId";
-            //column.Visible = false;                 //this.dataGridView1.Columns["CustomerID"].Visible = false;
-            //dgv.Columns.Add(column);
         }
 
         private void InitPositionsDataGrid(DataGridView dgv)
@@ -344,44 +336,57 @@ namespace MoneyTron
             dgv.AllowUserToResizeColumns = false;
             dgv.AllowUserToResizeRows = false;
             dgv.RowHeadersVisible = false;
+            dgv.DefaultCellStyle.Font = new Font(dgv.Font, FontStyle.Regular);
+            dgv.ReadOnly = true;
 
             DataGridViewColumn column = new DataGridViewTextBoxColumn();
 
             column = new DataGridViewTextBoxColumn();
             column.DataPropertyName = "symbol";
             column.Name = "Symbol";
+            column.AutoSizeMode = DataGridViewAutoSizeColumnMode.AllCells;
+            column.HeaderCell.Style.Alignment = DataGridViewContentAlignment.BottomCenter;
             dgv.Columns.Add(column);
 
             column = new DataGridViewTextBoxColumn();
             column.DataPropertyName = "currentQty";
             column.Name = "Quantity";
-            dgv.Columns.Add(column);
-
-            column = new DataGridViewTextBoxColumn();
-            column.DataPropertyName = "price";
-            column.Name = "Price";
+            column.AutoSizeMode = DataGridViewAutoSizeColumnMode.AllCells;
+            column.HeaderCell.Style.Alignment = DataGridViewContentAlignment.BottomCenter;
             dgv.Columns.Add(column);
 
             column = new DataGridViewTextBoxColumn();
             column.DataPropertyName = "avgEntryPrice";
-            column.Name = "Avg Price";
+            column.Name = "Entry Price";
+            column.AutoSizeMode = DataGridViewAutoSizeColumnMode.AllCells;
+            column.HeaderCell.Style.Alignment = DataGridViewContentAlignment.BottomCenter;
             dgv.Columns.Add(column);
 
             column = new DataGridViewTextBoxColumn();
             column.DataPropertyName = "liquidationPrice";
             column.Name = "Liq Price";
+            column.AutoSizeMode = DataGridViewAutoSizeColumnMode.AllCells;
+            column.HeaderCell.Style.Alignment = DataGridViewContentAlignment.BottomCenter;
+            column.CellTemplate.Style.ForeColor = Color.Red; 
+            column.CellTemplate.Style.Font = new Font(dgv.Font, FontStyle.Bold);
             dgv.Columns.Add(column);
 
-            //column = new DataGridViewTextBoxColumn();
-            //column.DataPropertyName = "timestamp";
-            //column.Name = "Time";
-            //dgv.Columns.Add(column);
+            column = new DataGridViewTextBoxColumn();
+            column.DataPropertyName = "unrealisedPnl";
+            column.Name = "Unrealised PNL";
+            column.AutoSizeMode = DataGridViewAutoSizeColumnMode.AllCells;
+            column.HeaderCell.Style.Alignment = DataGridViewContentAlignment.BottomCenter;
+            dgv.Columns.Add(column);
 
-            //column = new DataGridViewTextBoxColumn();
-            //column.DataPropertyName = "ClOrdId";
-            //column.Name = "ClOrdId";
-            //column.Visible = false;                 //this.dataGridView1.Columns["CustomerID"].Visible = false;
-            //dgv.Columns.Add(column);
+            column = new DataGridViewTextBoxColumn();
+            column.DataPropertyName = "realisedPnl";
+            column.Name = "Realised PNL";
+            column.AutoSizeMode = DataGridViewAutoSizeColumnMode.AllCells;
+            column.HeaderCell.Style.Alignment = DataGridViewContentAlignment.BottomCenter;
+            dgv.Columns.Add(column);
+
+            //                                              "unrealisedPnl":-700,"unrealisedPnlPcnt":-0.0001,"unrealisedRoePcnt":-0.0001
+            //"realisedPnl":-19301,"unrealisedGrossPnl":2800,"unrealisedPnl":2800,"unrealisedPnlPcnt":0.0006
         }
 
         private void Form1_Load(object sender, EventArgs e)
@@ -389,7 +394,6 @@ namespace MoneyTron
             OnInitA?.Invoke();
             OnInitB?.Invoke();
             disconnectToolStripMenuItem.Enabled = false;
-
         }
 
         /// <summary>
@@ -399,7 +403,6 @@ namespace MoneyTron
         /// <param name="e"></param>
         private void connectToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            timerListRefresh.Start();
             OnStartA?.Invoke();
             OnStartB?.Invoke();
             connectToolStripMenuItem.Enabled = false;
@@ -413,7 +416,6 @@ namespace MoneyTron
         /// <param name="e"></param>
         private void disconnectToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            timerListRefresh.Stop();
             OnStopA?.Invoke();
             OnStopB?.Invoke();
             connectToolStripMenuItem.Enabled = true;
@@ -425,14 +427,14 @@ namespace MoneyTron
             if (!dgv.InvokeRequired)
             {
                 dgv.DataSource = bs;
-                //((BindingSource)dgv.DataSource).ResetBindings(false);
+                ((BindingSource)dgv.DataSource).ResetBindings(false);
                 return;
             }
 
             dgv.Invoke(new Action(() =>
             {
                 dgv.DataSource = bs;
-                //((BindingSource)dgv.DataSource).ResetBindings(false);
+                ((BindingSource)dgv.DataSource).ResetBindings(false);
             }));
         }
 
@@ -470,10 +472,5 @@ namespace MoneyTron
             }));
         }
         
-        private void timerListRefresh_Tick(object sender, EventArgs e)
-        {
-            bSRCOrdersA.ResetBindings(false);
-            bSRCOrdersB.ResetBindings(false);
-        }
     }
 }

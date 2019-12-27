@@ -32,8 +32,12 @@ namespace MoneyTron.Presenter
 
         private OrderBookStatsComputer _orderBookStatsComputer;
         private TradeStatsComputer _tradeStatsComputer;
+
         private OrdersStatsHandler _orderStatsHandlerA;
         private OrdersStatsHandler _orderStatsHandlerB;
+
+        private PositionStatsHandler _posStatsHandlerA;
+        private PositionStatsHandler _posStatsHandlerB;
 
         private Dictionary<MTAccount, long> Accounts;
 
@@ -97,6 +101,8 @@ namespace MoneyTron.Presenter
             _orderBookStatsComputer = new OrderBookStatsComputer();
             _orderStatsHandlerA = new OrdersStatsHandler();
             _orderStatsHandlerB = new OrdersStatsHandler();
+            _posStatsHandlerA = new PositionStatsHandler();
+            _posStatsHandlerB = new PositionStatsHandler();
 
             var url = BitmexValues.ApiWebsocketTestnetUrl;
             _communicatorA = new BitmexWebsocketCommunicator(url);
@@ -205,7 +211,15 @@ namespace MoneyTron.Presenter
                 .Concat()
                 .Subscribe();
 
-
+            client
+                .Streams
+                .PositionStream
+                .Select(pos => Observable.FromAsync(async () => {
+                    HandlePositionResponse(pos);
+                }))
+                .Concat()
+                .Subscribe();
+            
             //client.Streams.MarginStream.ObserveOn(TaskPoolScheduler.Default).Subscribe(HandleMargin);
             //client.Streams.OrderStream.ObserveOn(TaskPoolScheduler.Default).Subscribe(HandleOrderResponse);
 
@@ -253,7 +267,7 @@ namespace MoneyTron.Presenter
             }
 
             await client.Send(new OrderSubscribeRequest());
-            //await client.Send(new PositionSubscribeRequest());
+            await client.Send(new PositionSubscribeRequest());
             await client.Send(new MarginSubscribeRequest());
             //await client.Send(new ExecutionSubscribeRequest());
         }
@@ -265,12 +279,13 @@ namespace MoneyTron.Presenter
         
         private void HandleOrderResponse(OrderResponse response)
         {
-            Log.Information($"Order received with action [{response.Action}]");
-
-            var acc = response.Data.First().Account;
+            if (response.Data.Count() == 0)
+                return;
 
             try
             {
+                var acc = response.Data.First().Account;
+
                 if (acc == Accounts[MTAccount.A])
                 {
                     foreach (Order o in response.Data)
@@ -280,6 +295,7 @@ namespace MoneyTron.Presenter
 
                     var bs = _orderStatsHandlerA.GetBindingSource();
                     _view.bSRCOrdersA = bs;
+                    _view.TabOrdersATitle = $"Orders [{bs.Count.ToString()}]";
                 }
                 else if (acc == Accounts[MTAccount.B])
                 {
@@ -290,6 +306,7 @@ namespace MoneyTron.Presenter
 
                     var bs = _orderStatsHandlerB.GetBindingSource();
                     _view.bSRCOrdersB = bs;
+                    _view.TabOrdersBTitle = $"Orders [{bs.Count.ToString()}]";
                 }
             }
             catch(Exception exc)
@@ -298,16 +315,78 @@ namespace MoneyTron.Presenter
             }
         }
 
-        private void HandlePositionResponseA(PositionResponse response)
+        private void HandlePositionResponse(PositionResponse response)
         {
-            //_view.DebugOutput = response.Data.ToString();
-        }
+            if (response.Data.Count() == 0)
+                return;
 
-        private void HandlePositionResponseB(PositionResponse response)
-        {
-            //_view.DebugOutput = response.Data.ToString();
-        }
+            try
+            {
+                var acc = response.Data.First().Account;
 
+                if (acc == Accounts[MTAccount.A])
+                {
+                    if (response.Action == BitmexAction.Insert || response.Action == BitmexAction.Partial)
+                    {
+                        foreach (Position p in response.Data)
+                        {
+                            _posStatsHandlerA.HandleNewPosition(p);
+                        }
+                    }
+                    else if (response.Action == BitmexAction.Update)
+                    {
+                        foreach (Position p in response.Data)
+                        {
+                            _posStatsHandlerA.HandleUpdatePosition(p);
+                        }
+                    }
+                    else if (response.Action == BitmexAction.Delete)
+                    {
+                        foreach (Position p in response.Data)
+                        {
+                            _posStatsHandlerA.HandleDeletePosition(p);
+                        }
+                    }
+
+                    var bs = _posStatsHandlerA.GetBindingSource();
+                    _view.bSRCPosA = bs;
+                    _view.TabPosATitle = $"Positions [{bs.Count.ToString()}]";
+                }
+                else if (acc == Accounts[MTAccount.B])
+                {
+                    if (response.Action == BitmexAction.Insert || response.Action == BitmexAction.Partial)
+                    {
+                        foreach (Position p in response.Data)
+                        {
+                            _posStatsHandlerB.HandleNewPosition(p);
+                        }
+                    }
+                    else if (response.Action == BitmexAction.Update)
+                    {
+                        foreach (Position p in response.Data)
+                        {
+                            _posStatsHandlerB.HandleUpdatePosition(p);
+                        }
+                    }
+                    else if (response.Action == BitmexAction.Delete)
+                    {
+                        foreach (Position p in response.Data)
+                        {
+                            _posStatsHandlerB.HandleDeletePosition(p);
+                        }
+                    }
+
+                    var bs = _orderStatsHandlerB.GetBindingSource();
+                    _view.bSRCPosB = bs;
+                    _view.TabPosBTitle = $"Positions [{bs.Count.ToString()}]";
+                }
+            }
+            catch (Exception exc)
+            {
+                Log.Error(exc.Message);
+            }
+        }
+        
         private void HandleExecutionResponseA(ExecutionResponse response)
         {
             //_view.DebugOutput = response.Data.ToString();
@@ -453,8 +532,7 @@ namespace MoneyTron.Presenter
 
         private void Clear(MTAccount acc)
         {
-            _view.DebugOutput = "...";
-
+            
             if (acc == MTAccount.A)
             {
                 _view.AccountAID = string.Empty;
@@ -494,8 +572,7 @@ namespace MoneyTron.Presenter
                 _view.bSRCPosB = new BindingSource();
             }
         }
-
-
+        
         private delegate void ShowMessageBoxDelegate(string strMessage, string strCaption/*, MessageBoxButton enmButton, MessageBoxImage enmImage*/);
 
         // Method invoked on a separate thread that shows the message box.

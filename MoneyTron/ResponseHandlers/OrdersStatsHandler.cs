@@ -1,10 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Windows.Forms;
-using System.Text;
-using System.Threading.Tasks;
-using Bitmex.Client.Websocket.Responses;
 using Bitmex.Client.Websocket.Responses.Orders;
 
 namespace MoneyTron.ResponseHandlers

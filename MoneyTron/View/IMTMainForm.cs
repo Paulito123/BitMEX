@@ -29,11 +29,7 @@ namespace MoneyTron
         string TabOrdersBTitle { get; set; }
         string PingL { get; set; }
         string PingS { get; set; }
-
-
-        // For testing
-        string DebugOutput { get; set; }
-
+        
         BindingSource bSRCOrdersA { get; set; }
         BindingSource bSRCOrdersB { get; set; }
         BindingSource bSRCPosA { get; set; }
