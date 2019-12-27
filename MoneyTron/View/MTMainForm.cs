@@ -41,7 +41,7 @@ namespace MoneyTron
             get => lblAsk.Text;
             set => SetLabelOnGuiThread(lblAsk, value);
         }
-        
+
         public string BidAmount
         {
             get => lblBidAmount.Text;
@@ -127,7 +127,7 @@ namespace MoneyTron
             get => lblBAvailableFunds.Text;
             set => SetLabelOnGuiThread(lblBAvailableFunds, value);
         }
-        
+
         public string MarginBalanceA
         {
             get => lblMarginBalanceA.Text;
@@ -224,20 +224,6 @@ namespace MoneyTron
             Trades24Hours = value;
             lblTrades24Hours.ForeColor = GetForeColorFor(side);
         }
-
-        //// https://docs.microsoft.com/en-us/dotnet/framework/winforms/controls/reflect-data-source-updates-in-a-wf-control-with-the-bindingsource
-        //public ArrayList OrdersA
-        //{
-        //    get => (ArrayList)bSRCOrdersA.DataSource;
-        //    set => SetBindingSRCOnGuiThread(bSRCOrdersA, value);
-
-        //}
-
-        //void IMTMainForm.UpdateOrdersA(Order o, MTActionType mtt)
-        //{
-        //    Trades24Hours = value;
-        //    lblTrades24Hours.ForeColor = GetForeColorFor(side);
-        //}
 
         public BindingSource bSRCOrdersA
         {
@@ -413,6 +399,7 @@ namespace MoneyTron
         /// <param name="e"></param>
         private void connectToolStripMenuItem_Click(object sender, EventArgs e)
         {
+            timerListRefresh.Start();
             OnStartA?.Invoke();
             OnStartB?.Invoke();
             connectToolStripMenuItem.Enabled = false;
@@ -426,26 +413,26 @@ namespace MoneyTron
         /// <param name="e"></param>
         private void disconnectToolStripMenuItem_Click(object sender, EventArgs e)
         {
+            timerListRefresh.Stop();
             OnStopA?.Invoke();
             OnStopB?.Invoke();
             connectToolStripMenuItem.Enabled = true;
             disconnectToolStripMenuItem.Enabled = false;
         }
-
+        
         private void SetBindingSRCOnGuiThread(DataGridView dgv, BindingSource bs)
         {
-            if (dgv.DataBindings.Equals(bs))
-                return;
-
-            if (!InvokeRequired)
+            if (!dgv.InvokeRequired)
             {
                 dgv.DataSource = bs;
+                //((BindingSource)dgv.DataSource).ResetBindings(false);
                 return;
             }
 
-            this.Invoke(new Action(() =>
+            dgv.Invoke(new Action(() =>
             {
                 dgv.DataSource = bs;
+                //((BindingSource)dgv.DataSource).ResetBindings(false);
             }));
         }
 
@@ -481,6 +468,12 @@ namespace MoneyTron
             {
                 tp.Text = value;
             }));
+        }
+        
+        private void timerListRefresh_Tick(object sender, EventArgs e)
+        {
+            bSRCOrdersA.ResetBindings(false);
+            bSRCOrdersB.ResetBindings(false);
         }
     }
 }

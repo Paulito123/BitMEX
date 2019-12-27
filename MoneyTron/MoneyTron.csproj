@@ -83,6 +83,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ResponseHandlers\OrderBookStatsComputer.cs" />
+    <Compile Include="ResponseHandlers\OrdersStatsHandler.cs" />
     <Compile Include="ResponseHandlers\TradeStatsComputer.cs" />
     <Compile Include="View\IMTMainForm.cs" />
     <Compile Include="View\MTMainForm.cs">

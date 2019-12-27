@@ -28,6 +28,7 @@
         /// </summary>
         private void InitializeComponent()
         {
+            this.components = new System.ComponentModel.Container();
             this.menuStrip1 = new System.Windows.Forms.MenuStrip();
             this.connectionsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.liveToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -59,6 +60,7 @@
             this.label5 = new System.Windows.Forms.Label();
             this.label7 = new System.Windows.Forms.Label();
             this.label1 = new System.Windows.Forms.Label();
+            this.button1 = new System.Windows.Forms.Button();
             this.tableLayoutPanel4 = new System.Windows.Forms.TableLayoutPanel();
             this.tableLayoutPanel6 = new System.Windows.Forms.TableLayoutPanel();
             this.tableLayoutPanel7 = new System.Windows.Forms.TableLayoutPanel();
@@ -101,7 +103,7 @@
             this.lblTrades1Min = new System.Windows.Forms.Label();
             this.lblBidAmount = new System.Windows.Forms.Label();
             this.lblBid = new System.Windows.Forms.Label();
-            this.button1 = new System.Windows.Forms.Button();
+            this.timerListRefresh = new System.Windows.Forms.Timer(this.components);
             this.menuStrip1.SuspendLayout();
             this.tableLayoutPanel2.SuspendLayout();
             this.tableLayoutPanel3.SuspendLayout();
@@ -448,6 +450,15 @@
             this.label1.Size = new System.Drawing.Size(71, 13);
             this.label1.TabIndex = 0;
             this.label1.Text = "Account ID";
+            // 
+            // button1
+            // 
+            this.button1.Location = new System.Drawing.Point(178, 3);
+            this.button1.Name = "button1";
+            this.button1.Size = new System.Drawing.Size(169, 23);
+            this.button1.TabIndex = 4;
+            this.button1.Text = "Refresh";
+            this.button1.UseVisualStyleBackColor = true;
             // 
             // tableLayoutPanel4
             // 
@@ -945,14 +956,10 @@
             this.lblBid.TabIndex = 3;
             this.lblBid.Text = "0.0";
             // 
-            // button1
+            // timerListRefresh
             // 
-            this.button1.Location = new System.Drawing.Point(178, 3);
-            this.button1.Name = "button1";
-            this.button1.Size = new System.Drawing.Size(169, 23);
-            this.button1.TabIndex = 4;
-            this.button1.Text = "button1";
-            this.button1.UseVisualStyleBackColor = true;
+            this.timerListRefresh.Interval = 1000;
+            this.timerListRefresh.Tick += new System.EventHandler(this.timerListRefresh_Tick);
             // 
             // MTMainForm
             // 
@@ -1078,6 +1085,7 @@
         private System.Windows.Forms.Label lblMarginBalanceB;
         private System.Windows.Forms.Label label19;
         private System.Windows.Forms.Button button1;
+        private System.Windows.Forms.Timer timerListRefresh;
     }
 }
 

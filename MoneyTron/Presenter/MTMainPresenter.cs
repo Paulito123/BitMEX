@@ -5,6 +5,7 @@ using System.Reactive.Linq;
 using System.Reactive.Concurrency;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Collections;
 using System.Windows.Forms;
 using Bitmex.Client.Websocket;
 using Bitmex.Client.Websocket.Client;
@@ -31,13 +32,10 @@ namespace MoneyTron.Presenter
 
         private OrderBookStatsComputer _orderBookStatsComputer;
         private TradeStatsComputer _tradeStatsComputer;
+        private OrdersStatsHandler _orderStatsHandlerA;
+        private OrdersStatsHandler _orderStatsHandlerB;
 
         private Dictionary<MTAccount, long> Accounts;
-
-        private BindingSource bSRCOrdersA = new BindingSource();
-        private BindingSource bSRCOrdersB = new BindingSource();
-        private BindingSource bSRCPosA = new BindingSource();
-        private BindingSource bSRCPosB = new BindingSource();
 
         private IBitmexCommunicator _communicatorA;
         private IBitmexCommunicator _communicatorB;
@@ -97,6 +95,8 @@ namespace MoneyTron.Presenter
 
             _tradeStatsComputer = new TradeStatsComputer();
             _orderBookStatsComputer = new OrderBookStatsComputer();
+            _orderStatsHandlerA = new OrdersStatsHandler();
+            _orderStatsHandlerB = new OrdersStatsHandler();
 
             var url = BitmexValues.ApiWebsocketTestnetUrl;
             _communicatorA = new BitmexWebsocketCommunicator(url);
@@ -186,9 +186,28 @@ namespace MoneyTron.Presenter
 
         private void Subscribe(BitmexWebsocketClient client, MTAccount acc)
         {
-            client.Streams.MarginStream.ObserveOn(TaskPoolScheduler.Default).Subscribe(HandleMargin);
-            client.Streams.OrderStream.ObserveOn(TaskPoolScheduler.Default).Subscribe(HandleOrderResponse);
 
+            client
+                .Streams
+                .MarginStream
+                .Select(trade => Observable.FromAsync(async () => {
+                    HandleMargin(trade);
+                }))
+                .Concat()
+                .Subscribe();
+
+            client
+                .Streams
+                .OrderStream
+                .Select(ord => Observable.FromAsync(async () => {
+                    HandleOrderResponse(ord);
+                }))
+                .Concat()
+                .Subscribe();
+
+
+            //client.Streams.MarginStream.ObserveOn(TaskPoolScheduler.Default).Subscribe(HandleMargin);
+            //client.Streams.OrderStream.ObserveOn(TaskPoolScheduler.Default).Subscribe(HandleOrderResponse);
 
             //client.Streams.AuthenticationStream.ObserveOn(TaskPoolScheduler.Default).Subscribe();
             //client.Streams.ErrorStream.ObserveOn(TaskPoolScheduler.Default).Subscribe(HandleErrorResponse);
@@ -243,74 +262,35 @@ namespace MoneyTron.Presenter
         {
 
         }
-
-        //private Order MergeOrders(Order newO, Order oldO)
-        //{
-        //    Order outOrder = oldO;
-
-        //    if (newO.Equals(oldO))
-        //        return outOrder;
-        //    else
-        //    {
-
-        //    }
-
-        //}
-
-        private BindingSource UpdateBSRCOrders(BindingSource bs, Order o, BitmexAction a)
-        {
-            BindingSource bsOut = bs;
-            var obj = bs.List.OfType<Order>().ToList().Find(f => f.OrderId == o.OrderId);
-            var foundIndex = bs.IndexOf(obj);
-
-            if (foundIndex <= 0)
-                bsOut.Add(o);
-
-            else if (o.OrdStatus == OrderStatus.Canceled || o.OrdStatus == OrderStatus.Rejected || o.OrdStatus == OrderStatus.Filled || a == BitmexAction.Delete)
-                bsOut.RemoveAt(foundIndex);
-
-            else if (o.OrdStatus == OrderStatus.New || o.OrdStatus == OrderStatus.PartiallyFilled)
-            {
-                bsOut.RemoveAt(foundIndex);
-                bsOut.Add(o);
-            }
-
-            return bsOut;
-        }
-
+        
         private void HandleOrderResponse(OrderResponse response)
         {
             Log.Information($"Order received with action [{response.Action}]");
 
+            var acc = response.Data.First().Account;
+
             try
             {
-                //_view.DebugOutput = response.Data.ToString();
-                var acc = response.Data.First().Account;
-
-                BindingSource bs = null;
-
-                if (acc == Accounts[MTAccount.A])
-                    bs = _view.bSRCOrdersA;
-                else if (acc == Accounts[MTAccount.B])
-                    bs = _view.bSRCOrdersB;
-
-                foreach (Order o in response.Data)
-                {
-                    bs = UpdateBSRCOrders(bs, o, response.Action);
-                }
-
                 if (acc == Accounts[MTAccount.A])
                 {
+                    foreach (Order o in response.Data)
+                    {
+                        _orderStatsHandlerA.HandleOrder(o);
+                    }
+
+                    var bs = _orderStatsHandlerA.GetBindingSource();
                     _view.bSRCOrdersA = bs;
-                    _view.TabOrdersATitle = "Orders [" + bs.Count.ToString() + "]";
                 }
                 else if (acc == Accounts[MTAccount.B])
                 {
+                    foreach (Order o in response.Data)
+                    {
+                        _orderStatsHandlerB.HandleOrder(o);
+                    }
+
+                    var bs = _orderStatsHandlerB.GetBindingSource();
                     _view.bSRCOrdersB = bs;
-                    _view.TabOrdersBTitle = "Orders [" + bs.Count.ToString() + "]";
                 }
-                
-                bs.Dispose();
             }
             catch(Exception exc)
             {
