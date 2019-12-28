@@ -41,12 +41,7 @@ namespace MoneyTron
         Action OnInitB { get; set; }
         Action OnStartB { set; }
         Action OnStopB { set; }
-        /*
-        void UpdateOrdersA(Order o, MTActionType mtt);
-        void UpdateOrdersB(Order o, MTActionType mtt);
-        void UpdatePositionA(Position o, MTActionType mtt);
-        void UpdatePositionB(Position o, MTActionType mtt);
-        */
+        
         void Trades1Min(string value, Side side);
         void Trades5Min(string value, Side side);
         void Trades15Min(string value, Side side);
@@ -55,7 +50,6 @@ namespace MoneyTron
 
         void StatusA(string value, StatusType type);
         void StatusB(string value, StatusType type);
-        
     }
 
     public enum Side

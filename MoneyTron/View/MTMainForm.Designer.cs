@@ -28,10 +28,10 @@
         /// </summary>
         private void InitializeComponent()
         {
-            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle1 = new System.Windows.Forms.DataGridViewCellStyle();
-            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle2 = new System.Windows.Forms.DataGridViewCellStyle();
-            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle3 = new System.Windows.Forms.DataGridViewCellStyle();
-            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle4 = new System.Windows.Forms.DataGridViewCellStyle();
+            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle9 = new System.Windows.Forms.DataGridViewCellStyle();
+            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle10 = new System.Windows.Forms.DataGridViewCellStyle();
+            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle11 = new System.Windows.Forms.DataGridViewCellStyle();
+            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle12 = new System.Windows.Forms.DataGridViewCellStyle();
             this.menuStrip1 = new System.Windows.Forms.MenuStrip();
             this.connectionsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.liveToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -259,14 +259,14 @@
             // 
             this.dGVPosA.BackgroundColor = System.Drawing.Color.Honeydew;
             this.dGVPosA.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            dataGridViewCellStyle1.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleLeft;
-            dataGridViewCellStyle1.BackColor = System.Drawing.SystemColors.Window;
-            dataGridViewCellStyle1.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            dataGridViewCellStyle1.ForeColor = System.Drawing.SystemColors.ControlText;
-            dataGridViewCellStyle1.SelectionBackColor = System.Drawing.Color.Honeydew;
-            dataGridViewCellStyle1.SelectionForeColor = System.Drawing.SystemColors.ControlText;
-            dataGridViewCellStyle1.WrapMode = System.Windows.Forms.DataGridViewTriState.False;
-            this.dGVPosA.DefaultCellStyle = dataGridViewCellStyle1;
+            dataGridViewCellStyle9.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleLeft;
+            dataGridViewCellStyle9.BackColor = System.Drawing.SystemColors.Window;
+            dataGridViewCellStyle9.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            dataGridViewCellStyle9.ForeColor = System.Drawing.SystemColors.ControlText;
+            dataGridViewCellStyle9.SelectionBackColor = System.Drawing.Color.Honeydew;
+            dataGridViewCellStyle9.SelectionForeColor = System.Drawing.SystemColors.ControlText;
+            dataGridViewCellStyle9.WrapMode = System.Windows.Forms.DataGridViewTriState.False;
+            this.dGVPosA.DefaultCellStyle = dataGridViewCellStyle9;
             this.dGVPosA.Dock = System.Windows.Forms.DockStyle.Fill;
             this.dGVPosA.Location = new System.Drawing.Point(3, 3);
             this.dGVPosA.Name = "dGVPosA";
@@ -289,14 +289,14 @@
             // 
             this.dGVOrdersA.BackgroundColor = System.Drawing.Color.Honeydew;
             this.dGVOrdersA.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            dataGridViewCellStyle2.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleLeft;
-            dataGridViewCellStyle2.BackColor = System.Drawing.SystemColors.Window;
-            dataGridViewCellStyle2.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            dataGridViewCellStyle2.ForeColor = System.Drawing.SystemColors.ControlText;
-            dataGridViewCellStyle2.SelectionBackColor = System.Drawing.Color.Honeydew;
-            dataGridViewCellStyle2.SelectionForeColor = System.Drawing.SystemColors.ControlText;
-            dataGridViewCellStyle2.WrapMode = System.Windows.Forms.DataGridViewTriState.False;
-            this.dGVOrdersA.DefaultCellStyle = dataGridViewCellStyle2;
+            dataGridViewCellStyle10.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleLeft;
+            dataGridViewCellStyle10.BackColor = System.Drawing.SystemColors.Window;
+            dataGridViewCellStyle10.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            dataGridViewCellStyle10.ForeColor = System.Drawing.SystemColors.ControlText;
+            dataGridViewCellStyle10.SelectionBackColor = System.Drawing.Color.Honeydew;
+            dataGridViewCellStyle10.SelectionForeColor = System.Drawing.SystemColors.ControlText;
+            dataGridViewCellStyle10.WrapMode = System.Windows.Forms.DataGridViewTriState.False;
+            this.dGVOrdersA.DefaultCellStyle = dataGridViewCellStyle10;
             this.dGVOrdersA.Dock = System.Windows.Forms.DockStyle.Fill;
             this.dGVOrdersA.Location = new System.Drawing.Point(3, 3);
             this.dGVOrdersA.Name = "dGVOrdersA";
@@ -425,6 +425,7 @@
             // lblAConnStatus
             // 
             this.lblAConnStatus.AutoSize = true;
+            this.lblAConnStatus.BackColor = System.Drawing.Color.Black;
             this.lblAConnStatus.Location = new System.Drawing.Point(3, 34);
             this.lblAConnStatus.Name = "lblAConnStatus";
             this.lblAConnStatus.Size = new System.Drawing.Size(79, 13);
@@ -622,6 +623,7 @@
             // lblBConnStatus
             // 
             this.lblBConnStatus.AutoSize = true;
+            this.lblBConnStatus.BackColor = System.Drawing.Color.Black;
             this.lblBConnStatus.Location = new System.Drawing.Point(3, 34);
             this.lblBConnStatus.Name = "lblBConnStatus";
             this.lblBConnStatus.Size = new System.Drawing.Size(79, 13);
@@ -694,14 +696,14 @@
             // 
             this.dGVPosB.BackgroundColor = System.Drawing.Color.SeaShell;
             this.dGVPosB.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            dataGridViewCellStyle3.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleLeft;
-            dataGridViewCellStyle3.BackColor = System.Drawing.SystemColors.Window;
-            dataGridViewCellStyle3.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            dataGridViewCellStyle3.ForeColor = System.Drawing.SystemColors.ControlText;
-            dataGridViewCellStyle3.SelectionBackColor = System.Drawing.Color.SeaShell;
-            dataGridViewCellStyle3.SelectionForeColor = System.Drawing.SystemColors.ControlText;
-            dataGridViewCellStyle3.WrapMode = System.Windows.Forms.DataGridViewTriState.False;
-            this.dGVPosB.DefaultCellStyle = dataGridViewCellStyle3;
+            dataGridViewCellStyle11.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleLeft;
+            dataGridViewCellStyle11.BackColor = System.Drawing.SystemColors.Window;
+            dataGridViewCellStyle11.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            dataGridViewCellStyle11.ForeColor = System.Drawing.SystemColors.ControlText;
+            dataGridViewCellStyle11.SelectionBackColor = System.Drawing.Color.SeaShell;
+            dataGridViewCellStyle11.SelectionForeColor = System.Drawing.SystemColors.ControlText;
+            dataGridViewCellStyle11.WrapMode = System.Windows.Forms.DataGridViewTriState.False;
+            this.dGVPosB.DefaultCellStyle = dataGridViewCellStyle11;
             this.dGVPosB.Dock = System.Windows.Forms.DockStyle.Fill;
             this.dGVPosB.Location = new System.Drawing.Point(3, 3);
             this.dGVPosB.Name = "dGVPosB";
@@ -724,14 +726,14 @@
             // 
             this.dGVOrdersB.BackgroundColor = System.Drawing.Color.SeaShell;
             this.dGVOrdersB.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            dataGridViewCellStyle4.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleLeft;
-            dataGridViewCellStyle4.BackColor = System.Drawing.SystemColors.Window;
-            dataGridViewCellStyle4.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            dataGridViewCellStyle4.ForeColor = System.Drawing.SystemColors.ControlText;
-            dataGridViewCellStyle4.SelectionBackColor = System.Drawing.Color.SeaShell;
-            dataGridViewCellStyle4.SelectionForeColor = System.Drawing.SystemColors.ControlText;
-            dataGridViewCellStyle4.WrapMode = System.Windows.Forms.DataGridViewTriState.False;
-            this.dGVOrdersB.DefaultCellStyle = dataGridViewCellStyle4;
+            dataGridViewCellStyle12.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleLeft;
+            dataGridViewCellStyle12.BackColor = System.Drawing.SystemColors.Window;
+            dataGridViewCellStyle12.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            dataGridViewCellStyle12.ForeColor = System.Drawing.SystemColors.ControlText;
+            dataGridViewCellStyle12.SelectionBackColor = System.Drawing.Color.SeaShell;
+            dataGridViewCellStyle12.SelectionForeColor = System.Drawing.SystemColors.ControlText;
+            dataGridViewCellStyle12.WrapMode = System.Windows.Forms.DataGridViewTriState.False;
+            this.dGVOrdersB.DefaultCellStyle = dataGridViewCellStyle12;
             this.dGVOrdersB.Dock = System.Windows.Forms.DockStyle.Fill;
             this.dGVOrdersB.Location = new System.Drawing.Point(3, 3);
             this.dGVOrdersB.Name = "dGVOrdersB";
@@ -787,7 +789,7 @@
             this.label8.AutoSize = true;
             this.label8.Font = new System.Drawing.Font("Microsoft Sans Serif", 14.25F);
             this.label8.ForeColor = System.Drawing.Color.White;
-            this.label8.Location = new System.Drawing.Point(657, 17);
+            this.label8.Location = new System.Drawing.Point(715, 13);
             this.label8.Name = "label8";
             this.label8.Size = new System.Drawing.Size(83, 24);
             this.label8.TabIndex = 25;
@@ -801,7 +803,7 @@
             this.label11.AutoSize = true;
             this.label11.Font = new System.Drawing.Font("Microsoft Sans Serif", 14.25F);
             this.label11.ForeColor = System.Drawing.Color.White;
-            this.label11.Location = new System.Drawing.Point(557, 17);
+            this.label11.Location = new System.Drawing.Point(615, 13);
             this.label11.Name = "label11";
             this.label11.Size = new System.Drawing.Size(64, 24);
             this.label11.TabIndex = 24;
@@ -815,7 +817,7 @@
             this.label12.AutoSize = true;
             this.label12.Font = new System.Drawing.Font("Microsoft Sans Serif", 14.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(238)));
             this.label12.ForeColor = System.Drawing.Color.White;
-            this.label12.Location = new System.Drawing.Point(237, 17);
+            this.label12.Location = new System.Drawing.Point(304, 13);
             this.label12.Name = "label12";
             this.label12.Size = new System.Drawing.Size(56, 24);
             this.label12.TabIndex = 21;
@@ -829,7 +831,7 @@
             this.label13.AutoSize = true;
             this.label13.Font = new System.Drawing.Font("Microsoft Sans Serif", 14.25F);
             this.label13.ForeColor = System.Drawing.Color.White;
-            this.label13.Location = new System.Drawing.Point(337, 17);
+            this.label13.Location = new System.Drawing.Point(404, 13);
             this.label13.Name = "label13";
             this.label13.Size = new System.Drawing.Size(56, 24);
             this.label13.TabIndex = 22;
@@ -843,7 +845,7 @@
             this.label14.AutoSize = true;
             this.label14.Font = new System.Drawing.Font("Microsoft Sans Serif", 14.25F);
             this.label14.ForeColor = System.Drawing.Color.White;
-            this.label14.Location = new System.Drawing.Point(437, 17);
+            this.label14.Location = new System.Drawing.Point(504, 13);
             this.label14.Name = "label14";
             this.label14.Size = new System.Drawing.Size(66, 24);
             this.label14.TabIndex = 23;
@@ -904,7 +906,7 @@
             this.lblTrades24Hours.AutoSize = true;
             this.lblTrades24Hours.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.lblTrades24Hours.ForeColor = System.Drawing.Color.White;
-            this.lblTrades24Hours.Location = new System.Drawing.Point(658, 51);
+            this.lblTrades24Hours.Location = new System.Drawing.Point(736, 43);
             this.lblTrades24Hours.Name = "lblTrades24Hours";
             this.lblTrades24Hours.Size = new System.Drawing.Size(25, 16);
             this.lblTrades24Hours.TabIndex = 3;
@@ -915,7 +917,7 @@
             this.lblTrades1Hour.AutoSize = true;
             this.lblTrades1Hour.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.lblTrades1Hour.ForeColor = System.Drawing.Color.White;
-            this.lblTrades1Hour.Location = new System.Drawing.Point(558, 51);
+            this.lblTrades1Hour.Location = new System.Drawing.Point(626, 43);
             this.lblTrades1Hour.Name = "lblTrades1Hour";
             this.lblTrades1Hour.Size = new System.Drawing.Size(25, 16);
             this.lblTrades1Hour.TabIndex = 3;
@@ -926,7 +928,7 @@
             this.lblTrades15Min.AutoSize = true;
             this.lblTrades15Min.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.lblTrades15Min.ForeColor = System.Drawing.Color.White;
-            this.lblTrades15Min.Location = new System.Drawing.Point(438, 51);
+            this.lblTrades15Min.Location = new System.Drawing.Point(524, 43);
             this.lblTrades15Min.Name = "lblTrades15Min";
             this.lblTrades15Min.Size = new System.Drawing.Size(25, 16);
             this.lblTrades15Min.TabIndex = 3;
@@ -937,7 +939,7 @@
             this.lblTrades5Min.AutoSize = true;
             this.lblTrades5Min.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.lblTrades5Min.ForeColor = System.Drawing.Color.White;
-            this.lblTrades5Min.Location = new System.Drawing.Point(338, 51);
+            this.lblTrades5Min.Location = new System.Drawing.Point(415, 43);
             this.lblTrades5Min.Name = "lblTrades5Min";
             this.lblTrades5Min.Size = new System.Drawing.Size(25, 16);
             this.lblTrades5Min.TabIndex = 3;
@@ -948,7 +950,7 @@
             this.lblTrades1Min.AutoSize = true;
             this.lblTrades1Min.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.lblTrades1Min.ForeColor = System.Drawing.Color.White;
-            this.lblTrades1Min.Location = new System.Drawing.Point(238, 51);
+            this.lblTrades1Min.Location = new System.Drawing.Point(315, 43);
             this.lblTrades1Min.Name = "lblTrades1Min";
             this.lblTrades1Min.Size = new System.Drawing.Size(25, 16);
             this.lblTrades1Min.TabIndex = 3;

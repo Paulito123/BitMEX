@@ -220,26 +220,16 @@ namespace MoneyTron.Presenter
                 .Concat()
                 .Subscribe();
             
-            //client.Streams.MarginStream.ObserveOn(TaskPoolScheduler.Default).Subscribe(HandleMargin);
-            //client.Streams.OrderStream.ObserveOn(TaskPoolScheduler.Default).Subscribe(HandleOrderResponse);
-
-            //client.Streams.AuthenticationStream.ObserveOn(TaskPoolScheduler.Default).Subscribe();
             //client.Streams.ErrorStream.ObserveOn(TaskPoolScheduler.Default).Subscribe(HandleErrorResponse);
 
             if (acc == MTAccount.A)
             {
-                //client.Streams.PositionStream.ObserveOn(TaskPoolScheduler.Default).Subscribe(HandlePositionResponseA);
-                //client.Streams.ExecutionStream.ObserveOn(TaskPoolScheduler.Default).Subscribe(HandleExecutionResponseA);
-                //client.Streams.TradesStream.ObserveOn(TaskPoolScheduler.Default).Subscribe(HandleTrades);
-                //client.Streams.BookStream.ObserveOn(TaskPoolScheduler.Default).Subscribe(HandleOrderBook);
-                //client.Streams.OrderStream.ObserveOn(TaskPoolScheduler.Default).Subscribe(blablaA);
+                client.Streams.TradesStream.ObserveOn(TaskPoolScheduler.Default).Subscribe(HandleTrades);
+                client.Streams.BookStream.ObserveOn(TaskPoolScheduler.Default).Subscribe(HandleOrderBook);
                 client.Streams.PongStream.ObserveOn(TaskPoolScheduler.Default).Subscribe(HandlePongA);
             }
             else
             {
-                //client.Streams.PositionStream.ObserveOn(TaskPoolScheduler.Default).Subscribe(HandlePositionResponseB);
-                //client.Streams.ExecutionStream.ObserveOn(TaskPoolScheduler.Default).Subscribe(HandleExecutionResponseB);
-                //client.Streams.OrderStream.ObserveOn(TaskPoolScheduler.Default).Subscribe(blablaB);
                 client.Streams.PongStream.ObserveOn(TaskPoolScheduler.Default).Subscribe(HandlePongB);
             }
         }
@@ -256,14 +246,12 @@ namespace MoneyTron.Presenter
             if (acc == MTAccount.A)
             {
                 await client.Send(new AuthenticationRequest("QbpGewiOyIYMbyQ-ieaTKfOJ", "FqGOSAewtkMBIuiIQHI47dxc6vBm3zqARSEr4Qif8K8N5eHf"));
-                //await client.Authenticate("QbpGewiOyIYMbyQ-ieaTKfOJ", "FqGOSAewtkMBIuiIQHI47dxc6vBm3zqARSEr4Qif8K8N5eHf");
                 //await client.Send(new TradesSubscribeRequest(pair));
                 //await client.Send(new BookSubscribeRequest(pair));
             }
             else
             {
                 await client.Send(new AuthenticationRequest("xEuMT-y7ffwxrvHA2yDwL1bZ", "3l0AmJz7l3P47-gK__LwgZQQ23uOKCFhYJG4HeTLlGXadRm6"));
-                //await client.Authenticate("xEuMT-y7ffwxrvHA2yDwL1bZ", "3l0AmJz7l3P47-gK__LwgZQQ23uOKCFhYJG4HeTLlGXadRm6");
             }
 
             await client.Send(new OrderSubscribeRequest());
@@ -319,6 +307,8 @@ namespace MoneyTron.Presenter
         {
             if (response.Data.Count() == 0)
                 return;
+
+            Log.Information($"Position [{response.Action}] received with [{response.Data.Count().ToString()}] nr of Data items.");
 
             try
             {
@@ -376,7 +366,7 @@ namespace MoneyTron.Presenter
                         }
                     }
 
-                    var bs = _orderStatsHandlerB.GetBindingSource();
+                    var bs = _posStatsHandlerB.GetBindingSource();
                     _view.bSRCPosB = bs;
                     _view.TabPosBTitle = $"Positions [{bs.Count.ToString()}]";
                 }
@@ -399,33 +389,41 @@ namespace MoneyTron.Presenter
 
         private void HandleMargin(MarginResponse response)
         {
-            Log.Information($"Margin received with action [{response.Action}]");
+            if (response.Data.Count() == 0)
+                return;
 
-            if (response.Action == BitmexAction.Partial || response.Action == BitmexAction.Insert || response.Action == BitmexAction.Update)
+            try
             {
-                foreach(Margin m in response.Data)
+                if (response.Action == BitmexAction.Partial || response.Action == BitmexAction.Insert || response.Action == BitmexAction.Update)
                 {
-                    if (m.Account == Accounts[MTAccount.A])
+                    foreach (Margin m in response.Data)
                     {
-                        if (m.WalletBalance > 0)
-                            _view.TotalFundsA = BitmexConverter.ConvertToBtc("XBt", m.WalletBalance ?? 0).ToString();
-                        if (m.MarginBalance > 0)
-                            _view.AvailableFundsA = BitmexConverter.ConvertToBtc("XBt", m.MarginBalance ?? 0).ToString();
-                        if (m.AvailableMargin > 0)
-                            _view.MarginBalanceA = BitmexConverter.ConvertToBtc("XBt", m.AvailableMargin ?? 0).ToString();
-                        _view.AccountAID = m.Account.ToString();
-                    }
-                    else if (m.Account == Accounts[MTAccount.B])
-                    {
-                        if (m.WalletBalance > 0)
-                            _view.TotalFundsB = BitmexConverter.ConvertToBtc("XBt", m.WalletBalance ?? 0).ToString();
-                        if (m.MarginBalance > 0)
-                            _view.AvailableFundsB = BitmexConverter.ConvertToBtc("XBt", m.MarginBalance ?? 0).ToString();
-                        if (m.AvailableMargin > 0)
-                            _view.MarginBalanceB = BitmexConverter.ConvertToBtc("XBt", m.AvailableMargin ?? 0).ToString();
-                        _view.AccountBID = m.Account.ToString();
+                        if (m.Account == Accounts[MTAccount.A])
+                        {
+                            if (m.WalletBalance > 0)
+                                _view.TotalFundsA = BitmexConverter.ConvertToBtc("XBt", m.WalletBalance ?? 0).ToString();
+                            if (m.MarginBalance > 0)
+                                _view.AvailableFundsA = BitmexConverter.ConvertToBtc("XBt", m.MarginBalance ?? 0).ToString();
+                            if (m.AvailableMargin > 0)
+                                _view.MarginBalanceA = BitmexConverter.ConvertToBtc("XBt", m.AvailableMargin ?? 0).ToString();
+                            _view.AccountAID = m.Account.ToString();
+                        }
+                        else if (m.Account == Accounts[MTAccount.B])
+                        {
+                            if (m.WalletBalance > 0)
+                                _view.TotalFundsB = BitmexConverter.ConvertToBtc("XBt", m.WalletBalance ?? 0).ToString();
+                            if (m.MarginBalance > 0)
+                                _view.AvailableFundsB = BitmexConverter.ConvertToBtc("XBt", m.MarginBalance ?? 0).ToString();
+                            if (m.AvailableMargin > 0)
+                                _view.MarginBalanceB = BitmexConverter.ConvertToBtc("XBt", m.AvailableMargin ?? 0).ToString();
+                            _view.AccountBID = m.Account.ToString();
+                        }
                     }
                 }
+            }
+            catch (Exception exc)
+            {
+                Log.Error(exc.Message);
             }
         }
 
