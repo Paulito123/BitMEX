@@ -38,7 +38,7 @@ namespace MoneyTron
         Action OnInitA { get; set; }
         Action OnStartA { set; }
         Action OnStopA { set; }
-        Action OnInitB { get; set; }
+        
         Action OnStartB { set; }
         Action OnStopB { set; }
         

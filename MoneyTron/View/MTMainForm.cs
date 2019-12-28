@@ -306,6 +306,13 @@ namespace MoneyTron
             dgv.Columns.Add(column);
 
             column = new DataGridViewTextBoxColumn();
+            column.DataPropertyName = "Side";
+            column.Name = "Side";
+            column.AutoSizeMode = DataGridViewAutoSizeColumnMode.AllCells;
+            column.HeaderCell.Style.Alignment = DataGridViewContentAlignment.BottomCenter;
+            dgv.Columns.Add(column);
+
+            column = new DataGridViewTextBoxColumn();
             column.DataPropertyName = "Price";
             column.Name = "Price";
             column.AutoSizeMode = DataGridViewAutoSizeColumnMode.AllCells;

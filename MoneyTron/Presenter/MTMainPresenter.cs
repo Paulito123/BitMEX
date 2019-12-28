@@ -63,8 +63,10 @@ namespace MoneyTron.Presenter
             _view = view;
 
             ConfigureAccounts();
-            HandleCommands();
+            HandleTasks();
         }
+
+        #region Configuration
 
         private void ConfigureAccounts()
         {
@@ -73,26 +75,25 @@ namespace MoneyTron.Presenter
             Accounts.Add(MTAccount.B, 170591);
         }
 
-        private void HandleCommands()
+        private void HandleTasks()
         {
-            _view.OnInitA = OnInitA;
+            _view.OnInitA = OnInit;
             _view.OnStartA = async () => await OnStartA();
             _view.OnStopA = OnStopA;
-            _view.OnInitB = OnInitB;
-            _view.OnStartB = async () => await OnStartB();
-            _view.OnStopB = OnStopB;
+
+            //_view.OnStartB = async () => await OnStartB();
+            //_view.OnStopB = OnStopB;
         }
 
-        private void OnInitA()
+        #endregion Configuration
+
+        #region Start and stop tasks
+
+        private void OnInit()
         {
-            Clear(MTAccount.A);
+            Clear();
         }
-
-        private void OnInitB()
-        {
-            Clear(MTAccount.B);
-        }
-
+        
         private async Task OnStartA()
         {
             var pair = _defaultPair.ToUpper();
@@ -113,7 +114,7 @@ namespace MoneyTron.Presenter
             _communicatorA.ReconnectionHappened.Subscribe(async type =>
             {
                 _view.StatusA($"Reconnected (type: {type})", StatusType.Info);
-                _view.ConnStartA = System.DateTime.Now.ToString("dd-MM-yy HH:mm:ss");
+                _view.ConnStartA = DateTime.Now.ToString("dd-MM-yy HH:mm:ss");
                 await SendSubscriptions(_clientA, pair, MTAccount.A);
             });
 
@@ -161,7 +162,7 @@ namespace MoneyTron.Presenter
             
             await _communicatorB.Start();
             
-            StartPingCheckB(_clientB);
+            //StartPingCheckB(_clientB);
         }
 
         private void OnStopA()
@@ -174,7 +175,7 @@ namespace MoneyTron.Presenter
                 _communicatorA.Dispose();
             _clientA = null;
             _communicatorA = null;
-            Clear(MTAccount.A);
+            Clear();
         }
 
         private void OnStopB()
@@ -187,8 +188,12 @@ namespace MoneyTron.Presenter
                 _communicatorB.Dispose();
             _clientB = null;
             _communicatorB = null;
-            Clear(MTAccount.B);
+            Clear();
         }
+
+        #endregion Start and stop tasks
+
+        #region Subscription methods
 
         private void Subscribe(BitmexWebsocketClient client, MTAccount acc)
         {
@@ -260,10 +265,9 @@ namespace MoneyTron.Presenter
             //await client.Send(new ExecutionSubscribeRequest());
         }
 
-        private void HandleErrorResponse(ErrorResponse response)
-        {
+        #endregion Subscription methods
 
-        }
+        #region Main response handlers
         
         private void HandleOrderResponse(OrderResponse response)
         {
@@ -276,20 +280,54 @@ namespace MoneyTron.Presenter
 
                 if (acc == Accounts[MTAccount.A])
                 {
-                    foreach (Order o in response.Data)
+                    if (response.Action == BitmexAction.Insert || response.Action == BitmexAction.Partial)
                     {
-                        _orderStatsHandlerA.HandleOrder(o);
+                        foreach (Order o in response.Data)
+                        {
+                            _orderStatsHandlerA.HandleNewOrder(o);
+                        }
                     }
-
+                    else if (response.Action == BitmexAction.Update)
+                    {
+                        foreach (Order o in response.Data)
+                        {
+                            _orderStatsHandlerA.HandleUpdateOrder(o);
+                        }
+                    }
+                    else if (response.Action == BitmexAction.Delete)
+                    {
+                        foreach (Order o in response.Data)
+                        {
+                            _orderStatsHandlerA.HandleDeleteOrder(o);
+                        }
+                    }
+                    
                     var bs = _orderStatsHandlerA.GetBindingSource();
                     _view.bSRCOrdersA = bs;
                     _view.TabOrdersATitle = $"Orders [{bs.Count.ToString()}]";
                 }
                 else if (acc == Accounts[MTAccount.B])
                 {
-                    foreach (Order o in response.Data)
+                    if (response.Action == BitmexAction.Insert || response.Action == BitmexAction.Partial)
                     {
-                        _orderStatsHandlerB.HandleOrder(o);
+                        foreach (Order o in response.Data)
+                        {
+                            _orderStatsHandlerB.HandleNewOrder(o);
+                        }
+                    }
+                    else if (response.Action == BitmexAction.Update)
+                    {
+                        foreach (Order o in response.Data)
+                        {
+                            _orderStatsHandlerB.HandleUpdateOrder(o);
+                        }
+                    }
+                    else if (response.Action == BitmexAction.Delete)
+                    {
+                        foreach (Order o in response.Data)
+                        {
+                            _orderStatsHandlerB.HandleDeleteOrder(o);
+                        }
                     }
 
                     var bs = _orderStatsHandlerB.GetBindingSource();
@@ -307,8 +345,6 @@ namespace MoneyTron.Presenter
         {
             if (response.Data.Count() == 0)
                 return;
-
-            Log.Information($"Position [{response.Action}] received with [{response.Data.Count().ToString()}] nr of Data items.");
 
             try
             {
@@ -377,16 +413,6 @@ namespace MoneyTron.Presenter
             }
         }
         
-        private void HandleExecutionResponseA(ExecutionResponse response)
-        {
-            //_view.DebugOutput = response.Data.ToString();
-        }
-
-        private void HandleExecutionResponseB(ExecutionResponse response)
-        {
-            //_view.DebugOutput = response.Data.ToString();
-        }
-
         private void HandleMargin(MarginResponse response)
         {
             if (response.Data.Count() == 0)
@@ -426,6 +452,10 @@ namespace MoneyTron.Presenter
                 Log.Error(exc.Message);
             }
         }
+
+        #endregion Main response handlers
+
+        #region Copied or irrelevant stuff
 
         private void HandleOrderBook(BookResponse response)
         {
@@ -528,63 +558,58 @@ namespace MoneyTron.Presenter
             }
         }
 
-        private void Clear(MTAccount acc)
+        private void Clear()
         {
+            _view.AccountAID = string.Empty;
+            _view.AvailableFundsA = string.Empty;
+            _view.ConnStartA = string.Empty;
+            _view.ConnStatusA = string.Empty;
+            _view.PingL = string.Empty;
+            _view.TabOrdersATitle = "Orders [0]";
+            _view.TabPosATitle = "Positions [0]";
+            _view.TotalFundsA = string.Empty;
+            _view.MarginBalanceA = string.Empty;
+            _view.bSRCOrdersA = new BindingSource();
+            _view.bSRCPosA = new BindingSource();
+
+            _view.Bid = string.Empty;
+            _view.Ask = string.Empty;
+            _view.BidAmount = string.Empty;
+            _view.AskAmount = string.Empty;
+            _view.Trades1Min(string.Empty, Side.Buy);
+            _view.Trades5Min(string.Empty, Side.Buy);
+            _view.Trades15Min(string.Empty, Side.Buy);
+            _view.Trades1Hour(string.Empty, Side.Buy);
+            _view.Trades24Hours(string.Empty, Side.Buy);
             
-            if (acc == MTAccount.A)
-            {
-                _view.AccountAID = string.Empty;
-                _view.AvailableFundsA = string.Empty;
-                _view.ConnStartA = string.Empty;
-                _view.ConnStatusA = string.Empty;
-                _view.PingL = string.Empty;
-                _view.TabOrdersATitle = "Orders [0]";
-                _view.TabPosATitle = "Positions [0]";
-                _view.TotalFundsA = string.Empty;
-                _view.MarginBalanceA = string.Empty;
-                _view.bSRCOrdersA = new BindingSource();
-                _view.bSRCPosA = new BindingSource();
-
-                _view.Bid = string.Empty;
-                _view.Ask = string.Empty;
-                _view.BidAmount = string.Empty;
-                _view.AskAmount = string.Empty;
-                _view.Trades1Min(string.Empty, Side.Buy);
-                _view.Trades5Min(string.Empty, Side.Buy);
-                _view.Trades15Min(string.Empty, Side.Buy);
-                _view.Trades1Hour(string.Empty, Side.Buy);
-                _view.Trades24Hours(string.Empty, Side.Buy);
-            }
-            else
-            {
-                _view.AccountBID = string.Empty;
-                _view.AvailableFundsB = string.Empty;
-                _view.ConnStartB = string.Empty;
-                _view.ConnStatusB = string.Empty;
-                _view.PingS = string.Empty;
-                _view.TabOrdersBTitle = "Orders [0]";
-                _view.TabPosBTitle = "Positions [0]";
-                _view.TotalFundsB = string.Empty;
-                _view.MarginBalanceB = string.Empty;
-                _view.bSRCOrdersB = new BindingSource();
-                _view.bSRCPosB = new BindingSource();
-            }
-        }
-        
-        private delegate void ShowMessageBoxDelegate(string strMessage, string strCaption/*, MessageBoxButton enmButton, MessageBoxImage enmImage*/);
-
-        // Method invoked on a separate thread that shows the message box.
-        private static void ShowMessageBox(string strMessage, string strCaption/*, MessageBoxButton enmButton, MessageBoxImage enmImage*/)
-        {
-            System.Windows.MessageBox.Show(strMessage, strCaption/*, enmButton, enmImage*/);
+            _view.AccountBID = string.Empty;
+            _view.AvailableFundsB = string.Empty;
+            _view.ConnStartB = string.Empty;
+            _view.ConnStatusB = string.Empty;
+            _view.PingS = string.Empty;
+            _view.TabOrdersBTitle = "Orders [0]";
+            _view.TabPosBTitle = "Positions [0]";
+            _view.TotalFundsB = string.Empty;
+            _view.MarginBalanceB = string.Empty;
+            _view.bSRCOrdersB = new BindingSource();
+            _view.bSRCPosB = new BindingSource();
         }
 
-        // Shows a message box from a separate worker thread.
-        public static void ShowMessageBoxAsync(string strMessage, string strCaption/*, MessageBoxButton enmButton, MessageBoxImage enmImage*/)
-        {
-            ShowMessageBoxDelegate caller = new ShowMessageBoxDelegate(ShowMessageBox);
-            caller.Invoke(strMessage, strCaption/*, enmButton, enmImage, null, null*/);
-        }
+        //private delegate void ShowMessageBoxDelegate(string strMessage, string strCaption/*, MessageBoxButton enmButton, MessageBoxImage enmImage*/);
 
+        //// Method invoked on a separate thread that shows the message box.
+        //private static void ShowMessageBox(string strMessage, string strCaption/*, MessageBoxButton enmButton, MessageBoxImage enmImage*/)
+        //{
+        //    System.Windows.MessageBox.Show(strMessage, strCaption/*, enmButton, enmImage*/);
+        //}
+
+        //// Shows a message box from a separate worker thread.
+        //public static void ShowMessageBoxAsync(string strMessage, string strCaption/*, MessageBoxButton enmButton, MessageBoxImage enmImage*/)
+        //{
+        //    ShowMessageBoxDelegate caller = new ShowMessageBoxDelegate(ShowMessageBox);
+        //    caller.Invoke(strMessage, strCaption/*, enmButton, enmImage, null, null*/);
+        //}
+
+        #endregion Copied or irrelevant stuff
     }
 }
