@@ -32,12 +32,19 @@ namespace MoneyTron.Presenter
 
         private OrderBookStatsComputer _orderBookStatsComputer;
         private TradeStatsComputer _tradeStatsComputer;
+        private GeneralStatsHandler _generalStatsHandler;
 
         private OrdersStatsHandler _orderStatsHandlerA;
         private OrdersStatsHandler _orderStatsHandlerB;
 
         private PositionStatsHandler _posStatsHandlerA;
         private PositionStatsHandler _posStatsHandlerB;
+
+        private ErrorStatsHandler _errorStatsHandlerA;
+        private ErrorStatsHandler _errorStatsHandlerB;
+
+        private MarginStatsHandler _marginStatsHandlerA;
+        private MarginStatsHandler _marginStatsHandlerB;
 
         private Dictionary<MTAccount, long> Accounts;
 
@@ -77,12 +84,10 @@ namespace MoneyTron.Presenter
 
         private void HandleTasks()
         {
-            _view.OnInitA = OnInit;
+            _view.OnInit = OnInit;
+            _view.OnStop = OnStop;
             _view.OnStartA = async () => await OnStartA();
-            _view.OnStopA = OnStopA;
-
-            //_view.OnStartB = async () => await OnStartB();
-            //_view.OnStopB = OnStopB;
+            _view.OnStartB = async () => await OnStartB();
         }
 
         #endregion Configuration
@@ -96,14 +101,17 @@ namespace MoneyTron.Presenter
         
         private async Task OnStartA()
         {
-            var pair = _defaultPair.ToUpper();
+            DateTime dt = DateTime.Now;
+            _generalStatsHandler = new GeneralStatsHandler(dt);
 
+            var pair = _defaultPair.ToUpper();
+            
             _tradeStatsComputer = new TradeStatsComputer();
             _orderBookStatsComputer = new OrderBookStatsComputer();
             _orderStatsHandlerA = new OrdersStatsHandler();
-            _orderStatsHandlerB = new OrdersStatsHandler();
             _posStatsHandlerA = new PositionStatsHandler();
-            _posStatsHandlerB = new PositionStatsHandler();
+            _errorStatsHandlerA = new ErrorStatsHandler();
+            _marginStatsHandlerA = new MarginStatsHandler();
 
             var url = BitmexValues.ApiWebsocketTestnetUrl;
             _communicatorA = new BitmexWebsocketCommunicator(url);
@@ -113,15 +121,27 @@ namespace MoneyTron.Presenter
 
             _communicatorA.ReconnectionHappened.Subscribe(async type =>
             {
+                if (type != ReconnectionType.Initial)
+                {
+                    Log.Warning($"Reconnected A (type: {type})");
+                    _errorStatsHandlerA.Add2Reconnections(1);
+                }
+                else if (type == ReconnectionType.Error)
+                    _errorStatsHandlerA.Add2ErrorCnt(1);
+
                 _view.StatusA($"Reconnected (type: {type})", StatusType.Info);
-                _view.ConnStartA = DateTime.Now.ToString("dd-MM-yy HH:mm:ss");
+                _view.ConnStartA = dt.ToString("dd-MM-yy HH:mm:ss");
+
                 await SendSubscriptions(_clientA, pair, MTAccount.A);
             });
 
             _communicatorA.DisconnectionHappened.Subscribe(type =>
             {
+                _errorStatsHandlerA.Add2Disconnections(1);
+
                 if (type == DisconnectionType.Error)
                 {
+                    _errorStatsHandlerA.Add2ErrorCnt(1);
                     _view.StatusA($"Disconnected by error, next try in {_communicatorA.ErrorReconnectTimeoutMs / 1000} sec", StatusType.Error);
                     return;
                 }
@@ -137,6 +157,11 @@ namespace MoneyTron.Presenter
         {
             var pair = _defaultPair.ToUpper();
 
+            _orderStatsHandlerB = new OrdersStatsHandler();
+            _posStatsHandlerB = new PositionStatsHandler();
+            _errorStatsHandlerB = new ErrorStatsHandler();
+            _marginStatsHandlerB = new MarginStatsHandler();
+
             var url = BitmexValues.ApiWebsocketTestnetUrl;
             _communicatorB = new BitmexWebsocketCommunicator(url);
             _clientB = new BitmexWebsocketClient(_communicatorB);
@@ -145,15 +170,27 @@ namespace MoneyTron.Presenter
             
             _communicatorB.ReconnectionHappened.Subscribe(async type =>
             {
+                if (type != ReconnectionType.Initial)
+                {
+                    Log.Warning($"Reconnected B (type: {type})");
+                    _errorStatsHandlerB.Add2Reconnections(1);
+                }
+                else if (type == ReconnectionType.Error)
+                    _errorStatsHandlerB.Add2ErrorCnt(1);
+
                 _view.StatusB($"Reconnected (type: {type})", StatusType.Info);
                 _view.ConnStartB = System.DateTime.Now.ToString("dd-MM-yy HH:mm:ss");
+
                 await SendSubscriptions(_clientB, pair, MTAccount.B);
             });
             
             _communicatorB.DisconnectionHappened.Subscribe(type =>
             {
+                _errorStatsHandlerB.Add2Disconnections(1);
+
                 if (type == DisconnectionType.Error)
                 {
+                    _errorStatsHandlerB.Add2ErrorCnt(1);
                     _view.StatusB($"Disconnected by error, next try in {_communicatorB.ErrorReconnectTimeoutMs / 1000} sec", StatusType.Error);
                     return;
                 }
@@ -162,10 +199,10 @@ namespace MoneyTron.Presenter
             
             await _communicatorB.Start();
             
-            //StartPingCheckB(_clientB);
+            StartPingCheckB(_clientB);
         }
 
-        private void OnStopA()
+        private void OnStop()
         {
             if (_pingSubscriptionA != null)
                 _pingSubscriptionA.Dispose();
@@ -175,11 +212,6 @@ namespace MoneyTron.Presenter
                 _communicatorA.Dispose();
             _clientA = null;
             _communicatorA = null;
-            Clear();
-        }
-
-        private void OnStopB()
-        {
             if (_pingSubscriptionB != null)
                 _pingSubscriptionB.Dispose();
             if (_clientB != null)
@@ -337,7 +369,7 @@ namespace MoneyTron.Presenter
             }
             catch(Exception exc)
             {
-                Log.Error(exc.Message);
+                Log.Error("[HandleOrderResponse]:" + exc.Message);
             }
         }
 
@@ -409,7 +441,7 @@ namespace MoneyTron.Presenter
             }
             catch (Exception exc)
             {
-                Log.Error(exc.Message);
+                Log.Error("[HandlePositionResponse]:" + exc.Message);
             }
         }
         
@@ -422,34 +454,45 @@ namespace MoneyTron.Presenter
             {
                 if (response.Action == BitmexAction.Partial || response.Action == BitmexAction.Insert || response.Action == BitmexAction.Update)
                 {
+                    MarginStats ma = null;
+                    MarginStats mb = null;
+                    
                     foreach (Margin m in response.Data)
                     {
                         if (m.Account == Accounts[MTAccount.A])
                         {
-                            if (m.WalletBalance > 0)
-                                _view.TotalFundsA = BitmexConverter.ConvertToBtc("XBt", m.WalletBalance ?? 0).ToString();
-                            if (m.MarginBalance > 0)
-                                _view.AvailableFundsA = BitmexConverter.ConvertToBtc("XBt", m.MarginBalance ?? 0).ToString();
-                            if (m.AvailableMargin > 0)
-                                _view.MarginBalanceA = BitmexConverter.ConvertToBtc("XBt", m.AvailableMargin ?? 0).ToString();
                             _view.AccountAID = m.Account.ToString();
+
+                            _marginStatsHandlerA.UpdateBalances(m.WalletBalance, m.MarginBalance, m.AvailableMargin);
+                            ma = _marginStatsHandlerA.GetMarginBalances();
+                            
+                            _view.TotalFundsA = BitmexConverter.ConvertToBtc("XBt", ma.WalletBalance).ToString();
+                            _view.AvailableFundsA = BitmexConverter.ConvertToBtc("XBt", ma.MarginBalance).ToString();
+                            _view.MarginBalanceA = BitmexConverter.ConvertToBtc("XBt", ma.AvailableMargin).ToString();
                         }
                         else if (m.Account == Accounts[MTAccount.B])
                         {
-                            if (m.WalletBalance > 0)
-                                _view.TotalFundsB = BitmexConverter.ConvertToBtc("XBt", m.WalletBalance ?? 0).ToString();
-                            if (m.MarginBalance > 0)
-                                _view.AvailableFundsB = BitmexConverter.ConvertToBtc("XBt", m.MarginBalance ?? 0).ToString();
-                            if (m.AvailableMargin > 0)
-                                _view.MarginBalanceB = BitmexConverter.ConvertToBtc("XBt", m.AvailableMargin ?? 0).ToString();
                             _view.AccountBID = m.Account.ToString();
+
+                            _marginStatsHandlerB.UpdateBalances(m.WalletBalance, m.MarginBalance, m.AvailableMargin);
+                            mb = _marginStatsHandlerB.GetMarginBalances();
+
+                            _view.TotalFundsB = BitmexConverter.ConvertToBtc("XBt", mb.WalletBalance).ToString();
+                            _view.AvailableFundsB = BitmexConverter.ConvertToBtc("XBt", mb.MarginBalance).ToString();
+                            _view.MarginBalanceB = BitmexConverter.ConvertToBtc("XBt", mb.AvailableMargin).ToString();
                         }
                     }
+
+                    var a = (string.IsNullOrEmpty(_view.TotalFundsA)) ? 0.0 : double.Parse(_view.TotalFundsA);
+                    var b = (string.IsNullOrEmpty(_view.TotalFundsB)) ? 0.0 : double.Parse(_view.TotalFundsB);
+
+                    _view.PNLA = ((int)(a / (a + b) * 100)).ToString();
+                    _view.CashImbalance = (int)(a / (a + b) * 100);
                 }
             }
             catch (Exception exc)
             {
-                Log.Error(exc.Message);
+                Log.Error("[HandleMargin]:" + exc.Message);
             }
         }
 
@@ -550,12 +593,20 @@ namespace MoneyTron.Presenter
             {
                 _view.PingL = $"{diff.TotalMilliseconds:###} ms";
                 _view.StatusA("Connected", StatusType.Info);
+                _view.DisconnectionsA = $"{_errorStatsHandlerA.GetDisconnections()}";
+                _view.ReconnectionsA = $"{_errorStatsHandlerA.GetReconnections()}";
+                _view.ErrorsCounterA = $"{_errorStatsHandlerA.GetErrorCnt()}";
             }
             else
             {
                 _view.PingS = $"{diff.TotalMilliseconds:###} ms";
                 _view.StatusB("Connected", StatusType.Info);
+                _view.DisconnectionsB = $"{_errorStatsHandlerB.GetDisconnections()}";
+                _view.ReconnectionsB = $"{_errorStatsHandlerB.GetReconnections()}";
+                _view.ErrorsCounterB = $"{_errorStatsHandlerB.GetErrorCnt()}";
             }
+            _view.TimeConnected = $"{_generalStatsHandler.GetTimeActive()}";
+            _view.ErrorsCounterTotal = $"{_errorStatsHandlerA.GetErrorCnt() + _errorStatsHandlerB.GetErrorCnt()}";
         }
 
         private void Clear()
@@ -593,6 +644,16 @@ namespace MoneyTron.Presenter
             _view.MarginBalanceB = string.Empty;
             _view.bSRCOrdersB = new BindingSource();
             _view.bSRCPosB = new BindingSource();
+
+            _view.DisconnectionsB = string.Empty;
+            _view.ReconnectionsB = string.Empty;
+            _view.ErrorsCounterB = string.Empty;
+            _view.DisconnectionsA = string.Empty;
+            _view.ReconnectionsA = string.Empty;
+            _view.ErrorsCounterA = string.Empty;
+
+            _view.TimeConnected = string.Empty;
+            _view.ErrorsCounterTotal = string.Empty;
         }
 
         //private delegate void ShowMessageBoxDelegate(string strMessage, string strCaption/*, MessageBoxButton enmButton, MessageBoxImage enmImage*/);

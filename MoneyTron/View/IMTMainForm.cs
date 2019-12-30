@@ -11,6 +11,10 @@ namespace MoneyTron
         string AccountBID { get; set; }
         string ConnStatusA { get; set; }
         string ConnStatusB { get; set; }
+        string ReconnectionsA { get; set; }
+        string ReconnectionsB { get; set; }
+        string DisconnectionsA { get; set; }
+        string DisconnectionsB { get; set; }
         string ConnStartA { get; set; }
         string ConnStartB { get; set; }
         string Bid { get; set; }
@@ -29,18 +33,25 @@ namespace MoneyTron
         string TabOrdersBTitle { get; set; }
         string PingL { get; set; }
         string PingS { get; set; }
-        
+        string ErrorsCounterA { get; set; }
+        string ErrorsCounterB { get; set; }
+        string ErrorsCounterTotal { get; set; }
+        string TimeConnected { get;  set; }
+        int CashImbalance { get; set; }
+        string PNLA { get; set; }
+        string PNLB { get; set; }
+        string TotalCostA { get; set; }
+        string TotalCostB { get; set; }
+
         BindingSource bSRCOrdersA { get; set; }
         BindingSource bSRCOrdersB { get; set; }
         BindingSource bSRCPosA { get; set; }
         BindingSource bSRCPosB { get; set; }
 
-        Action OnInitA { get; set; }
+        Action OnInit { get; set; }
+        Action OnStop { set; }
         Action OnStartA { set; }
-        Action OnStopA { set; }
-        
         Action OnStartB { set; }
-        Action OnStopB { set; }
         
         void Trades1Min(string value, Side side);
         void Trades5Min(string value, Side side);

@@ -82,14 +82,39 @@ namespace MoneyTron
 
         public string ConnStatusA
         {
-            get => lblAConnStatus.Text;
-            set => SetLabelOnGuiThread(lblAConnStatus, value);
+            
+            get => tbStatusA.Text;
+            set => SetTextBoxOnGuiThread(tbStatusA, value);
         }
 
         public string ConnStatusB
         {
-            get => lblBConnStatus.Text;
-            set => SetLabelOnGuiThread(lblBConnStatus, value);
+            get => tbStatusA.Text;
+            set => SetTextBoxOnGuiThread(tbStatusB, value);
+        }
+
+        public string ReconnectionsA
+        {
+            get => lblReconnectionsA.Text;
+            set => SetLabelOnGuiThread(lblReconnectionsA, value);
+        }
+
+        public string ReconnectionsB
+        {
+            get => lblReconnectionsB.Text;
+            set => SetLabelOnGuiThread(lblReconnectionsB, value);
+        }
+
+        public string DisconnectionsA
+        {
+            get => lblDisconnectionsA.Text;
+            set => SetLabelOnGuiThread(lblDisconnectionsA, value);
+        }
+
+        public string DisconnectionsB
+        {
+            get => lblDisconnectionsB.Text;
+            set => SetLabelOnGuiThread(lblDisconnectionsB, value);
         }
 
         public string ConnStartA
@@ -175,17 +200,71 @@ namespace MoneyTron
             get => lblPingB.Text;
             set => SetLabelOnGuiThread(lblPingB, value);
         }
-        
+
+        public string ErrorsCounterA
+        {
+            get => lblErrorsA.Text;
+            set => SetLabelOnGuiThread(lblErrorsA, value);
+        }
+
+        public string ErrorsCounterB
+        {
+            get => lblErrorsB.Text;
+            set => SetLabelOnGuiThread(lblErrorsB, value);
+        }
+
+        public string ErrorsCounterTotal
+        {
+            get => lblErrorsTotal.Text;
+            set => SetLabelOnGuiThread(lblErrorsTotal, value);
+        }
+
+        public string TimeConnected
+        {
+            get => lblTimeConnected.Text;
+            set => SetLabelOnGuiThread(lblTimeConnected, value);
+        }
+
+        public int CashImbalance
+        {
+            get => pbCashImbalance.Value;
+            set => SetPBOnGuiThread(pbCashImbalance, value);
+        }
+
+        public string PNLA
+        {
+            get => lblPNLA.Text;
+            set => SetLabelOnGuiThread(lblPNLA, value);
+        }
+
+        public string PNLB
+        {
+            get => lblPNLB.Text;
+            set => SetLabelOnGuiThread(lblPNLB, value);
+        }
+
+        public string TotalCostA
+        {
+            get => lblTotalCostA.Text;
+            set => SetLabelOnGuiThread(lblTotalCostA, value);
+        }
+
+        public string TotalCostB
+        {
+            get => lblTotalCostB.Text;
+            set => SetLabelOnGuiThread(lblTotalCostB, value);
+        }
+
         public void StatusA(string value, StatusType type)
         {
-            SetLabelOnGuiThread(lblAConnStatus, value);
-            lblAConnStatus.ForeColor = GetForeColorFor(type);
+            SetTextBoxOnGuiThread(tbStatusA, value);
+            tbStatusA.ForeColor = GetForeColorFor(type);
         }
 
         public void StatusB(string value, StatusType type)
         {
-            SetLabelOnGuiThread(lblBConnStatus, value);
-            lblBConnStatus.ForeColor = GetForeColorFor(type);
+            SetTextBoxOnGuiThread(tbStatusB, value);
+            tbStatusB.ForeColor = GetForeColorFor(type);
         }
 
         void IMTMainForm.Trades1Min(string value, Side side)
@@ -242,12 +321,10 @@ namespace MoneyTron
             set => SetBindingSRCOnGuiThread(dGVPosB, value);
         }
 
-        public Action OnInitA { get; set; }
+        public Action OnInit { get; set; }
         public Action OnStartA { get; set; }
-        public Action OnStopA { get; set; }
-        public Action OnInitB { get; set; }
+        public Action OnStop { get; set; }
         public Action OnStartB { get; set; }
-        public Action OnStopB { get; set; }
 
         private Color GetForeColorFor(Side side)
         {
@@ -392,14 +469,11 @@ namespace MoneyTron
             column.HeaderCell.Style.Alignment = DataGridViewContentAlignment.BottomCenter;
             dgv.Columns.Add(column);
 
-            //                                              "unrealisedPnl":-700,"unrealisedPnlPcnt":-0.0001,"unrealisedRoePcnt":-0.0001
-            //"realisedPnl":-19301,"unrealisedGrossPnl":2800,"unrealisedPnl":2800,"unrealisedPnlPcnt":0.0006
         }
 
         private void Form1_Load(object sender, EventArgs e)
         {
-            OnInitA?.Invoke();
-            OnInitB?.Invoke();
+            OnInit?.Invoke();
             disconnectToolStripMenuItem.Enabled = false;
         }
 
@@ -423,8 +497,7 @@ namespace MoneyTron
         /// <param name="e"></param>
         private void disconnectToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            OnStopA?.Invoke();
-            OnStopB?.Invoke();
+            OnStop?.Invoke();
             connectToolStripMenuItem.Enabled = true;
             disconnectToolStripMenuItem.Enabled = false;
         }
@@ -476,6 +549,42 @@ namespace MoneyTron
             this.Invoke(new Action(() =>
             {
                 tp.Text = value;
+            }));
+        }
+
+        private void SetTextBoxOnGuiThread(TextBox tb, string value)
+        {
+            if (tb.Text == value)
+                return;
+
+            if (!InvokeRequired)
+            {
+                tb.Text = value;
+                return;
+            }
+
+            this.Invoke(new Action(() =>
+            {
+                tb.Text = value;
+            }));
+        }
+
+        private void SetPBOnGuiThread(ProgressBar pb, int value)
+        {
+            if (pb.Value == value)
+            {
+                return;
+            }
+                
+            if (!InvokeRequired)
+            {
+                pb.Value = value;
+                return;
+            }
+
+            this.Invoke(new Action(() =>
+            {
+                pb.Value = value;
             }));
         }
         
