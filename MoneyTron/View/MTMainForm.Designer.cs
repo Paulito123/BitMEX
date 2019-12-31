@@ -28,10 +28,10 @@
         /// </summary>
         private void InitializeComponent()
         {
-            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle5 = new System.Windows.Forms.DataGridViewCellStyle();
-            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle6 = new System.Windows.Forms.DataGridViewCellStyle();
-            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle7 = new System.Windows.Forms.DataGridViewCellStyle();
-            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle8 = new System.Windows.Forms.DataGridViewCellStyle();
+            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle41 = new System.Windows.Forms.DataGridViewCellStyle();
+            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle42 = new System.Windows.Forms.DataGridViewCellStyle();
+            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle43 = new System.Windows.Forms.DataGridViewCellStyle();
+            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle44 = new System.Windows.Forms.DataGridViewCellStyle();
             this.menuStrip1 = new System.Windows.Forms.MenuStrip();
             this.connectionsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.liveToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -51,6 +51,8 @@
             this.tlpAMeasuresMain = new System.Windows.Forms.TableLayoutPanel();
             this.panelAMeasuresRight = new System.Windows.Forms.Panel();
             this.label4 = new System.Windows.Forms.Label();
+            this.lblPNLA = new System.Windows.Forms.Label();
+            this.lblTotalCostA = new System.Windows.Forms.Label();
             this.lblMarginBalanceA = new System.Windows.Forms.Label();
             this.lblAAvailableFunds = new System.Windows.Forms.Label();
             this.label31 = new System.Windows.Forms.Label();
@@ -78,6 +80,8 @@
             this.panelBMeasuresRight = new System.Windows.Forms.Panel();
             this.label2 = new System.Windows.Forms.Label();
             this.lblMarginBalanceB = new System.Windows.Forms.Label();
+            this.lblPNLB = new System.Windows.Forms.Label();
+            this.lblTotalCostB = new System.Windows.Forms.Label();
             this.lblBAvailableFunds = new System.Windows.Forms.Label();
             this.label30 = new System.Windows.Forms.Label();
             this.label22 = new System.Windows.Forms.Label();
@@ -125,14 +129,33 @@
             this.lblTimeConnected = new System.Windows.Forms.Label();
             this.label29 = new System.Windows.Forms.Label();
             this.label26 = new System.Windows.Forms.Label();
-            this.label27 = new System.Windows.Forms.Label();
-            this.pbCashImbalance = new System.Windows.Forms.ProgressBar();
-            this.label23 = new System.Windows.Forms.Label();
             this.label33 = new System.Windows.Forms.Label();
-            this.lblTotalCostA = new System.Windows.Forms.Label();
-            this.lblPNLA = new System.Windows.Forms.Label();
-            this.lblTotalCostB = new System.Windows.Forms.Label();
-            this.lblPNLB = new System.Windows.Forms.Label();
+            this.label23 = new System.Windows.Forms.Label();
+            this.label27 = new System.Windows.Forms.Label();
+            this.lblCashImbalance = new System.Windows.Forms.Label();
+            this.label34 = new System.Windows.Forms.Label();
+            this.label35 = new System.Windows.Forms.Label();
+            this.label36 = new System.Windows.Forms.Label();
+            this.label37 = new System.Windows.Forms.Label();
+            this.label38 = new System.Windows.Forms.Label();
+            this.label39 = new System.Windows.Forms.Label();
+            this.label40 = new System.Windows.Forms.Label();
+            this.label41 = new System.Windows.Forms.Label();
+            this.label42 = new System.Windows.Forms.Label();
+            this.label43 = new System.Windows.Forms.Label();
+            this.label44 = new System.Windows.Forms.Label();
+            this.label45 = new System.Windows.Forms.Label();
+            this.label46 = new System.Windows.Forms.Label();
+            this.label47 = new System.Windows.Forms.Label();
+            this.label48 = new System.Windows.Forms.Label();
+            this.label49 = new System.Windows.Forms.Label();
+            this.label50 = new System.Windows.Forms.Label();
+            this.label51 = new System.Windows.Forms.Label();
+            this.label52 = new System.Windows.Forms.Label();
+            this.label53 = new System.Windows.Forms.Label();
+            this.label54 = new System.Windows.Forms.Label();
+            this.label55 = new System.Windows.Forms.Label();
+            this.label56 = new System.Windows.Forms.Label();
             this.menuStrip1.SuspendLayout();
             this.tlpMain.SuspendLayout();
             this.tlpSplitA_B.SuspendLayout();
@@ -307,14 +330,14 @@
             // 
             this.dGVPosA.BackgroundColor = System.Drawing.Color.Honeydew;
             this.dGVPosA.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            dataGridViewCellStyle5.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleLeft;
-            dataGridViewCellStyle5.BackColor = System.Drawing.SystemColors.Window;
-            dataGridViewCellStyle5.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            dataGridViewCellStyle5.ForeColor = System.Drawing.SystemColors.ControlText;
-            dataGridViewCellStyle5.SelectionBackColor = System.Drawing.Color.Honeydew;
-            dataGridViewCellStyle5.SelectionForeColor = System.Drawing.SystemColors.ControlText;
-            dataGridViewCellStyle5.WrapMode = System.Windows.Forms.DataGridViewTriState.False;
-            this.dGVPosA.DefaultCellStyle = dataGridViewCellStyle5;
+            dataGridViewCellStyle41.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleLeft;
+            dataGridViewCellStyle41.BackColor = System.Drawing.SystemColors.Window;
+            dataGridViewCellStyle41.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            dataGridViewCellStyle41.ForeColor = System.Drawing.SystemColors.ControlText;
+            dataGridViewCellStyle41.SelectionBackColor = System.Drawing.Color.Honeydew;
+            dataGridViewCellStyle41.SelectionForeColor = System.Drawing.SystemColors.ControlText;
+            dataGridViewCellStyle41.WrapMode = System.Windows.Forms.DataGridViewTriState.False;
+            this.dGVPosA.DefaultCellStyle = dataGridViewCellStyle41;
             this.dGVPosA.Dock = System.Windows.Forms.DockStyle.Fill;
             this.dGVPosA.Location = new System.Drawing.Point(3, 3);
             this.dGVPosA.Name = "dGVPosA";
@@ -337,14 +360,14 @@
             // 
             this.dGVOrdersA.BackgroundColor = System.Drawing.Color.Honeydew;
             this.dGVOrdersA.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            dataGridViewCellStyle6.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleLeft;
-            dataGridViewCellStyle6.BackColor = System.Drawing.SystemColors.Window;
-            dataGridViewCellStyle6.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            dataGridViewCellStyle6.ForeColor = System.Drawing.SystemColors.ControlText;
-            dataGridViewCellStyle6.SelectionBackColor = System.Drawing.Color.Honeydew;
-            dataGridViewCellStyle6.SelectionForeColor = System.Drawing.SystemColors.ControlText;
-            dataGridViewCellStyle6.WrapMode = System.Windows.Forms.DataGridViewTriState.False;
-            this.dGVOrdersA.DefaultCellStyle = dataGridViewCellStyle6;
+            dataGridViewCellStyle42.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleLeft;
+            dataGridViewCellStyle42.BackColor = System.Drawing.SystemColors.Window;
+            dataGridViewCellStyle42.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            dataGridViewCellStyle42.ForeColor = System.Drawing.SystemColors.ControlText;
+            dataGridViewCellStyle42.SelectionBackColor = System.Drawing.Color.Honeydew;
+            dataGridViewCellStyle42.SelectionForeColor = System.Drawing.SystemColors.ControlText;
+            dataGridViewCellStyle42.WrapMode = System.Windows.Forms.DataGridViewTriState.False;
+            this.dGVOrdersA.DefaultCellStyle = dataGridViewCellStyle42;
             this.dGVOrdersA.Dock = System.Windows.Forms.DockStyle.Fill;
             this.dGVOrdersA.Location = new System.Drawing.Point(3, 3);
             this.dGVOrdersA.Name = "dGVOrdersA";
@@ -373,6 +396,8 @@
             // panelAMeasuresRight
             // 
             this.panelAMeasuresRight.Controls.Add(this.label4);
+            this.panelAMeasuresRight.Controls.Add(this.label54);
+            this.panelAMeasuresRight.Controls.Add(this.label51);
             this.panelAMeasuresRight.Controls.Add(this.lblPNLA);
             this.panelAMeasuresRight.Controls.Add(this.lblTotalCostA);
             this.panelAMeasuresRight.Controls.Add(this.lblMarginBalanceA);
@@ -381,6 +406,8 @@
             this.panelAMeasuresRight.Controls.Add(this.label32);
             this.panelAMeasuresRight.Controls.Add(this.label15);
             this.panelAMeasuresRight.Controls.Add(this.label9);
+            this.panelAMeasuresRight.Controls.Add(this.label53);
+            this.panelAMeasuresRight.Controls.Add(this.label40);
             this.panelAMeasuresRight.Controls.Add(this.lblATotalFunds);
             this.panelAMeasuresRight.Dock = System.Windows.Forms.DockStyle.Fill;
             this.panelAMeasuresRight.Location = new System.Drawing.Point(352, 3);
@@ -396,6 +423,24 @@
             this.label4.Size = new System.Drawing.Size(82, 13);
             this.label4.TabIndex = 3;
             this.label4.Text = "Wallet Balance:";
+            // 
+            // lblPNLA
+            // 
+            this.lblPNLA.AutoSize = true;
+            this.lblPNLA.Location = new System.Drawing.Point(101, 52);
+            this.lblPNLA.Name = "lblPNLA";
+            this.lblPNLA.Size = new System.Drawing.Size(22, 13);
+            this.lblPNLA.TabIndex = 2;
+            this.lblPNLA.Text = "0.0";
+            // 
+            // lblTotalCostA
+            // 
+            this.lblTotalCostA.AutoSize = true;
+            this.lblTotalCostA.Location = new System.Drawing.Point(101, 39);
+            this.lblTotalCostA.Name = "lblTotalCostA";
+            this.lblTotalCostA.Size = new System.Drawing.Size(22, 13);
+            this.lblTotalCostA.TabIndex = 2;
+            this.lblTotalCostA.Text = "0.0";
             // 
             // lblMarginBalanceA
             // 
@@ -487,7 +532,7 @@
             // 
             this.lblDisconnectionsA.AutoSize = true;
             this.lblDisconnectionsA.ForeColor = System.Drawing.Color.Black;
-            this.lblDisconnectionsA.Location = new System.Drawing.Point(265, 13);
+            this.lblDisconnectionsA.Location = new System.Drawing.Point(244, 13);
             this.lblDisconnectionsA.Name = "lblDisconnectionsA";
             this.lblDisconnectionsA.Size = new System.Drawing.Size(13, 13);
             this.lblDisconnectionsA.TabIndex = 2;
@@ -497,7 +542,7 @@
             // 
             this.lblReconnectionsA.AutoSize = true;
             this.lblReconnectionsA.ForeColor = System.Drawing.Color.Black;
-            this.lblReconnectionsA.Location = new System.Drawing.Point(265, 0);
+            this.lblReconnectionsA.Location = new System.Drawing.Point(244, 0);
             this.lblReconnectionsA.Name = "lblReconnectionsA";
             this.lblReconnectionsA.Size = new System.Drawing.Size(13, 13);
             this.lblReconnectionsA.TabIndex = 2;
@@ -507,7 +552,7 @@
             // 
             this.lblErrorsA.AutoSize = true;
             this.lblErrorsA.ForeColor = System.Drawing.Color.Black;
-            this.lblErrorsA.Location = new System.Drawing.Point(265, 26);
+            this.lblErrorsA.Location = new System.Drawing.Point(244, 26);
             this.lblErrorsA.Name = "lblErrorsA";
             this.lblErrorsA.Size = new System.Drawing.Size(13, 13);
             this.lblErrorsA.TabIndex = 2;
@@ -536,7 +581,7 @@
             // lblAAccountID
             // 
             this.lblAAccountID.AutoSize = true;
-            this.lblAAccountID.Location = new System.Drawing.Point(63, 0);
+            this.lblAAccountID.Location = new System.Drawing.Point(56, 0);
             this.lblAAccountID.Name = "lblAAccountID";
             this.lblAAccountID.Size = new System.Drawing.Size(13, 13);
             this.lblAAccountID.TabIndex = 0;
@@ -545,20 +590,20 @@
             // labelhuppeldepup
             // 
             this.labelhuppeldepup.AutoSize = true;
-            this.labelhuppeldepup.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.labelhuppeldepup.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.labelhuppeldepup.Location = new System.Drawing.Point(138, 13);
             this.labelhuppeldepup.Name = "labelhuppeldepup";
-            this.labelhuppeldepup.Size = new System.Drawing.Size(98, 13);
+            this.labelhuppeldepup.Size = new System.Drawing.Size(83, 13);
             this.labelhuppeldepup.TabIndex = 2;
             this.labelhuppeldepup.Text = "Disconnections:";
             // 
             // label24
             // 
             this.label24.AutoSize = true;
-            this.label24.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label24.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.label24.Location = new System.Drawing.Point(138, 0);
             this.label24.Name = "label24";
-            this.label24.Size = new System.Drawing.Size(96, 13);
+            this.label24.Size = new System.Drawing.Size(82, 13);
             this.label24.TabIndex = 2;
             this.label24.Text = "Reconnections:";
             // 
@@ -584,30 +629,30 @@
             // label21
             // 
             this.label21.AutoSize = true;
-            this.label21.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label21.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.label21.Location = new System.Drawing.Point(138, 26);
             this.label21.Name = "label21";
-            this.label21.Size = new System.Drawing.Size(121, 13);
+            this.label21.Size = new System.Drawing.Size(100, 13);
             this.label21.TabIndex = 2;
             this.label21.Text = "Errors since started:";
             // 
             // label5
             // 
             this.label5.AutoSize = true;
-            this.label5.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label5.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.label5.Location = new System.Drawing.Point(3, 146);
             this.label5.Name = "label5";
-            this.label5.Size = new System.Drawing.Size(129, 13);
+            this.label5.Size = new System.Drawing.Size(108, 13);
             this.label5.TabIndex = 2;
             this.label5.Text = "Connection restarted:";
             // 
             // label1
             // 
             this.label1.AutoSize = true;
-            this.label1.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label1.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.label1.Location = new System.Drawing.Point(3, 0);
             this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(54, 13);
+            this.label1.Size = new System.Drawing.Size(47, 13);
             this.label1.TabIndex = 0;
             this.label1.Text = "Account";
             // 
@@ -663,7 +708,9 @@
             // panelBMeasuresRight
             // 
             this.panelBMeasuresRight.Controls.Add(this.label2);
+            this.panelBMeasuresRight.Controls.Add(this.label56);
             this.panelBMeasuresRight.Controls.Add(this.lblMarginBalanceB);
+            this.panelBMeasuresRight.Controls.Add(this.label52);
             this.panelBMeasuresRight.Controls.Add(this.lblPNLB);
             this.panelBMeasuresRight.Controls.Add(this.lblTotalCostB);
             this.panelBMeasuresRight.Controls.Add(this.lblBAvailableFunds);
@@ -671,6 +718,8 @@
             this.panelBMeasuresRight.Controls.Add(this.label22);
             this.panelBMeasuresRight.Controls.Add(this.label19);
             this.panelBMeasuresRight.Controls.Add(this.label10);
+            this.panelBMeasuresRight.Controls.Add(this.label41);
+            this.panelBMeasuresRight.Controls.Add(this.label55);
             this.panelBMeasuresRight.Controls.Add(this.lblBTotalFunds);
             this.panelBMeasuresRight.Dock = System.Windows.Forms.DockStyle.Fill;
             this.panelBMeasuresRight.Location = new System.Drawing.Point(352, 3);
@@ -695,6 +744,24 @@
             this.lblMarginBalanceB.Size = new System.Drawing.Size(22, 13);
             this.lblMarginBalanceB.TabIndex = 2;
             this.lblMarginBalanceB.Text = "0.0";
+            // 
+            // lblPNLB
+            // 
+            this.lblPNLB.AutoSize = true;
+            this.lblPNLB.Location = new System.Drawing.Point(101, 52);
+            this.lblPNLB.Name = "lblPNLB";
+            this.lblPNLB.Size = new System.Drawing.Size(22, 13);
+            this.lblPNLB.TabIndex = 2;
+            this.lblPNLB.Text = "0.0";
+            // 
+            // lblTotalCostB
+            // 
+            this.lblTotalCostB.AutoSize = true;
+            this.lblTotalCostB.Location = new System.Drawing.Point(101, 39);
+            this.lblTotalCostB.Name = "lblTotalCostB";
+            this.lblTotalCostB.Size = new System.Drawing.Size(22, 13);
+            this.lblTotalCostB.TabIndex = 2;
+            this.lblTotalCostB.Text = "0.0";
             // 
             // lblBAvailableFunds
             // 
@@ -777,7 +844,7 @@
             // 
             this.lblDisconnectionsB.AutoSize = true;
             this.lblDisconnectionsB.ForeColor = System.Drawing.Color.Black;
-            this.lblDisconnectionsB.Location = new System.Drawing.Point(265, 13);
+            this.lblDisconnectionsB.Location = new System.Drawing.Point(244, 13);
             this.lblDisconnectionsB.Name = "lblDisconnectionsB";
             this.lblDisconnectionsB.Size = new System.Drawing.Size(13, 13);
             this.lblDisconnectionsB.TabIndex = 2;
@@ -787,7 +854,7 @@
             // 
             this.lblReconnectionsB.AutoSize = true;
             this.lblReconnectionsB.ForeColor = System.Drawing.Color.Black;
-            this.lblReconnectionsB.Location = new System.Drawing.Point(265, 0);
+            this.lblReconnectionsB.Location = new System.Drawing.Point(244, 0);
             this.lblReconnectionsB.Name = "lblReconnectionsB";
             this.lblReconnectionsB.Size = new System.Drawing.Size(13, 13);
             this.lblReconnectionsB.TabIndex = 2;
@@ -797,7 +864,7 @@
             // 
             this.lblErrorsB.AutoSize = true;
             this.lblErrorsB.ForeColor = System.Drawing.Color.Black;
-            this.lblErrorsB.Location = new System.Drawing.Point(265, 26);
+            this.lblErrorsB.Location = new System.Drawing.Point(244, 26);
             this.lblErrorsB.Name = "lblErrorsB";
             this.lblErrorsB.Size = new System.Drawing.Size(13, 13);
             this.lblErrorsB.TabIndex = 2;
@@ -826,7 +893,7 @@
             // lblBAccountID
             // 
             this.lblBAccountID.AutoSize = true;
-            this.lblBAccountID.Location = new System.Drawing.Point(63, 0);
+            this.lblBAccountID.Location = new System.Drawing.Point(56, 0);
             this.lblBAccountID.Name = "lblBAccountID";
             this.lblBAccountID.Size = new System.Drawing.Size(13, 13);
             this.lblBAccountID.TabIndex = 0;
@@ -835,10 +902,10 @@
             // label25
             // 
             this.label25.AutoSize = true;
-            this.label25.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label25.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.label25.Location = new System.Drawing.Point(138, 0);
             this.label25.Name = "label25";
-            this.label25.Size = new System.Drawing.Size(96, 13);
+            this.label25.Size = new System.Drawing.Size(82, 13);
             this.label25.TabIndex = 2;
             this.label25.Text = "Reconnections:";
             // 
@@ -854,10 +921,10 @@
             // label28
             // 
             this.label28.AutoSize = true;
-            this.label28.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label28.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.label28.Location = new System.Drawing.Point(138, 13);
             this.label28.Name = "label28";
-            this.label28.Size = new System.Drawing.Size(98, 13);
+            this.label28.Size = new System.Drawing.Size(83, 13);
             this.label28.TabIndex = 2;
             this.label28.Text = "Disconnections:";
             // 
@@ -874,30 +941,30 @@
             // label20
             // 
             this.label20.AutoSize = true;
-            this.label20.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label20.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.label20.Location = new System.Drawing.Point(138, 26);
             this.label20.Name = "label20";
-            this.label20.Size = new System.Drawing.Size(121, 13);
+            this.label20.Size = new System.Drawing.Size(100, 13);
             this.label20.TabIndex = 2;
             this.label20.Text = "Errors since started:";
             // 
             // label16
             // 
             this.label16.AutoSize = true;
-            this.label16.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label16.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.label16.Location = new System.Drawing.Point(3, 146);
             this.label16.Name = "label16";
-            this.label16.Size = new System.Drawing.Size(129, 13);
+            this.label16.Size = new System.Drawing.Size(108, 13);
             this.label16.TabIndex = 2;
             this.label16.Text = "Connection restarted:";
             // 
             // label18
             // 
             this.label18.AutoSize = true;
-            this.label18.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label18.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.label18.Location = new System.Drawing.Point(3, 0);
             this.label18.Name = "label18";
-            this.label18.Size = new System.Drawing.Size(54, 13);
+            this.label18.Size = new System.Drawing.Size(47, 13);
             this.label18.TabIndex = 0;
             this.label18.Text = "Account";
             // 
@@ -928,14 +995,14 @@
             // 
             this.dGVPosB.BackgroundColor = System.Drawing.Color.SeaShell;
             this.dGVPosB.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            dataGridViewCellStyle7.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleLeft;
-            dataGridViewCellStyle7.BackColor = System.Drawing.SystemColors.Window;
-            dataGridViewCellStyle7.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            dataGridViewCellStyle7.ForeColor = System.Drawing.SystemColors.ControlText;
-            dataGridViewCellStyle7.SelectionBackColor = System.Drawing.Color.SeaShell;
-            dataGridViewCellStyle7.SelectionForeColor = System.Drawing.SystemColors.ControlText;
-            dataGridViewCellStyle7.WrapMode = System.Windows.Forms.DataGridViewTriState.False;
-            this.dGVPosB.DefaultCellStyle = dataGridViewCellStyle7;
+            dataGridViewCellStyle43.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleLeft;
+            dataGridViewCellStyle43.BackColor = System.Drawing.SystemColors.Window;
+            dataGridViewCellStyle43.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            dataGridViewCellStyle43.ForeColor = System.Drawing.SystemColors.ControlText;
+            dataGridViewCellStyle43.SelectionBackColor = System.Drawing.Color.SeaShell;
+            dataGridViewCellStyle43.SelectionForeColor = System.Drawing.SystemColors.ControlText;
+            dataGridViewCellStyle43.WrapMode = System.Windows.Forms.DataGridViewTriState.False;
+            this.dGVPosB.DefaultCellStyle = dataGridViewCellStyle43;
             this.dGVPosB.Dock = System.Windows.Forms.DockStyle.Fill;
             this.dGVPosB.Location = new System.Drawing.Point(3, 3);
             this.dGVPosB.Name = "dGVPosB";
@@ -958,14 +1025,14 @@
             // 
             this.dGVOrdersB.BackgroundColor = System.Drawing.Color.SeaShell;
             this.dGVOrdersB.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            dataGridViewCellStyle8.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleLeft;
-            dataGridViewCellStyle8.BackColor = System.Drawing.SystemColors.Window;
-            dataGridViewCellStyle8.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            dataGridViewCellStyle8.ForeColor = System.Drawing.SystemColors.ControlText;
-            dataGridViewCellStyle8.SelectionBackColor = System.Drawing.Color.SeaShell;
-            dataGridViewCellStyle8.SelectionForeColor = System.Drawing.SystemColors.ControlText;
-            dataGridViewCellStyle8.WrapMode = System.Windows.Forms.DataGridViewTriState.False;
-            this.dGVOrdersB.DefaultCellStyle = dataGridViewCellStyle8;
+            dataGridViewCellStyle44.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleLeft;
+            dataGridViewCellStyle44.BackColor = System.Drawing.SystemColors.Window;
+            dataGridViewCellStyle44.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            dataGridViewCellStyle44.ForeColor = System.Drawing.SystemColors.ControlText;
+            dataGridViewCellStyle44.SelectionBackColor = System.Drawing.Color.SeaShell;
+            dataGridViewCellStyle44.SelectionForeColor = System.Drawing.SystemColors.ControlText;
+            dataGridViewCellStyle44.WrapMode = System.Windows.Forms.DataGridViewTriState.False;
+            this.dGVOrdersB.DefaultCellStyle = dataGridViewCellStyle44;
             this.dGVOrdersB.Dock = System.Windows.Forms.DockStyle.Fill;
             this.dGVOrdersB.Location = new System.Drawing.Point(3, 3);
             this.dGVOrdersB.Name = "dGVOrdersB";
@@ -1196,11 +1263,26 @@
             // panelGeneralMeasures
             // 
             this.panelGeneralMeasures.BackColor = System.Drawing.Color.Black;
-            this.panelGeneralMeasures.Controls.Add(this.pbCashImbalance);
+            this.panelGeneralMeasures.Controls.Add(this.label50);
+            this.panelGeneralMeasures.Controls.Add(this.label49);
+            this.panelGeneralMeasures.Controls.Add(this.label48);
+            this.panelGeneralMeasures.Controls.Add(this.label47);
+            this.panelGeneralMeasures.Controls.Add(this.label46);
+            this.panelGeneralMeasures.Controls.Add(this.label45);
+            this.panelGeneralMeasures.Controls.Add(this.label44);
+            this.panelGeneralMeasures.Controls.Add(this.label43);
+            this.panelGeneralMeasures.Controls.Add(this.lblCashImbalance);
             this.panelGeneralMeasures.Controls.Add(this.lblErrorsTotal);
             this.panelGeneralMeasures.Controls.Add(this.lblTimeConnected);
             this.panelGeneralMeasures.Controls.Add(this.label29);
             this.panelGeneralMeasures.Controls.Add(this.label26);
+            this.panelGeneralMeasures.Controls.Add(this.label42);
+            this.panelGeneralMeasures.Controls.Add(this.label39);
+            this.panelGeneralMeasures.Controls.Add(this.label38);
+            this.panelGeneralMeasures.Controls.Add(this.label37);
+            this.panelGeneralMeasures.Controls.Add(this.label36);
+            this.panelGeneralMeasures.Controls.Add(this.label35);
+            this.panelGeneralMeasures.Controls.Add(this.label34);
             this.panelGeneralMeasures.Controls.Add(this.label33);
             this.panelGeneralMeasures.Controls.Add(this.label23);
             this.panelGeneralMeasures.Controls.Add(this.label27);
@@ -1252,6 +1334,28 @@
             this.label26.TabIndex = 2;
             this.label26.Text = "Errors since started:";
             // 
+            // label33
+            // 
+            this.label33.AutoSize = true;
+            this.label33.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label33.ForeColor = System.Drawing.Color.White;
+            this.label33.Location = new System.Drawing.Point(729, 0);
+            this.label33.Name = "label33";
+            this.label33.Size = new System.Drawing.Size(59, 13);
+            this.label33.TabIndex = 2;
+            this.label33.Text = "ZRIndex:";
+            // 
+            // label23
+            // 
+            this.label23.AutoSize = true;
+            this.label23.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label23.ForeColor = System.Drawing.Color.White;
+            this.label23.Location = new System.Drawing.Point(3, 39);
+            this.label23.Name = "label23";
+            this.label23.Size = new System.Drawing.Size(121, 13);
+            this.label23.TabIndex = 2;
+            this.label23.Text = "Cash imbalance (%):";
+            // 
             // label27
             // 
             this.label27.AutoSize = true;
@@ -1263,73 +1367,252 @@
             this.label27.TabIndex = 2;
             this.label27.Text = "PNL since started:";
             // 
-            // pbCashImbalance
+            // lblCashImbalance
             // 
-            this.pbCashImbalance.Location = new System.Drawing.Point(133, 39);
-            this.pbCashImbalance.MarqueeAnimationSpeed = 0;
-            this.pbCashImbalance.Name = "pbCashImbalance";
-            this.pbCashImbalance.Size = new System.Drawing.Size(150, 13);
-            this.pbCashImbalance.Step = 1;
-            this.pbCashImbalance.Style = System.Windows.Forms.ProgressBarStyle.Marquee;
-            this.pbCashImbalance.TabIndex = 3;
+            this.lblCashImbalance.AutoSize = true;
+            this.lblCashImbalance.ForeColor = System.Drawing.Color.White;
+            this.lblCashImbalance.Location = new System.Drawing.Point(130, 39);
+            this.lblCashImbalance.Name = "lblCashImbalance";
+            this.lblCashImbalance.Size = new System.Drawing.Size(13, 13);
+            this.lblCashImbalance.TabIndex = 2;
+            this.lblCashImbalance.Text = "0";
             // 
-            // label23
+            // label34
             // 
-            this.label23.AutoSize = true;
-            this.label23.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label23.ForeColor = System.Drawing.Color.White;
-            this.label23.Location = new System.Drawing.Point(3, 39);
-            this.label23.Name = "label23";
-            this.label23.Size = new System.Drawing.Size(100, 13);
-            this.label23.TabIndex = 2;
-            this.label23.Text = "Cash imbalance:";
+            this.label34.AutoSize = true;
+            this.label34.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label34.ForeColor = System.Drawing.Color.White;
+            this.label34.Location = new System.Drawing.Point(907, 0);
+            this.label34.Name = "label34";
+            this.label34.Size = new System.Drawing.Size(90, 13);
+            this.label34.TabIndex = 2;
+            this.label34.Text = "Max Exposure:";
             // 
-            // label33
+            // label35
             // 
-            this.label33.AutoSize = true;
-            this.label33.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label33.ForeColor = System.Drawing.Color.White;
-            this.label33.Location = new System.Drawing.Point(3, 52);
-            this.label33.Name = "label33";
-            this.label33.Size = new System.Drawing.Size(100, 13);
-            this.label33.TabIndex = 2;
-            this.label33.Text = "Cash imbalance:";
+            this.label35.AutoSize = true;
+            this.label35.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label35.ForeColor = System.Drawing.Color.White;
+            this.label35.Location = new System.Drawing.Point(907, 13);
+            this.label35.Name = "label35";
+            this.label35.Size = new System.Drawing.Size(64, 13);
+            this.label35.TabIndex = 2;
+            this.label35.Text = "Leverage:";
             // 
-            // lblTotalCostA
+            // label36
             // 
-            this.lblTotalCostA.AutoSize = true;
-            this.lblTotalCostA.Location = new System.Drawing.Point(101, 39);
-            this.lblTotalCostA.Name = "lblTotalCostA";
-            this.lblTotalCostA.Size = new System.Drawing.Size(22, 13);
-            this.lblTotalCostA.TabIndex = 2;
-            this.lblTotalCostA.Text = "0.0";
+            this.label36.AutoSize = true;
+            this.label36.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label36.ForeColor = System.Drawing.Color.White;
+            this.label36.Location = new System.Drawing.Point(907, 26);
+            this.label36.Name = "label36";
+            this.label36.Size = new System.Drawing.Size(72, 13);
+            this.label36.TabIndex = 2;
+            this.label36.Text = "Max Depth:";
             // 
-            // lblPNLA
+            // label37
             // 
-            this.lblPNLA.AutoSize = true;
-            this.lblPNLA.Location = new System.Drawing.Point(101, 52);
-            this.lblPNLA.Name = "lblPNLA";
-            this.lblPNLA.Size = new System.Drawing.Size(22, 13);
-            this.lblPNLA.TabIndex = 2;
-            this.lblPNLA.Text = "0.0";
+            this.label37.AutoSize = true;
+            this.label37.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label37.ForeColor = System.Drawing.Color.White;
+            this.label37.Location = new System.Drawing.Point(907, 39);
+            this.label37.Name = "label37";
+            this.label37.Size = new System.Drawing.Size(68, 13);
+            this.label37.TabIndex = 2;
+            this.label37.Text = "Zone Size:";
             // 
-            // lblTotalCostB
+            // label38
             // 
-            this.lblTotalCostB.AutoSize = true;
-            this.lblTotalCostB.Location = new System.Drawing.Point(101, 39);
-            this.lblTotalCostB.Name = "lblTotalCostB";
-            this.lblTotalCostB.Size = new System.Drawing.Size(22, 13);
-            this.lblTotalCostB.TabIndex = 2;
-            this.lblTotalCostB.Text = "0.0";
+            this.label38.AutoSize = true;
+            this.label38.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label38.ForeColor = System.Drawing.Color.White;
+            this.label38.Location = new System.Drawing.Point(907, 52);
+            this.label38.Name = "label38";
+            this.label38.Size = new System.Drawing.Size(65, 13);
+            this.label38.TabIndex = 2;
+            this.label38.Text = "Min Profit:";
             // 
-            // lblPNLB
+            // label39
             // 
-            this.lblPNLB.AutoSize = true;
-            this.lblPNLB.Location = new System.Drawing.Point(101, 52);
-            this.lblPNLB.Name = "lblPNLB";
-            this.lblPNLB.Size = new System.Drawing.Size(22, 13);
-            this.lblPNLB.TabIndex = 2;
-            this.lblPNLB.Text = "0.0";
+            this.label39.AutoSize = true;
+            this.label39.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label39.ForeColor = System.Drawing.Color.White;
+            this.label39.Location = new System.Drawing.Point(729, 13);
+            this.label39.Name = "label39";
+            this.label39.Size = new System.Drawing.Size(64, 13);
+            this.label39.TabIndex = 2;
+            this.label39.Text = "ZRStatus:";
+            // 
+            // label40
+            // 
+            this.label40.AutoSize = true;
+            this.label40.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label40.ForeColor = System.Drawing.Color.Black;
+            this.label40.Location = new System.Drawing.Point(3, 65);
+            this.label40.Name = "label40";
+            this.label40.Size = new System.Drawing.Size(55, 13);
+            this.label40.TabIndex = 2;
+            this.label40.Text = "Leverage:";
+            // 
+            // label41
+            // 
+            this.label41.AutoSize = true;
+            this.label41.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label41.ForeColor = System.Drawing.Color.Black;
+            this.label41.Location = new System.Drawing.Point(3, 65);
+            this.label41.Name = "label41";
+            this.label41.Size = new System.Drawing.Size(55, 13);
+            this.label41.TabIndex = 2;
+            this.label41.Text = "Leverage:";
+            // 
+            // label42
+            // 
+            this.label42.AutoSize = true;
+            this.label42.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label42.ForeColor = System.Drawing.Color.White;
+            this.label42.Location = new System.Drawing.Point(729, 26);
+            this.label42.Name = "label42";
+            this.label42.Size = new System.Drawing.Size(62, 13);
+            this.label42.TabIndex = 2;
+            this.label42.Text = "Unit Size:";
+            // 
+            // label43
+            // 
+            this.label43.AutoSize = true;
+            this.label43.ForeColor = System.Drawing.Color.White;
+            this.label43.Location = new System.Drawing.Point(799, 13);
+            this.label43.Name = "label43";
+            this.label43.Size = new System.Drawing.Size(13, 13);
+            this.label43.TabIndex = 2;
+            this.label43.Text = "0";
+            // 
+            // label44
+            // 
+            this.label44.AutoSize = true;
+            this.label44.ForeColor = System.Drawing.Color.White;
+            this.label44.Location = new System.Drawing.Point(799, 26);
+            this.label44.Name = "label44";
+            this.label44.Size = new System.Drawing.Size(13, 13);
+            this.label44.TabIndex = 2;
+            this.label44.Text = "0";
+            // 
+            // label45
+            // 
+            this.label45.AutoSize = true;
+            this.label45.ForeColor = System.Drawing.Color.White;
+            this.label45.Location = new System.Drawing.Point(799, 0);
+            this.label45.Name = "label45";
+            this.label45.Size = new System.Drawing.Size(13, 13);
+            this.label45.TabIndex = 2;
+            this.label45.Text = "0";
+            // 
+            // label46
+            // 
+            this.label46.AutoSize = true;
+            this.label46.ForeColor = System.Drawing.Color.White;
+            this.label46.Location = new System.Drawing.Point(1002, 0);
+            this.label46.Name = "label46";
+            this.label46.Size = new System.Drawing.Size(13, 13);
+            this.label46.TabIndex = 2;
+            this.label46.Text = "0";
+            // 
+            // label47
+            // 
+            this.label47.AutoSize = true;
+            this.label47.ForeColor = System.Drawing.Color.White;
+            this.label47.Location = new System.Drawing.Point(1002, 13);
+            this.label47.Name = "label47";
+            this.label47.Size = new System.Drawing.Size(13, 13);
+            this.label47.TabIndex = 2;
+            this.label47.Text = "0";
+            // 
+            // label48
+            // 
+            this.label48.AutoSize = true;
+            this.label48.ForeColor = System.Drawing.Color.White;
+            this.label48.Location = new System.Drawing.Point(1002, 26);
+            this.label48.Name = "label48";
+            this.label48.Size = new System.Drawing.Size(13, 13);
+            this.label48.TabIndex = 2;
+            this.label48.Text = "0";
+            // 
+            // label49
+            // 
+            this.label49.AutoSize = true;
+            this.label49.ForeColor = System.Drawing.Color.White;
+            this.label49.Location = new System.Drawing.Point(1002, 39);
+            this.label49.Name = "label49";
+            this.label49.Size = new System.Drawing.Size(13, 13);
+            this.label49.TabIndex = 2;
+            this.label49.Text = "0";
+            // 
+            // label50
+            // 
+            this.label50.AutoSize = true;
+            this.label50.ForeColor = System.Drawing.Color.White;
+            this.label50.Location = new System.Drawing.Point(1002, 52);
+            this.label50.Name = "label50";
+            this.label50.Size = new System.Drawing.Size(13, 13);
+            this.label50.TabIndex = 2;
+            this.label50.Text = "0";
+            // 
+            // label51
+            // 
+            this.label51.AutoSize = true;
+            this.label51.Location = new System.Drawing.Point(101, 65);
+            this.label51.Name = "label51";
+            this.label51.Size = new System.Drawing.Size(22, 13);
+            this.label51.TabIndex = 2;
+            this.label51.Text = "0.0";
+            // 
+            // label52
+            // 
+            this.label52.AutoSize = true;
+            this.label52.Location = new System.Drawing.Point(101, 65);
+            this.label52.Name = "label52";
+            this.label52.Size = new System.Drawing.Size(22, 13);
+            this.label52.TabIndex = 2;
+            this.label52.Text = "0.0";
+            // 
+            // label53
+            // 
+            this.label53.AutoSize = true;
+            this.label53.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label53.ForeColor = System.Drawing.Color.Black;
+            this.label53.Location = new System.Drawing.Point(3, 78);
+            this.label53.Name = "label53";
+            this.label53.Size = new System.Drawing.Size(90, 13);
+            this.label53.TabIndex = 2;
+            this.label53.Text = "Current exposure:";
+            // 
+            // label54
+            // 
+            this.label54.AutoSize = true;
+            this.label54.Location = new System.Drawing.Point(101, 78);
+            this.label54.Name = "label54";
+            this.label54.Size = new System.Drawing.Size(22, 13);
+            this.label54.TabIndex = 2;
+            this.label54.Text = "0.0";
+            // 
+            // label55
+            // 
+            this.label55.AutoSize = true;
+            this.label55.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label55.ForeColor = System.Drawing.Color.Black;
+            this.label55.Location = new System.Drawing.Point(3, 78);
+            this.label55.Name = "label55";
+            this.label55.Size = new System.Drawing.Size(90, 13);
+            this.label55.TabIndex = 2;
+            this.label55.Text = "Current exposure:";
+            // 
+            // label56
+            // 
+            this.label56.AutoSize = true;
+            this.label56.Location = new System.Drawing.Point(101, 78);
+            this.label56.Name = "label56";
+            this.label56.Size = new System.Drawing.Size(22, 13);
+            this.label56.TabIndex = 2;
+            this.label56.Text = "0.0";
             // 
             // MTMainForm
             // 
@@ -1477,13 +1760,36 @@
         private System.Windows.Forms.Label labelhuppeldepup;
         private System.Windows.Forms.Label lblDisconnectionsB;
         private System.Windows.Forms.Label label28;
-        private System.Windows.Forms.ProgressBar pbCashImbalance;
         private System.Windows.Forms.Label label33;
         private System.Windows.Forms.Label label23;
         private System.Windows.Forms.Label lblPNLA;
         private System.Windows.Forms.Label lblTotalCostA;
         private System.Windows.Forms.Label lblPNLB;
         private System.Windows.Forms.Label lblTotalCostB;
+        private System.Windows.Forms.Label lblCashImbalance;
+        private System.Windows.Forms.Label label39;
+        private System.Windows.Forms.Label label38;
+        private System.Windows.Forms.Label label37;
+        private System.Windows.Forms.Label label36;
+        private System.Windows.Forms.Label label35;
+        private System.Windows.Forms.Label label34;
+        private System.Windows.Forms.Label label40;
+        private System.Windows.Forms.Label label41;
+        private System.Windows.Forms.Label label42;
+        private System.Windows.Forms.Label label50;
+        private System.Windows.Forms.Label label49;
+        private System.Windows.Forms.Label label48;
+        private System.Windows.Forms.Label label47;
+        private System.Windows.Forms.Label label46;
+        private System.Windows.Forms.Label label45;
+        private System.Windows.Forms.Label label44;
+        private System.Windows.Forms.Label label43;
+        private System.Windows.Forms.Label label54;
+        private System.Windows.Forms.Label label51;
+        private System.Windows.Forms.Label label53;
+        private System.Windows.Forms.Label label56;
+        private System.Windows.Forms.Label label52;
+        private System.Windows.Forms.Label label55;
     }
 }
 

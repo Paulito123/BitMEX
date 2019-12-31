@@ -16,44 +16,38 @@ namespace MoneyTron
 {
     public partial class MTMainForm : Form, IMTMainForm
     {
-        //private Dictionary<long, MordoR> Conns;
+        #region Linked variables
 
         public string AccountAID
         {
             get => lblAAccountID.Text;
             set => SetLabelOnGuiThread(lblAAccountID, value);
         }
-
         public string AccountBID
         {
             get => lblBAccountID.Text;
             set => SetLabelOnGuiThread(lblBAccountID, value);
         }
-
         public string Bid
         {
             get => lblBid.Text;
             set => SetLabelOnGuiThread(lblBid, value);
         }
-
         public string Ask
         {
             get => lblAsk.Text;
             set => SetLabelOnGuiThread(lblAsk, value);
         }
-
         public string BidAmount
         {
             get => lblBidAmount.Text;
             set => SetLabelOnGuiThread(lblBidAmount, value);
         }
-
         public string AskAmount
         {
             get => lblAskAmount.Text;
             set => SetLabelOnGuiThread(lblAskAmount, value);
         }
-
         public string Trades1Min
         {
             get => lblTrades1Min.Text;
@@ -79,188 +73,187 @@ namespace MoneyTron
             get => lblTrades24Hours.Text;
             set => SetLabelOnGuiThread(lblTrades24Hours, value);
         }
-
         public string ConnStatusA
         {
             
             get => tbStatusA.Text;
             set => SetTextBoxOnGuiThread(tbStatusA, value);
         }
-
         public string ConnStatusB
         {
             get => tbStatusA.Text;
             set => SetTextBoxOnGuiThread(tbStatusB, value);
         }
-
         public string ReconnectionsA
         {
             get => lblReconnectionsA.Text;
             set => SetLabelOnGuiThread(lblReconnectionsA, value);
         }
-
         public string ReconnectionsB
         {
             get => lblReconnectionsB.Text;
             set => SetLabelOnGuiThread(lblReconnectionsB, value);
         }
-
         public string DisconnectionsA
         {
             get => lblDisconnectionsA.Text;
             set => SetLabelOnGuiThread(lblDisconnectionsA, value);
         }
-
         public string DisconnectionsB
         {
             get => lblDisconnectionsB.Text;
             set => SetLabelOnGuiThread(lblDisconnectionsB, value);
         }
-
         public string ConnStartA
         {
             get => lblAConnStart.Text;
             set => SetLabelOnGuiThread(lblAConnStart, value);
         }
-
         public string ConnStartB
         {
             get => lblBConnStart.Text;
             set => SetLabelOnGuiThread(lblBConnStart, value);
         }
-
         public string TotalFundsA
         {
             get => lblATotalFunds.Text;
             set => SetLabelOnGuiThread(lblATotalFunds, value);
         }
-
         public string TotalFundsB
         {
             get => lblBTotalFunds.Text;
             set => SetLabelOnGuiThread(lblBTotalFunds, value);
         }
-
         public string AvailableFundsA
         {
             get => lblAAvailableFunds.Text;
             set => SetLabelOnGuiThread(lblAAvailableFunds, value);
         }
-
         public string AvailableFundsB
         {
             get => lblBAvailableFunds.Text;
             set => SetLabelOnGuiThread(lblBAvailableFunds, value);
         }
-
         public string MarginBalanceA
         {
             get => lblMarginBalanceA.Text;
             set => SetLabelOnGuiThread(lblMarginBalanceA, value);
         }
-
         public string MarginBalanceB
         {
             get => lblMarginBalanceB.Text;
             set => SetLabelOnGuiThread(lblMarginBalanceB, value);
         }
-
         public string TabPosBTitle
         {
             get => tabPagePosB.Text;
             set => SetTabTitleOnGuiThread(tabPagePosB, value);
         }
-
         public string TabPosATitle
         {
             get => tabPagePosA.Text;
             set => SetTabTitleOnGuiThread(tabPagePosA, value);
         }
-
         public string TabOrdersBTitle
         {
             get => tabPageOrdersB.Text;
             set => SetTabTitleOnGuiThread(tabPageOrdersB, value);
         }
-
         public string TabOrdersATitle
         {
             get => tabPageOrdersA.Text;
             set => SetTabTitleOnGuiThread(tabPageOrdersA, value);
         }
-
         public string PingL
         {
             get => lblPingA.Text;
             set => SetLabelOnGuiThread(lblPingA, value);
         }
-
         public string PingS
         {
             get => lblPingB.Text;
             set => SetLabelOnGuiThread(lblPingB, value);
         }
-
         public string ErrorsCounterA
         {
             get => lblErrorsA.Text;
             set => SetLabelOnGuiThread(lblErrorsA, value);
         }
-
         public string ErrorsCounterB
         {
             get => lblErrorsB.Text;
             set => SetLabelOnGuiThread(lblErrorsB, value);
         }
-
         public string ErrorsCounterTotal
         {
             get => lblErrorsTotal.Text;
             set => SetLabelOnGuiThread(lblErrorsTotal, value);
         }
-
         public string TimeConnected
         {
             get => lblTimeConnected.Text;
             set => SetLabelOnGuiThread(lblTimeConnected, value);
         }
-
-        public int CashImbalance
+        public string CashImbalance
         {
-            get => pbCashImbalance.Value;
-            set => SetPBOnGuiThread(pbCashImbalance, value);
+            get => lblCashImbalance.Text;
+            set => SetLabelOnGuiThread(lblCashImbalance, value);
         }
-
         public string PNLA
         {
             get => lblPNLA.Text;
             set => SetLabelOnGuiThread(lblPNLA, value);
         }
-
         public string PNLB
         {
             get => lblPNLB.Text;
             set => SetLabelOnGuiThread(lblPNLB, value);
         }
-
         public string TotalCostA
         {
             get => lblTotalCostA.Text;
             set => SetLabelOnGuiThread(lblTotalCostA, value);
         }
-
         public string TotalCostB
         {
             get => lblTotalCostB.Text;
             set => SetLabelOnGuiThread(lblTotalCostB, value);
         }
 
+        #endregion Linked variables
+
+        #region Linked controls
+
+        public BindingSource bSRCOrdersA
+        {
+            get => (BindingSource)dGVOrdersA.DataSource;
+            set => SetBindingSRCOnGuiThread(dGVOrdersA, value);
+        }
+        public BindingSource bSRCOrdersB
+        {
+            get => (BindingSource)dGVOrdersB.DataSource;
+            set => SetBindingSRCOnGuiThread(dGVOrdersB, value);
+        }
+        public BindingSource bSRCPosA
+        {
+            get => (BindingSource)dGVPosA.DataSource;
+            set => SetBindingSRCOnGuiThread(dGVPosA, value);
+        }
+        public BindingSource bSRCPosB
+        {
+            get => (BindingSource)dGVPosB.DataSource;
+            set => SetBindingSRCOnGuiThread(dGVPosB, value);
+        }
+
+        #endregion Linked controls
+
+        #region Control updating methods
+
         public void StatusA(string value, StatusType type)
         {
             SetTextBoxOnGuiThread(tbStatusA, value);
             tbStatusA.ForeColor = GetForeColorFor(type);
         }
-
         public void StatusB(string value, StatusType type)
         {
             SetTextBoxOnGuiThread(tbStatusB, value);
@@ -272,59 +265,30 @@ namespace MoneyTron
             Trades1Min = value;
             lblTrades1Min.ForeColor = GetForeColorFor(side);
         }
-
         void IMTMainForm.Trades5Min(string value, Side side)
         {
             Trades5Min = value;
             lblTrades5Min.ForeColor = GetForeColorFor(side);
         }
-
         void IMTMainForm.Trades15Min(string value, Side side)
         {
             Trades15Min = value;
             lblTrades15Min.ForeColor = GetForeColorFor(side);
         }
-
         void IMTMainForm.Trades1Hour(string value, Side side)
         {
             Trades1Hour = value;
             lblTrades1Hour.ForeColor = GetForeColorFor(side);
         }
-
         void IMTMainForm.Trades24Hours(string value, Side side)
         {
             Trades24Hours = value;
             lblTrades24Hours.ForeColor = GetForeColorFor(side);
         }
 
-        public BindingSource bSRCOrdersA
-        {
-            get => (BindingSource)dGVOrdersA.DataSource;
-            set => SetBindingSRCOnGuiThread(dGVOrdersA, value);
-        }
+        #endregion Control updating methods
 
-        public BindingSource bSRCOrdersB
-        {
-            get => (BindingSource)dGVOrdersB.DataSource;
-            set => SetBindingSRCOnGuiThread(dGVOrdersB, value);
-        }
-
-        public BindingSource bSRCPosA
-        {
-            get => (BindingSource)dGVPosA.DataSource;
-            set => SetBindingSRCOnGuiThread(dGVPosA, value);
-        }
-
-        public BindingSource bSRCPosB
-        {
-            get => (BindingSource)dGVPosB.DataSource;
-            set => SetBindingSRCOnGuiThread(dGVPosB, value);
-        }
-
-        public Action OnInit { get; set; }
-        public Action OnStartA { get; set; }
-        public Action OnStop { get; set; }
-        public Action OnStartB { get; set; }
+        #region Helper methods
 
         private Color GetForeColorFor(Side side)
         {
@@ -332,7 +296,6 @@ namespace MoneyTron
                 return Color.GreenYellow;
             return Color.LightCoral;
         }
-
         private Color GetForeColorFor(StatusType type)
         {
             switch (type)
@@ -346,10 +309,29 @@ namespace MoneyTron
             }
         }
 
+        #endregion Helper methods
+
+        #region Actions
+
+        public Action OnInit { get; set; }
+        public Action OnStartA { get; set; }
+        public Action OnStop { get; set; }
+        public Action OnStartB { get; set; }
+
+        #endregion Actions
+
+        #region Init methods
+
         public MTMainForm()
         {
             InitializeComponent();
             InitDataGrids();
+        }
+
+        private void Form1_Load(object sender, EventArgs e)
+        {
+            OnInit?.Invoke();
+            disconnectToolStripMenuItem.Enabled = false;
         }
 
         private void InitDataGrids()
@@ -471,11 +453,9 @@ namespace MoneyTron
 
         }
 
-        private void Form1_Load(object sender, EventArgs e)
-        {
-            OnInit?.Invoke();
-            disconnectToolStripMenuItem.Enabled = false;
-        }
+        #endregion Init methods
+
+        #region Menu event handlers
 
         /// <summary>
         /// Connect BitMEX Test
@@ -501,7 +481,11 @@ namespace MoneyTron
             connectToolStripMenuItem.Enabled = true;
             disconnectToolStripMenuItem.Enabled = false;
         }
-        
+
+        #endregion Menu event handlers
+
+        #region SetGUIThread methods
+
         private void SetBindingSRCOnGuiThread(DataGridView dgv, BindingSource bs)
         {
             if (!dgv.InvokeRequired)
@@ -572,8 +556,7 @@ namespace MoneyTron
         private void SetPBOnGuiThread(ProgressBar pb, int value)
         {
             if (pb.Value == value)
-            {
-                return;
+            {               return;
             }
                 
             if (!InvokeRequired)
@@ -587,6 +570,7 @@ namespace MoneyTron
                 pb.Value = value;
             }));
         }
-        
+
+        #endregion SetGUIThread methods
     }
 }

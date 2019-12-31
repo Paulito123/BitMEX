@@ -37,7 +37,7 @@ namespace MoneyTron
         string ErrorsCounterB { get; set; }
         string ErrorsCounterTotal { get; set; }
         string TimeConnected { get;  set; }
-        int CashImbalance { get; set; }
+        string CashImbalance { get; set; }
         string PNLA { get; set; }
         string PNLB { get; set; }
         string TotalCostA { get; set; }

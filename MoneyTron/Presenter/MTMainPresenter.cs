@@ -28,6 +28,8 @@ namespace MoneyTron.Presenter
 {
     class MTMainPresenter
     {
+        #region Declarations
+
         private readonly IMTMainForm _view;
 
         private OrderBookStatsComputer _orderBookStatsComputer;
@@ -60,6 +62,8 @@ namespace MoneyTron.Presenter
 
         private readonly string _defaultPair = "XBTUSD";
         private readonly string _currency = "$";
+
+        #endregion Declarations
 
         /// <summary>
         /// Constructor
@@ -485,9 +489,8 @@ namespace MoneyTron.Presenter
 
                     var a = (string.IsNullOrEmpty(_view.TotalFundsA)) ? 0.0 : double.Parse(_view.TotalFundsA);
                     var b = (string.IsNullOrEmpty(_view.TotalFundsB)) ? 0.0 : double.Parse(_view.TotalFundsB);
-
-                    _view.PNLA = ((int)(a / (a + b) * 100)).ToString();
-                    _view.CashImbalance = (int)(a / (a + b) * 100);
+                    
+                    _view.CashImbalance = "L " + Math.Round((a / (a + b) * 100), 2).ToString() + " - S " + Math.Round((b / (b + a) * 100), 2).ToString();
                 }
             }
             catch (Exception exc)
@@ -654,6 +657,11 @@ namespace MoneyTron.Presenter
 
             _view.TimeConnected = string.Empty;
             _view.ErrorsCounterTotal = string.Empty;
+            _view.CashImbalance = string.Empty;
+            _view.TotalCostA = string.Empty;
+            _view.TotalCostB = string.Empty;
+            _view.PNLA = string.Empty;
+            _view.PNLB = string.Empty;
         }
 
         //private delegate void ShowMessageBoxDelegate(string strMessage, string strCaption/*, MessageBoxButton enmButton, MessageBoxImage enmImage*/);
