@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
+using System.Configuration;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Threading;
@@ -31,10 +32,10 @@ namespace BitMEX.TestForm
 
         //private static readonly ManualResetEvent ExitEvent = new ManualResetEvent(false);
         //private static readonly string API_KEY = "QbpGewiOyIYMbyQ-ieaTKfOJ";
-        //private static readonly string API_SECRET = "FqGOSAewtkMBIuiIQHI47dxc6vBm3zqARSEr4Qif8K8N5eHf";
+        //private static readonly string API_SECRET = "";
 
-        // TESTLONG  [51091]    : "QbpGewiOyIYMbyQ-ieaTKfOJ" - "FqGOSAewtkMBIuiIQHI47dxc6vBm3zqARSEr4Qif8K8N5eHf"
-        // TESTSHORT [170591]   : "xEuMT-y7ffwxrvHA2yDwL1bZ" - "3l0AmJz7l3P47-gK__LwgZQQ23uOKCFhYJG4HeTLlGXadRm6"
+        // TESTLONG  [51091]    : "QbpGewiOyIYMbyQ-ieaTKfOJ"
+        // TESTSHORT [170591]   : "xEuMT-y7ffwxrvHA2yDwL1bZ"
 
         public Form1()
         {
@@ -70,11 +71,22 @@ namespace BitMEX.TestForm
 
         public void PrepareConnections(double maxExp, double leverage,int maxDepth, int zoneSize, double minProfit)
         {
-            Connections = new Dictionary<long, MordoR>();
+            var appSettings = ConfigurationManager.AppSettings;
+            string apiA, secA, apiB, secB;
+            
+            apiA = appSettings["API_KEY_BITMEX_A_TEST"] ?? string.Empty;
+            secA = appSettings["API_SECRET_BITMEX_A_TEST"] ?? string.Empty;
+            apiB = appSettings["API_KEY_BITMEX_B_TEST"] ?? string.Empty;
+            secB = appSettings["API_SECRET_BITMEX_B_TEST"] ?? string.Empty;
 
-            connLong = new MordoR("QbpGewiOyIYMbyQ-ieaTKfOJ", "FqGOSAewtkMBIuiIQHI47dxc6vBm3zqARSEr4Qif8K8N5eHf");
-            connShort = new MordoR("xEuMT-y7ffwxrvHA2yDwL1bZ", "3l0AmJz7l3P47-gK__LwgZQQ23uOKCFhYJG4HeTLlGXadRm6");
+            if (!string.IsNullOrEmpty(apiA) && !string.IsNullOrEmpty(secA) && !string.IsNullOrEmpty(apiB) && !string.IsNullOrEmpty(secB))
+            {
+                Connections = new Dictionary<long, MordoR>();
 
+                connLong = new MordoR(apiA, secA);
+                connShort = new MordoR(apiB, secB);
+            }
+            
             if (connLong.TryConnect() == BitMEXConnectorStatus.Connected && connShort.TryConnect() == BitMEXConnectorStatus.Connected)
             {
                 Connections.Add(connLong.Account, connLong);

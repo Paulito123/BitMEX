@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Configuration;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reactive.Linq;
@@ -238,7 +239,7 @@ namespace MoneyTron.Presenter
                 .Streams
                 .MarginStream
                 .Select(trade => Observable.FromAsync(async () => {
-                    HandleMargin(trade);
+                    HandleMarginResponse(trade);
                 }))
                 .Concat()
                 .Subscribe();
@@ -284,16 +285,41 @@ namespace MoneyTron.Presenter
         /// <returns></returns>
         private async Task SendSubscriptions(BitmexWebsocketClient client, string pair, MTAccount acc)
         {
+            var appSettings = ConfigurationManager.AppSettings;
+            string api, sec;
+
             if (acc == MTAccount.A)
             {
-                await client.Send(new AuthenticationRequest("QbpGewiOyIYMbyQ-ieaTKfOJ", "FqGOSAewtkMBIuiIQHI47dxc6vBm3zqARSEr4Qif8K8N5eHf"));
+                if (_view.isTest)
+                {
+                    api = appSettings["API_KEY_BITMEX_A_TEST"] ?? string.Empty;
+                    sec = appSettings["API_SECRET_BITMEX_A_TEST"] ?? string.Empty;
+                }
+                else
+                {
+                    api = appSettings["API_KEY_BITMEX_A_LIVE"] ?? string.Empty;
+                    sec = appSettings["API_SECRET_BITMEX_A_LIVE"] ?? string.Empty;
+                }
+
                 //await client.Send(new TradesSubscribeRequest(pair));
                 //await client.Send(new BookSubscribeRequest(pair));
             }
             else
             {
-                await client.Send(new AuthenticationRequest("xEuMT-y7ffwxrvHA2yDwL1bZ", "3l0AmJz7l3P47-gK__LwgZQQ23uOKCFhYJG4HeTLlGXadRm6"));
+                if (_view.isTest)
+                {
+                    api = appSettings["API_KEY_BITMEX_B_TEST"] ?? string.Empty;
+                    sec = appSettings["API_SECRET_BITMEX_B_TEST"] ?? string.Empty;
+                }
+                else
+                {
+                    api = appSettings["API_KEY_BITMEX_B_LIVE"] ?? string.Empty;
+                    sec = appSettings["API_SECRET_BITMEX_B_LIVE"] ?? string.Empty;
+                }
             }
+
+            if (!string.IsNullOrEmpty(api) && !string.IsNullOrEmpty(sec))
+                await client.Send(new AuthenticationRequest(api, sec));
 
             await client.Send(new OrderSubscribeRequest());
             await client.Send(new PositionSubscribeRequest());
@@ -449,7 +475,7 @@ namespace MoneyTron.Presenter
             }
         }
         
-        private void HandleMargin(MarginResponse response)
+        private void HandleMarginResponse(MarginResponse response)
         {
             if (response.Data.Count() == 0)
                 return;

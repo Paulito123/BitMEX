@@ -39,8 +39,8 @@ namespace BitMEX.Client
 
         #region Constructor
 
-        // TESTLONG  [51091]    : "QbpGewiOyIYMbyQ-ieaTKfOJ" - "FqGOSAewtkMBIuiIQHI47dxc6vBm3zqARSEr4Qif8K8N5eHf"
-        // TESTSHORT [170591]   : "xEuMT-y7ffwxrvHA2yDwL1bZ" - "3l0AmJz7l3P47-gK__LwgZQQ23uOKCFhYJG4HeTLlGXadRm6"
+        // TESTLONG  [51091]    : "QbpGewiOyIYMbyQ-ieaTKfOJ"
+        // TESTSHORT [170591]   : "xEuMT-y7ffwxrvHA2yDwL1bZ"
 
         public MordoR(string bitmexKey, 
                       string bitmexSecret, 

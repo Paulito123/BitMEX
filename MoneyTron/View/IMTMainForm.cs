@@ -7,6 +7,7 @@ namespace MoneyTron
 {
     interface IMTMainForm
     {
+        bool isTest { get; set; }
         string AccountAID { get; set; }
         string AccountBID { get; set; }
         string ConnStatusA { get; set; }

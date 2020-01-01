@@ -9,13 +9,8 @@
     using BitMEX.Model;
     using BitMEX.Client;
 
-    /// <summary>
-    /// An enumeration used for expressing in which part of the Zone Recovery algorithm the class is at a given moment.
-    /// </summary>
-    public enum ZoneRecoveryStatus { Winding, Unwinding, Init, Finish, Alert }
-
-    // TESTLONG  [51091]    : "QbpGewiOyIYMbyQ-ieaTKfOJ" - "FqGOSAewtkMBIuiIQHI47dxc6vBm3zqARSEr4Qif8K8N5eHf"
-    // TESTSHORT [170591]   : "xEuMT-y7ffwxrvHA2yDwL1bZ" - "3l0AmJz7l3P47-gK__LwgZQQ23uOKCFhYJG4HeTLlGXadRm6"
+    // TESTLONG  [51091]    : "QbpGewiOyIYMbyQ-ieaTKfOJ"
+    // TESTSHORT [170591]   : "xEuMT-y7ffwxrvHA2yDwL1bZ"
 
     public class Calculator
     {
@@ -197,6 +192,7 @@
             for (int i = 0; i < MaxDepthIndex; i++)
             {
                 sum = sum + FactorArray[i];
+                //FactorArray.Select(x => x.Key).Where(x => x.Key < MaxDepthIndex).Sum()
             }
             return sum;
         }

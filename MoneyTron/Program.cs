@@ -5,6 +5,7 @@ using System.Windows.Forms;
 using MoneyTron.Presenter;
 using Serilog;
 using Serilog.Events;
+using System.Configuration;
 
 namespace MoneyTron
 {

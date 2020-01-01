@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Drawing;
+using System.Configuration;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -18,6 +19,7 @@ namespace MoneyTron
     {
         #region Linked variables
 
+        public bool isTest { get; set; } = true;
         public string AccountAID
         {
             get => lblAAccountID.Text;
@@ -438,6 +440,15 @@ namespace MoneyTron
             dgv.Columns.Add(column);
 
             column = new DataGridViewTextBoxColumn();
+            column.DataPropertyName = "breakEvenPrice";
+            column.Name = "BE Price";
+            column.AutoSizeMode = DataGridViewAutoSizeColumnMode.AllCells;
+            column.HeaderCell.Style.Alignment = DataGridViewContentAlignment.BottomCenter;
+            column.CellTemplate.Style.ForeColor = Color.Blue;
+            column.CellTemplate.Style.Font = new Font(dgv.Font, FontStyle.Bold);
+            dgv.Columns.Add(column);
+
+            column = new DataGridViewTextBoxColumn();
             column.DataPropertyName = "unrealisedPnl";
             column.Name = "Unrealised PNL";
             column.AutoSizeMode = DataGridViewAutoSizeColumnMode.AllCells;
@@ -464,10 +475,13 @@ namespace MoneyTron
         /// <param name="e"></param>
         private void connectToolStripMenuItem_Click(object sender, EventArgs e)
         {
+            isTest = true;
             OnStartA?.Invoke();
             OnStartB?.Invoke();
             connectToolStripMenuItem.Enabled = false;
             disconnectToolStripMenuItem.Enabled = true;
+            onToolStripMenuItem.Enabled = false;
+            offToolStripMenuItem.Enabled = false;
         }
 
         /// <summary>
@@ -480,6 +494,28 @@ namespace MoneyTron
             OnStop?.Invoke();
             connectToolStripMenuItem.Enabled = true;
             disconnectToolStripMenuItem.Enabled = false;
+            onToolStripMenuItem.Enabled = true;
+            offToolStripMenuItem.Enabled = false;
+        }
+
+        private void onToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            isTest = false;
+            OnStartA?.Invoke();
+            OnStartB?.Invoke();
+            connectToolStripMenuItem.Enabled = false;
+            disconnectToolStripMenuItem.Enabled = false;
+            onToolStripMenuItem.Enabled = false;
+            offToolStripMenuItem.Enabled = true;
+        }
+
+        private void offToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            OnStop?.Invoke();
+            connectToolStripMenuItem.Enabled = true;
+            disconnectToolStripMenuItem.Enabled = false;
+            onToolStripMenuItem.Enabled = true;
+            offToolStripMenuItem.Enabled = false;
         }
 
         #endregion Menu event handlers
@@ -572,5 +608,13 @@ namespace MoneyTron
         }
 
         #endregion SetGUIThread methods
+
+        private void btnTest_Click(object sender, EventArgs e)
+        {
+            //MessageBox.Show(ConfigurationManager.AppSettings["API_KEY_BITMEX_A_TEST"]);
+            //MessageBox.Show(ConfigurationManager.AppSettings["ClientValidationEnabled"]);
+        }
+
+        
     }
 }
