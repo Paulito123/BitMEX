@@ -7,23 +7,40 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Threading;
 //using Serilog;
-using BitMEX.Model;
-using BitMEX.Client;
-using PStrategies.ZoneRecovery;
-using System.Data.SqlClient;
-using log4net; 
+//using BitMEX.Model;
+//using BitMEX.Client;
+//using PStrategies.ZoneRecovery;
+//using System.Data.SqlClient;
+//using log4net;
+//using IO.Swagger.Api;
+//using IO.Swagger.Client;
+//using IO.Swagger.Model;
+
+using BitMEXRest.Authorization;
+using BitMEXRest.Client;
+using BitMEXRest.Dto;
+using BitMEXRest.Model;
 
 namespace BitMEX.TestForm
 {
     public partial class Form1 : Form
     {
-        private MordoR mconn;
-        private MordoR connLong;
-        private MordoR connShort;
-        private Calculator calc;
-        private Dictionary<long, MordoR> Connections;
-        ILog log;
-        string guid;
+        //private MordoR mconn;
+        //private MordoR connLong;
+        //private MordoR connShort;
+        //private Calculator calc;
+        //private Dictionary<long, MordoR> Connections;
+        //ILog log;
+        //string guid;
+
+        //ApiClient ClientA;
+        //ApiClient ClientB;
+
+        private readonly IBitmexAuthorization _bitmexAuthorizationA;
+        private readonly IBitmexAuthorization _bitmexAuthorizationB;
+
+        private IBitmexApiService bitmexApiServiceA;
+        private IBitmexApiService bitmexApiServiceB;
 
         private BindingSource bs;
         private long ID = 0;
@@ -41,6 +58,10 @@ namespace BitMEX.TestForm
         {
             InitializeComponent();
             InitForm();
+
+            _bitmexAuthorizationA = new BitmexAuthorization { BitmexEnvironment = BitmexEnvironment.Test };
+            _bitmexAuthorizationB = new BitmexAuthorization { BitmexEnvironment = BitmexEnvironment.Test };
+            PrepareConnections(/*(double)NUDMaxExp.Value, (double)NUDLeverage.Value, (int)NUDDepth.Value, (int)NUDZonesize.Value, (double)NUDMinProfit.Value*/);
 
             bs = new BindingSource();
             dGV.AutoGenerateColumns = false;
@@ -69,7 +90,12 @@ namespace BitMEX.TestForm
 
         }
 
-        public void PrepareConnections(double maxExp, double leverage,int maxDepth, int zoneSize, double minProfit)
+        private string GetExpiresString()
+        {
+            return (ToUnixTimeSeconds(DateTimeOffset.UtcNow) + 3600).ToString();
+        }
+
+        public void PrepareConnections(/*double maxExp, double leverage,int maxDepth, int zoneSize, double minProfit*/)
         {
             var appSettings = ConfigurationManager.AppSettings;
             string apiA, secA, apiB, secB;
@@ -78,22 +104,31 @@ namespace BitMEX.TestForm
             secA = appSettings["API_SECRET_BITMEX_A_TEST"] ?? string.Empty;
             apiB = appSettings["API_KEY_BITMEX_B_TEST"] ?? string.Empty;
             secB = appSettings["API_SECRET_BITMEX_B_TEST"] ?? string.Empty;
-
+            
             if (!string.IsNullOrEmpty(apiA) && !string.IsNullOrEmpty(secA) && !string.IsNullOrEmpty(apiB) && !string.IsNullOrEmpty(secB))
             {
-                Connections = new Dictionary<long, MordoR>();
+                _bitmexAuthorizationA.Key = apiA;
+                _bitmexAuthorizationA.Secret = secA;
+                _bitmexAuthorizationB.Key = apiB;
+                _bitmexAuthorizationB.Secret = secB;
 
-                connLong = new MordoR(apiA, secA);
-                connShort = new MordoR(apiB, secB);
+                //try
+                //{
+
+                //}
+                //catch (Exception e)
+                //{
+                //    MessageBox.Show(e.Message);
+                //}
             }
-            
-            if (connLong.TryConnect() == BitMEXConnectorStatus.Connected && connShort.TryConnect() == BitMEXConnectorStatus.Connected)
-            {
-                Connections.Add(connLong.Account, connLong);
-                Connections.Add(connShort.Account, connShort);
-                calc = new Calculator("XBTUSD", maxExp, leverage, maxDepth, zoneSize, minProfit, connLong, connShort);
-                lblConnectionStatus.Text = maxExp.ToString() + "-" + leverage.ToString() + "-" + maxDepth.ToString() + "-" + zoneSize.ToString() + "-" + minProfit.ToString() + "-";
-            }
+
+            //if (connLong.TryConnect() == BitMEXConnectorStatus.Connected && connShort.TryConnect() == BitMEXConnectorStatus.Connected)
+            //{
+            //    Connections.Add(connLong.Account, connLong);
+            //    Connections.Add(connShort.Account, connShort);
+            //    calc = new Calculator("XBTUSD", maxExp, leverage, maxDepth, zoneSize, minProfit, connLong, connShort);
+            //    lblConnectionStatus.Text = maxExp.ToString() + "-" + leverage.ToString() + "-" + maxDepth.ToString() + "-" + zoneSize.ToString() + "-" + minProfit.ToString() + "-";
+            //}
         }
 
         private void InitForm()
@@ -153,131 +188,145 @@ namespace BitMEX.TestForm
 
         #region Button handlers
 
-        
+        private void btn1_Click(object sender, EventArgs e)
+        {
+            LabelOnOff.Text = (LabelOnOff.Text == "OFF") ? "ON" : "OFF";
+
+            
+
+            var posOrderParamsA = OrderPOSTRequestParams.CreateMarketStopOrder("XBTUSD", 150, 8000, OrderSide.Buy);
+            bitmexApiServiceA = BitmexApiService.CreateDefaultApi(_bitmexAuthorizationA);
+            bitmexApiServiceA.Execute(BitmexApiUrls.Order.PostOrder, posOrderParamsA).ContinueWith(ProcessPostOrderResult);
+
+            var posOrderParamsB = OrderPOSTRequestParams.CreateMarketStopOrder("XBTUSD", 150, 6500, OrderSide.Sell);
+            bitmexApiServiceB = BitmexApiService.CreateDefaultApi(_bitmexAuthorizationB);
+            bitmexApiServiceB.Execute(BitmexApiUrls.Order.PostOrder, posOrderParamsB).ContinueWith(ProcessPostOrderResult);
+            
+        }
 
         #endregion Button handlers
 
-        private void btn1_Click(object sender, EventArgs e)
+        private async void ProcessPostOrderResult(Task<BitmexApiResult<OrderDto>> task)
         {
-            
-            PrepareConnections((double)NUDMaxExp.Value, (double)NUDLeverage.Value, (int)NUDDepth.Value, (int)NUDZonesize.Value, (double)NUDMinProfit.Value);
-
-            if (calc != null)
+            if (task.Exception != null)
             {
-                RefreshLabels();
+                MessageBox.Show((task.Exception.InnerException ?? task.Exception).Message);
             }
-                
+            else
+            {
+                MessageBox.Show($"order has been placed with Id {task.Result.Result.OrderId}");
+            }
         }
 
         private void DBLogOperation(string operation, object obj)
         {
-            try
-            {
-                //// Build connection string
-                //SqlConnectionStringBuilder builder = new SqlConnectionStringBuilder();
-                //builder.DataSource = "localhost";   // update me
-                //builder.UserID = "sa";              // update me
-                //builder.Password = "your_password";      // update me
-                //builder.InitialCatalog = "master";
+            //try
+            //{
+            //    //// Build connection string
+            //    //SqlConnectionStringBuilder builder = new SqlConnectionStringBuilder();
+            //    //builder.DataSource = "localhost";   // update me
+            //    //builder.UserID = "sa";              // update me
+            //    //builder.Password = "your_password";      // update me
+            //    //builder.InitialCatalog = "master";
 
-                string connectionString = @"Data Source=.\MYSQLSDB;Initial Catalog=Trading;Integrated Security=true;";
+            //    string connectionString = @"Data Source=.\MYSQLSDB;Initial Catalog=Trading;Integrated Security=true;";
 
-                // Connect to SQL
-                using (SqlConnection connection = new SqlConnection(connectionString))
-                {
-                    connection.Open();
-                    // Connected !
+            //    // Connect to SQL
+            //    using (SqlConnection connection = new SqlConnection(connectionString))
+            //    {
+            //        connection.Open();
+            //        // Connected !
 
-                    //String sql = "DROP DATABASE IF EXISTS [SampleDB]; CREATE DATABASE [SampleDB]";
-                    //using (SqlCommand command = new SqlCommand(sql, connection))
-                    //{
-                    //    command.ExecuteNonQuery();
-                    //    Console.WriteLine("Done.");
-                    //}
+            //        //String sql = "DROP DATABASE IF EXISTS [SampleDB]; CREATE DATABASE [SampleDB]";
+            //        //using (SqlCommand command = new SqlCommand(sql, connection))
+            //        //{
+            //        //    command.ExecuteNonQuery();
+            //        //    Console.WriteLine("Done.");
+            //        //}
 
-                    // Create a Table and insert some sample data
-                    //StringBuilder sb = new StringBuilder();
-                    //sb.Append("USE SampleDB; ");
-                    //sb.Append("CREATE TABLE Employees ( ");
-                    //sb.Append(" Id INT IDENTITY(1,1) NOT NULL PRIMARY KEY, ");
-                    //sb.Append(" Name NVARCHAR(50), ");
-                    //sb.Append(" Location NVARCHAR(50) ");
-                    //sb.Append("); ");
-                    //sb.Append("INSERT INTO Employees (Name, Location) VALUES ");
-                    //sb.Append("(N'Jared', N'Australia'), ");
-                    //sb.Append("(N'Nikita', N'India'), ");
-                    //sb.Append("(N'Tom', N'Germany'); ");
-                    //sql = sb.ToString();
-                    //using (SqlCommand command = new SqlCommand(sql, connection))
-                    //{
-                    //    command.ExecuteNonQuery();
-                    //    Console.WriteLine("Done.");
-                    //}
+            //        // Create a Table and insert some sample data
+            //        //StringBuilder sb = new StringBuilder();
+            //        //sb.Append("USE SampleDB; ");
+            //        //sb.Append("CREATE TABLE Employees ( ");
+            //        //sb.Append(" Id INT IDENTITY(1,1) NOT NULL PRIMARY KEY, ");
+            //        //sb.Append(" Name NVARCHAR(50), ");
+            //        //sb.Append(" Location NVARCHAR(50) ");
+            //        //sb.Append("); ");
+            //        //sb.Append("INSERT INTO Employees (Name, Location) VALUES ");
+            //        //sb.Append("(N'Jared', N'Australia'), ");
+            //        //sb.Append("(N'Nikita', N'India'), ");
+            //        //sb.Append("(N'Tom', N'Germany'); ");
+            //        //sql = sb.ToString();
+            //        //using (SqlCommand command = new SqlCommand(sql, connection))
+            //        //{
+            //        //    command.ExecuteNonQuery();
+            //        //    Console.WriteLine("Done.");
+            //        //}
 
-                    //// INSERT demo
-                    //Console.Write("Inserting a new row into table, press any key to continue...");
-                    //Console.ReadKey(true);
-                    //sb.Clear();
-                    //sb.Append("INSERT Employees (Name, Location) ");
-                    //sb.Append("VALUES (@name, @location);");
-                    //sql = sb.ToString();
-                    //using (SqlCommand command = new SqlCommand(sql, connection))
-                    //{
-                    //    command.Parameters.AddWithValue("@name", "Jake");
-                    //    command.Parameters.AddWithValue("@location", "United States");
-                    //    int rowsAffected = command.ExecuteNonQuery();
-                    //    Console.WriteLine(rowsAffected + " row(s) inserted");
-                    //}
+            //        //// INSERT demo
+            //        //Console.Write("Inserting a new row into table, press any key to continue...");
+            //        //Console.ReadKey(true);
+            //        //sb.Clear();
+            //        //sb.Append("INSERT Employees (Name, Location) ");
+            //        //sb.Append("VALUES (@name, @location);");
+            //        //sql = sb.ToString();
+            //        //using (SqlCommand command = new SqlCommand(sql, connection))
+            //        //{
+            //        //    command.Parameters.AddWithValue("@name", "Jake");
+            //        //    command.Parameters.AddWithValue("@location", "United States");
+            //        //    int rowsAffected = command.ExecuteNonQuery();
+            //        //    Console.WriteLine(rowsAffected + " row(s) inserted");
+            //        //}
 
-                    //// UPDATE demo
-                    //String userToUpdate = "Nikita";
-                    //Console.Write("Updating 'Location' for user '" + userToUpdate + "', press any key to continue...");
-                    //Console.ReadKey(true);
-                    //sb.Clear();
-                    //sb.Append("UPDATE Employees SET Location = N'United States' WHERE Name = @name");
-                    //sql = sb.ToString();
-                    //using (SqlCommand command = new SqlCommand(sql, connection))
-                    //{
-                    //    command.Parameters.AddWithValue("@name", userToUpdate);
-                    //    int rowsAffected = command.ExecuteNonQuery();
-                    //    Console.WriteLine(rowsAffected + " row(s) updated");
-                    //}
+            //        //// UPDATE demo
+            //        //String userToUpdate = "Nikita";
+            //        //Console.Write("Updating 'Location' for user '" + userToUpdate + "', press any key to continue...");
+            //        //Console.ReadKey(true);
+            //        //sb.Clear();
+            //        //sb.Append("UPDATE Employees SET Location = N'United States' WHERE Name = @name");
+            //        //sql = sb.ToString();
+            //        //using (SqlCommand command = new SqlCommand(sql, connection))
+            //        //{
+            //        //    command.Parameters.AddWithValue("@name", userToUpdate);
+            //        //    int rowsAffected = command.ExecuteNonQuery();
+            //        //    Console.WriteLine(rowsAffected + " row(s) updated");
+            //        //}
 
-                    //// DELETE demo
-                    //String userToDelete = "Jared";
-                    //Console.Write("Deleting user '" + userToDelete + "', press any key to continue...");
-                    //Console.ReadKey(true);
-                    //sb.Clear();
-                    //sb.Append("DELETE FROM Employees WHERE Name = @name;");
-                    //sql = sb.ToString();
-                    //using (SqlCommand command = new SqlCommand(sql, connection))
-                    //{
-                    //    command.Parameters.AddWithValue("@name", userToDelete);
-                    //    int rowsAffected = command.ExecuteNonQuery();
-                    //    Console.WriteLine(rowsAffected + " row(s) deleted");
-                    //}
+            //        //// DELETE demo
+            //        //String userToDelete = "Jared";
+            //        //Console.Write("Deleting user '" + userToDelete + "', press any key to continue...");
+            //        //Console.ReadKey(true);
+            //        //sb.Clear();
+            //        //sb.Append("DELETE FROM Employees WHERE Name = @name;");
+            //        //sql = sb.ToString();
+            //        //using (SqlCommand command = new SqlCommand(sql, connection))
+            //        //{
+            //        //    command.Parameters.AddWithValue("@name", userToDelete);
+            //        //    int rowsAffected = command.ExecuteNonQuery();
+            //        //    Console.WriteLine(rowsAffected + " row(s) deleted");
+            //        //}
 
-                    //// READ demo
-                    //Console.WriteLine("Reading data from table, press any key to continue...");
-                    //Console.ReadKey(true);
-                    //sql = "SELECT Id, Name, Location FROM Employees;";
-                    //using (SqlCommand command = new SqlCommand(sql, connection))
-                    //{
+            //        //// READ demo
+            //        //Console.WriteLine("Reading data from table, press any key to continue...");
+            //        //Console.ReadKey(true);
+            //        //sql = "SELECT Id, Name, Location FROM Employees;";
+            //        //using (SqlCommand command = new SqlCommand(sql, connection))
+            //        //{
 
-                    //    using (SqlDataReader reader = command.ExecuteReader())
-                    //    {
-                    //        while (reader.Read())
-                    //        {
-                    //            Console.WriteLine("{0} {1} {2}", reader.GetInt32(0), reader.GetString(1), reader.GetString(2));
-                    //        }
-                    //    }
-                    //}
-                }
-            }
-            catch (SqlException e)
-            {
-                Console.WriteLine(e.ToString());
-            }
+            //        //    using (SqlDataReader reader = command.ExecuteReader())
+            //        //    {
+            //        //        while (reader.Read())
+            //        //        {
+            //        //            Console.WriteLine("{0} {1} {2}", reader.GetInt32(0), reader.GetString(1), reader.GetString(2));
+            //        //        }
+            //        //    }
+            //        //}
+            //    }
+            //}
+            //catch (SqlException e)
+            //{
+            //    Console.WriteLine(e.ToString());
+            //}
 
             Console.WriteLine("All done. Press any key to finish...");
             Console.ReadKey(true);
@@ -287,21 +336,21 @@ namespace BitMEX.TestForm
 
         private void Heartbeat_Tick(object sender, EventArgs e)
         {
-            if (calc != null)
-            {
-                long r = calc.Evaluate();
+            //if (calc != null)
+            //{
+            //    long r = calc.Evaluate();
                 
-                RefreshLabels(r.ToString());
+            //    RefreshLabels(r.ToString());
 
-                //if (calc.GetStatus().ToString() == "Finish")
-                //    btn
-                //{
-                //    calc.GetLastPrice();
-                //    PrepareConnections((double)NUDMaxExp.Value, (double)NUDLeverage.Value, (int)NUDDepth.Value, (int)NUDZonesize.Value, (double)NUDMinProfit.Value);
-                //}  
-            }
-            else
-                lbl1.Text = "Status:Disconnected";
+            //    //if (calc.GetStatus().ToString() == "Finish")
+            //    //    btn
+            //    //{
+            //    //    calc.GetLastPrice();
+            //    //    PrepareConnections((double)NUDMaxExp.Value, (double)NUDLeverage.Value, (int)NUDDepth.Value, (int)NUDZonesize.Value, (double)NUDMinProfit.Value);
+            //    //}  
+            //}
+            //else
+            //    lbl1.Text = "Status:Disconnected";
 
         }
 
@@ -314,43 +363,43 @@ namespace BitMEX.TestForm
 
         private void btn6_Click(object sender, EventArgs e)
         {
-            try
-            {
-                if (calc == null)
-                {
-                    PrepareConnections((double)NUDMaxExp.Value, (double)NUDLeverage.Value, (int)NUDDepth.Value, (int)NUDZonesize.Value, (double)NUDMinProfit.Value);
-                    lblConnectionStatus.Text = NUDMaxExp.Value.ToString() + "-" + NUDLeverage.Value.ToString() + "-" + NUDDepth.Value.ToString() + "-" + NUDZonesize.Value.ToString() + "-" + NUDMinProfit.Value.ToString() + "-";
-                }
+            //try
+            //{
+            //    if (calc == null)
+            //    {
+            //        PrepareConnections((double)NUDMaxExp.Value, (double)NUDLeverage.Value, (int)NUDDepth.Value, (int)NUDZonesize.Value, (double)NUDMinProfit.Value);
+            //        lblConnectionStatus.Text = NUDMaxExp.Value.ToString() + "-" + NUDLeverage.Value.ToString() + "-" + NUDDepth.Value.ToString() + "-" + NUDZonesize.Value.ToString() + "-" + NUDMinProfit.Value.ToString() + "-";
+            //    }
                 
-                double price;
-                double usize;
+            //    double price;
+            //    double usize;
 
-                price = calc.GetPrevClosePrice();
+            //    price = calc.GetPrevClosePrice();
                 
-                if (price == 0)
-                    price = (double)NUDDepth.Value;
+            //    if (price == 0)
+            //        price = (double)NUDDepth.Value;
 
-                if (price > 0)
-                {
-                    usize = calc.GetUnitSizeForPrice(price);
-                    connLong.MarketOrder("XBTUSD", MordoR.GenerateGUID(), long.Parse(usize.ToString()));
-                    lblLastPrice.Text = "Last price:" + price.ToString();
-                    lblUS.Text = "Unit size:" + usize.ToString();
-                }
-            }
-            catch (Exception exc)
-            {
-                MessageBox.Show(exc.Message);
-            }
+            //    if (price > 0)
+            //    {
+            //        usize = calc.GetUnitSizeForPrice(price);
+            //        connLong.MarketOrder("XBTUSD", MordoR.GenerateGUID(), long.Parse(usize.ToString()));
+            //        lblLastPrice.Text = "Last price:" + price.ToString();
+            //        lblUS.Text = "Unit size:" + usize.ToString();
+            //    }
+            //}
+            //catch (Exception exc)
+            //{
+            //    MessageBox.Show(exc.Message);
+            //}
             
         }
 
         public void RefreshLabels(string evalReturnCode = "")
         {
-            lbl2.Text = "RLim [L:" + connLong.LastKnownRateLimit.ToString() + "] & [S:" + connShort.LastKnownRateLimit.ToString() + "]";
-            lbl1.Text = "Status:" + calc.GetStatus().ToString();
-            lbl4.Text = "PrevClosePrice:" + calc.GetPrevClosePrice().ToString();
-            lbl5.Text = "Return code:" + evalReturnCode;
+            //lbl2.Text = "RLim [L:" + connLong.LastKnownRateLimit.ToString() + "] & [S:" + connShort.LastKnownRateLimit.ToString() + "]";
+            //lbl1.Text = "Status:" + calc.GetStatus().ToString();
+            //lbl4.Text = "PrevClosePrice:" + calc.GetPrevClosePrice().ToString();
+            //lbl5.Text = "Return code:" + evalReturnCode;
         }
 
         private void btn5_Click(object sender, EventArgs e)
@@ -391,19 +440,19 @@ namespace BitMEX.TestForm
 
         private void btn8_Click(object sender, EventArgs e)
         {
-            ID++;
-            bs.Add(new OrderResponse { Account = 1234, OrderQty = 1, ClOrdId = "A-" + ID.ToString() });
+            //ID++;
+            //bs.Add(new OrderResponse { Account = 1234, OrderQty = 1, ClOrdId = "A-" + ID.ToString() });
         }
 
         private void btn2_Click(object sender, EventArgs e)
         {
-            var obj = bs.List.OfType<OrderResponse>().ToList().Find(f => f.ClOrdId == textBox1.Text);
-            var foundIndex = bs.IndexOf(obj);
+            //var obj = bs.List.OfType<OrderResponse>().ToList().Find(f => f.ClOrdId == textBox1.Text);
+            //var foundIndex = bs.IndexOf(obj);
             
-            if (foundIndex > -1)
-                bs.List.RemoveAt(foundIndex);
-            else
-                MessageBox.Show("Not found.");
+            //if (foundIndex > -1)
+            //    bs.List.RemoveAt(foundIndex);
+            //else
+            //    MessageBox.Show("Not found.");
         }
     }
 }

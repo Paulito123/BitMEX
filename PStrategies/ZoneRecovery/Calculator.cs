@@ -9,8 +9,8 @@
     using BitMEX.Model;
     using BitMEX.Client;
 
-    // TESTLONG  [51091]    : "QbpGewiOyIYMbyQ-ieaTKfOJ"
-    // TESTSHORT [170591]   : "xEuMT-y7ffwxrvHA2yDwL1bZ"
+    // TESTLONG  [51091]
+    // TESTSHORT [170591]
 
     public class Calculator
     {
