@@ -51,6 +51,21 @@ namespace BitMEXRest.Model
             };
         }
 
+        public static OrderPOSTRequestParams CreateSimpleLimitWithID(string symbol, string clOrdId, decimal quantity, decimal price, OrderSide side)
+        {
+            return new OrderPOSTRequestParams
+            {
+                Symbol = symbol,
+                ClOrdID = clOrdId,
+                Side = Enum.GetName(typeof(OrderSide), side),
+                OrderQty = quantity,
+                OrdType = Enum.GetName(typeof(OrderType), OrderType.Limit),
+                DisplayQty = quantity,
+                Price = price,
+                //ExecInst = "ParticipateDoNotInitiate",
+            };
+        }
+
         /// <summary>
         /// Be aware that bitmex takes fee for hidden limit orders
         /// </summary>

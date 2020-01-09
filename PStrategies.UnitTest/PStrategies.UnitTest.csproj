@@ -54,13 +54,10 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="app.config" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\BitMEX\BitMEX.csproj">
-      <Project>{f8d81e53-f615-4d90-abb8-857c8c617eeb}</Project>
-      <Name>BitMEX</Name>
-    </ProjectReference>
     <ProjectReference Include="..\PStrategies\PStrategies.csproj">
       <Project>{bba09875-410f-46b5-bc68-1f647bc00c1b}</Project>
       <Name>PStrategies</Name>

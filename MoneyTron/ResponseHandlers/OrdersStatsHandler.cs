@@ -19,11 +19,12 @@ namespace MoneyTron.ResponseHandlers
             switch (newOrder.OrdStatus)
             {
                 case OrderStatus.Undefined:
-                case OrderStatus.Filled:
+                //case OrderStatus.Filled:
                 case OrderStatus.Canceled:
                     _orderList.RemoveAll(r => removeList.Any(a => a == r.OrderId));
                     break;
                 case OrderStatus.New:
+                case OrderStatus.Filled:
                 case OrderStatus.PartiallyFilled:
                     if (_orderList.Where(o => o.OrderId == newOrder.OrderId).Count() == 0)
                         _orderList.Add(newOrder);
@@ -42,6 +43,7 @@ namespace MoneyTron.ResponseHandlers
                 _orderList.Add(newOrder);
             else if (_orderList.Where(o => o.OrderId == newOrder.OrderId).Count() > 0)
             {
+                Log.Error($"Multipe Orders in list for single OrderId.");
                 List<string> removeList = new List<string>() { newOrder.OrderId };
                 _orderList.RemoveAll(r => removeList.Any(a => a == r.OrderId));
                 _orderList.Add(newOrder);
@@ -56,19 +58,20 @@ namespace MoneyTron.ResponseHandlers
                 _orderList.Add(newOrder);
             else if (_orderList.Where(p => p.OrderId == newOrder.OrderId).Count() > 1)
             {
-                _orderList.RemoveAll(r => removeList.Any(a => a == r.OrderId));
                 Log.Error($"Multipe Orders in list for single OrderId.");
+                _orderList.RemoveAll(r => removeList.Any(a => a == r.OrderId));
                 throw new Exception("Multipe Orders in list for single OrderId.");
             }
             else
             {
                 Order oldOrd = _orderList.Where(p => p.OrderId == newOrder.OrderId).First();
 
-                if (newOrder.OrdStatus == OrderStatus.Canceled || newOrder.OrdStatus == OrderStatus.Filled || newOrder.OrdStatus == OrderStatus.Rejected)
+                if (newOrder.OrdStatus == OrderStatus.Canceled || /*newOrder.OrdStatus == OrderStatus.Filled || */newOrder.OrdStatus == OrderStatus.Rejected)
                     _orderList.RemoveAll(r => removeList.Any(a => a == r.OrderId));
 
                 else
                 {
+                    // Update the existing order with the new property values.
                     var posType = typeof(Order);
                     var properties = posType.GetProperties(BindingFlags.Public | BindingFlags.Instance).Where(prop => prop.CanRead && prop.CanWrite);
 
@@ -99,7 +102,7 @@ namespace MoneyTron.ResponseHandlers
                 }
             }
         }
-
+        
         public void HandleDeleteOrder(Order newOrder)
         {
             List<string> removeList = new List<string>() { newOrder.OrderId };
@@ -111,6 +114,11 @@ namespace MoneyTron.ResponseHandlers
             BindingSource bs = new BindingSource();
             bs.DataSource = _orderList;
             return bs;
+        }
+
+        public List<Order> Clone()
+        {
+            return _orderList.ToList();
         }
     }
 }

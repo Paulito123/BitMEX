@@ -1,480 +1,428 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
-using BitMEX.Model;
-using BitMEX.Client;
+
+using Bitmex.Client.Websocket.Responses.Positions;
+using Bitmex.Client.Websocket.Responses.Orders;
+
+using BitMEXRest.Client;
+using BitMEXRest.Dto;
+using BitMEXRest.Model;
+
+using Serilog;
 
 namespace PStrategies.ZoneRecovery
 {
-    /// <summary>
-    /// An enumeration used for expressing in which part of the Zone Recovery algorithm the class is at a given moment.
-    /// </summary>
-    public enum ZoneRecoveryStatus { Winding, Unwinding, Init, Finish, Alert, Undefined }
-
-    /// <summary>
-    /// The direction in which profits (or lesser loss) can be made for the current positions.
-    /// </summary>
-    public enum ZoneRecoveryDirection { Up, Down, Undefined }
 
     class ZoneRecoveryComputer
     {
         #region Private variables
 
-        /// <summary>
-        /// The trading symbol for this instance of the Calculator.
-        /// </summary>
+        private IBitmexApiService bitmexApiServiceA;
+        private IBitmexApiService bitmexApiServiceB;
+
         private string Symbol { get; }
-
-        /// <summary>
-        /// An array of factors used to calculate the size of each winding.
-        /// </summary>
-        private static long[] FactorArray = new long[] { 1, 2, 3, 6, 12, 24, 48, 96 };
-
-        /// <summary>
-        /// The minimum unit size of each order. The result of the UnitSize multiplied by a value of the FactorArray 
-        /// results in the quantity of a respective order.
-        /// </summary>
-        private long UnitSize { get; set; }
-
-        /// <summary>
-        /// Reflects how deep inside the FactorArray, this instance of the Calculator class, is allowed to go.
-        /// </summary>
         private int MaxDepthIndex { get; }
-
-        /// <summary>
-        /// The list of available connections.
-        /// </summary>
-        private Dictionary<long, MordoR> Connections;
-        
-        /// <summary>
-        /// At any time, this measure reflects the maximum percentage of the TotalBalance that can be exposed to 
-        /// the market. 
-        /// </summary>
-        private double MaxExposurePerc { get; }
-
-        /// <summary>
-        /// The current leverage used for calculating other measures
-        /// </summary>
-        private double Leverage { get; }
-
-        /// <summary>
-        /// The size of the zone expressed in number of pips. ZoneSize * PipSize = Real Zone Size
-        /// </summary>
         private int ZoneSize { get; }
-
-        /// <summary>
-        /// When the mathematical break even price has been reached, this percentage defines how far in profit
-        /// the strategy needs to be before closing all related positions. 
-        /// Should be a decimal between 0 and 1!!!
-        /// </summary>
+        private double MaxExposurePerc { get; }
+        private double Leverage { get; }
         private double MinimumProfitPercentage { get; }
-
-        /// <summary>
-        /// Object used to lock a piece of code to prevent it from being executed multiple times within one instance of the calculator class.
-        /// </summary>
-        private readonly Object _Lock = new Object();
-
-        /// <summary>
-        /// The value of the current ZoneRecoveryStatus
-        /// </summary>
+        
         private ZoneRecoveryStatus CurrentStatus;
-
-        /// <summary>
-        /// CurrentZRPosition reflects the position withing the Zone Recovery strategy.
-        /// When 0 > Strategy has been initialized or is completely unwound. There should be no open positions.
-        /// When 1 > First Winding / last Unwinding
-        /// When CurrentZRPosition = MaxDepthIndex > ZoneRecoveryStatus is switched and winding process reversed
-        /// </summary>
         private int CurrentZRPosition;
+        private ZoneRecoveryDirection CurrentDirection;
+        
+        private static int StandardPegDistance { get; } = 5;
+        private static int[] FactorArray = new int[] { 1, 2, 3, 6, 12, 24, 48, 96 };
+
+        private double InitPrice { get; set; }
+        private long UnitSize { get; set; }
+        private double TotalBalance { get; set; }
+
+        private Dictionary<ZoneRecoveryAccount, List<Order>> LiveOrders;
+        private static Mutex OrderMutex = new Mutex();
+
+        private Dictionary<ZoneRecoveryAccount, List<Position>> LastKnownPosition;
+        private static Mutex PositionMutex = new Mutex();
 
         /// <summary>
-        /// The current direction for the known positions.
+        /// The main mutex for placing and removing orders.
         /// </summary>
-        private ZoneRecoveryDirection CurrentDirection;
+        private static Mutex EvaluationMutex = new Mutex();
+
+        /// <summary>
+        /// A ledger that keeps all the created (and sent) orders. It takes a batch number and a ZoneRecoveryOrder object.
+        /// TODO: Add functionality to export the ledger to files or DB...
+        /// </summary>
+        private readonly SortedDictionary<long, ZoneRecoveryOrderBatch> ZROrderLedger;
+
+        /// <summary>
+        /// The last BatchNr that is currently considered active.
+        /// </summary>
+        private long RunningBatchNr;
 
         #endregion Private variables
 
-        /// <summary>
-        /// Constructor
-        /// </summary>
-        /// <param name="symbol"></param>
-        /// <param name="maxExposurePerc"></param>
-        /// <param name="leverage"></param>
-        /// <param name="maxDepthIndex"></param>
-        /// <param name="zoneSize"></param>
-        /// <param name="minPrftPerc"></param>
-        /// <param name="connA"></param>
-        /// <param name="connB"></param>
-        public ZoneRecoveryComputer(string symbol, double maxExposurePerc, double leverage, int maxDepthIndex, int zoneSize, double minPrftPerc, MordoR connA, MordoR connB)
+        public ZoneRecoveryComputer(
+            IBitmexApiService apiSA,
+            IBitmexApiService apiSB,
+            double mostRecentPrice,
+            double totalWalletBalance,
+            string symbol = "XBTUSD",
+            int maxDepthIndex = 1,
+            int zoneSize = 20,
+            double maxExposurePerc = 0.01,
+            double leverage = 1,
+            double minPrftPerc = 0.01)
         {
-            // Initialize main variables
-            Symbol = symbol;
-            MaxExposurePerc = maxExposurePerc;
-            Leverage = leverage;
-            MaxDepthIndex = maxDepthIndex;
-            ZoneSize = zoneSize;
-            MinimumProfitPercentage = minPrftPerc;
 
-            Connections = new Dictionary<long, MordoR>();
-            Connections.Add(connA.Account, connA);
-            Connections.Add(connB.Account, connB);
-        }
-
-        /// <summary>
-        /// Turning the wheel, advance one step further in the ZR winding process...
-        /// </summary>
-        private void TakeStepForward()
-        {
-            if (CurrentStatus == ZoneRecoveryStatus.Winding)
-            {
-                CurrentZRPosition++;
-
-                // Zone Recovery logic is reversed
-                if (CurrentZRPosition == MaxDepthIndex)
-                    CurrentStatus = ZoneRecoveryStatus.Unwinding;
-            }
-            else if (CurrentStatus == ZoneRecoveryStatus.Unwinding)
-            {
-                CurrentZRPosition--;
-
-                // Reset the calculator
-                if (CurrentZRPosition == 0)
-                    CurrentStatus = ZoneRecoveryStatus.Finish;
-            }
-            else if (CurrentStatus == ZoneRecoveryStatus.Init)
-            {
-                CurrentStatus = ZoneRecoveryStatus.Winding;
-                CurrentZRPosition++;
-            }
-        }
-
-        /// <summary>
-        /// Calculates the break even price of two positions.
-        /// </summary>
-        /// <returns>The calculated break even price</returns>
-        private static double CalculateBreakEvenPrice(double volA, double priceA, double volB, double priceB)
-        {
-            double outp;
+            // Should never be reset during the lifetime of this ZoneRecoveryComputer instance...
+            ZROrderLedger = new SortedDictionary<long, ZoneRecoveryOrderBatch>();
+            RunningBatchNr = 0;
 
             try
             {
-                outp = ((volA * priceA) + (volB * priceB)) / (volA + volB);
+                if (apiSA == null || apiSB == null)
+                    throw new Exception("bitmexApiService cannot be null");
+
+                bitmexApiServiceA = apiSA;
+                bitmexApiServiceB = apiSB;
+
+                if (symbol == "XBTUSD")
+                    Symbol = symbol;
+                else
+                    throw new Exception("Symbol has a value that is not permitted");
+
+                if (maxExposurePerc > 0 && maxExposurePerc <= 1)
+                    MaxExposurePerc = maxExposurePerc;
+                else
+                    throw new Exception("MaxExposurePerc not within permitted bounds");
+
+                if (leverage > 0 && leverage <= 100)
+                    Leverage = leverage;
+                else
+                    throw new Exception("Leverage not within permitted bounds");
+
+                if (maxDepthIndex > 0 && maxDepthIndex <= FactorArray.Count())
+                    MaxDepthIndex = maxDepthIndex;
+                else
+                    throw new Exception("MaxDepthIndex not within permitted bounds");
+
+                if (zoneSize >= 2 && zoneSize < 1000)
+                    ZoneSize = zoneSize;
+                else
+                    throw new Exception("ZoneSize not within permitted bounds");
+
+                if (minPrftPerc > 0 && minPrftPerc <= 1)
+                    MinimumProfitPercentage = minPrftPerc;
+                else
+                    throw new Exception("MinimumProfitPercentage not within permitted bounds");
+
+                if (mostRecentPrice <= 0)
+                    throw new Exception("MostRecentPrice does not have a permitted value");
+
+                if (totalWalletBalance <= 0)
+                    throw new Exception("TotalWalletBalance does not have a permitted value");
+
+                Reset(mostRecentPrice, totalWalletBalance);
             }
             catch (Exception exc)
             {
-                outp = 0;
+                Log.Error($"ZoneRecoveryComputer: {exc.Message}");
+                throw exc;
             }
-
-            return outp;
         }
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <returns></returns>
-        //public void EvaluatePositions()
-        //{
-        //    long exitCode = 0;
+        private double GetMaximumDepth()
+        {
+            double sum = 0;
 
-        //    // Check if server can be queried
-        //    if (DateTime.Now >= NextServerReleaseDateTime && Connections[AccountLong].LastKnownRateLimit > 5 && Connections[AccountShort].LastKnownRateLimit > 5)
-        //    {
-        //        // Create a variable used for locking.
-        //        bool acquiredLock = false;
-        //        long timeOutMS = 0;
+            for (int i = 0; i < MaxDepthIndex; i++)
+            {
+                sum = sum + FactorArray[i];
+            }
+            return sum;
+        }
 
-        //        try
-        //        {
-        //            // ----------
-        //            exitCode = 1;
-        //            // ----------
+        private void SetUnitSizeForPrice(double refPrice)
+        {
+            try
+            {
+                double totalDepthMaxExposure = GetMaximumDepth();
 
-        //            // Try enter the lock.
-        //            Monitor.TryEnter(_Lock, 0, ref acquiredLock);
+                if (refPrice > 0 && totalDepthMaxExposure > 0 && totalDepthMaxExposure < FactorArray.Sum())
+                {
+                    UnitSize = (long)Math.Round(refPrice * Leverage * TotalBalance * MaxExposurePerc / totalDepthMaxExposure, MidpointRounding.ToEven);
+                }
+                else
+                    throw new Exception("Cannot determine UnitSize");
+            }
+            catch (Exception exc)
+            {
+                Log.Error($"SetUnitSizeForPrice: {exc.Message}");
+                throw exc;
+            }
+        }
 
-        //            // Test if entering the lock was successful.
-        //            if (acquiredLock)
-        //            {
-        //                // ----------
-        //                exitCode = 2;
-        //                // ----------
+        public void Reset(double mostRecentPrice, double totalWalletBalance)
+        {
+            try
+            {
+                Random rand = new Random();
+                if ((rand.NextDouble() * (1 - -1) - 1) >= 0)
+                    CurrentDirection = ZoneRecoveryDirection.Up;
+                else
+                    CurrentDirection = ZoneRecoveryDirection.Down;
 
-        //                if (CurrentStatus == ZoneRecoveryStatus.Unwinding || CurrentStatus == ZoneRecoveryStatus.Winding)
-        //                {
-        //                    // ----------
-        //                    exitCode = 3;
-        //                    // ----------
-        //                    List<OrderResponse> ServerOrders = new List<OrderResponse>();
+                CurrentStatus = ZoneRecoveryStatus.Init;
+                CurrentZRPosition = 0;
 
-        //                    // Cancel resting orders
-        //                    if (ApplicationOrders != null)
-        //                    {
-        //                        // ----------
-        //                        exitCode = 4;
-        //                        // ----------
-        //                        string l;
-        //                        string s;
+                LiveOrders = new Dictionary<ZoneRecoveryAccount, List<Order>>();
+                LiveOrders.Add(ZoneRecoveryAccount.A, new List<Order>());
+                LiveOrders.Add(ZoneRecoveryAccount.B, new List<Order>());
 
-        //                        MessageBox.Show(ApplicationOrders.Select(p => ((OrderResponse)p.ServerResponseInitial).Account).First().ToString());
-        //                        MessageBox.Show(ApplicationOrders.Count().ToString());
+                LastKnownPosition = new Dictionary<ZoneRecoveryAccount, List<Position>>();
+                LastKnownPosition.Add(ZoneRecoveryAccount.A, new List<Position>());
+                LastKnownPosition.Add(ZoneRecoveryAccount.B, new List<Position>());
 
-        //                        // Get the clOrdIds that are supposed to be live
-        //                        if (ApplicationOrders.Where(p => ((OrderResponse)p.ServerResponseInitial).Account == AccountLong).Count() > 0)
-        //                        {
-        //                            l = string.Join(",", ApplicationOrders.Where(p => ((OrderResponse)p.ServerResponseInitial).Account == AccountLong).Select(p => p.ClOrdId));
-        //                            var ol = Connections[AccountLong].GetOrdersForCSId(l);
+                if (totalWalletBalance > 0)
+                    TotalBalance = totalWalletBalance;
+                else
+                    throw new Exception("TotalWalletBalance does not have a permitted value");
 
-        //                            // Add OrderResponses to ServerOrders
-        //                            if (ol is List<OrderResponse>)
-        //                                ServerOrders.AddRange((List<OrderResponse>)ol);
-        //                            else
-        //                                throw new Exception("Error: Cannot update OrderResponse Long");
-        //                        }
+                if (mostRecentPrice > 0)
+                {
+                    InitPrice = mostRecentPrice;
+                    SetUnitSizeForPrice(mostRecentPrice);
+                }
+                else
+                    throw new Exception("MostRecentPrice does not have a permitted value");
+            }
+            catch (Exception exc)
+            {
+                Log.Error($"Reset: {exc.Message}");
+                throw exc;
+            }
+        }
+        
+        public void EvaluateOrders(List<Order> lo, ZoneRecoveryAccount zra)
+        {
+            try
+            {
+                // Tell all other threads to wait here if the mutex is working...
+                OrderMutex.WaitOne();
 
-        //                        // Get the clOrdIds that are supposed to be live
-        //                        if (ApplicationOrders.Where(p => ((OrderResponse)p.ServerResponseInitial).Account == AccountShort).Count() > 0)
-        //                        {
-        //                            s = string.Join(",", ApplicationOrders.Where(p => ((OrderResponse)p.ServerResponseInitial).Account == AccountShort).Select(p => p.ClOrdId));
-        //                            var os = Connections[AccountShort].GetOrdersForCSId(s);
+                LiveOrders[zra] = lo;
+            }
+            catch (Exception exc)
+            {
+                Log.Error($"EvaluateOrders: {exc.Message}");
+            }
+            finally
+            {
+                // Evaluate the new situation
+                Evaluate();
 
-        //                            // Add OrderResponses to ServerOrders
-        //                            if (os is List<OrderResponse>)
-        //                                ServerOrders.AddRange((List<OrderResponse>)os);
-        //                            else
-        //                                throw new Exception("Error: Cannot update OrderResponse Short");
-        //                        }
-        //                    }
+                // Release the Mutex.
+                OrderMutex.ReleaseMutex();
+            }
+        }
 
-        //                    if (ServerOrders.Count() == 0)
-        //                    {
-        //                        // ----------
-        //                        exitCode = 5;
-        //                        // ----------
+        private void EvaluatePositions(List<Position> posList, ZoneRecoveryAccount zra)
+        {
+            try
+            {
+                // Tell all other threads to wait here if the mutex is working...
+                PositionMutex.WaitOne();
 
-        //                    }
-        //                    else if (ServerOrders.Where(o => o.OrdStatus == "Filled").Count() > 0)
-        //                    {
-        //                        // ----------
-        //                        exitCode = 6;
-        //                        // ----------
+                var currentQty = LastKnownPosition[zra].Where(x => x.Symbol == Symbol).First().CurrentQty ?? -1;
 
-        //                        // Synchronize the internal positions
-        //                        SyncPositions();
+                if (currentQty >= 0 && currentQty != posList.Where(x => x.Symbol == Symbol).First().CurrentQty)
+                {
+                    LastKnownPosition[zra] = posList;
+                }
+            }
+            catch (Exception exc)
+            {
+                Log.Error($"EvaluatePositions: {exc.Message}");
+            }
+            finally
+            {
+                // Evaluate the new situation
+                Evaluate();
 
-        //                        timeOutMS = 5000;
+                // Release the Mutex.
+                PositionMutex.ReleaseMutex();
+            }
+        }
 
-        //                        // Match the orders on the server with the orders known in the application
-        //                        foreach (ZoneRecoveryOrder ao in ApplicationOrders)
-        //                        {
-        //                            ao.ServerResponseCompare = ServerOrders.Where(n => n.ClOrdId == ao.ClOrdId).Single();
-        //                        }
+        // TODO: Evaluate should be called in both Position stream and Order stream because both orders and positions are evaluated here all the time.
+        // The mutex makes sure they dont interfere with each other and wait for the previous action to be finished.
+        // We will only be able to go to the next step if ALL REQUIREMENTS are met. The requirements can be related to orders and/or positions.
+        // Therefore both streams need to call Evaluate().
 
-        //                        string REVStatus = ApplicationOrders.Where(o => o.OrderType == ZoneRecoveryOrderType.REV).Select(o => o.ServerResponseCompare.OrdStatus).Single();
-        //                        string TPStatus = ApplicationOrders.Where(o => o.OrderType == ZoneRecoveryOrderType.TP).Select(o => o.ServerResponseCompare.OrdStatus).Single();
-        //                        string TLStatus = "N/A";
-        //                        if (ApplicationOrders.Where(o => o.OrderType == ZoneRecoveryOrderType.TL).Select(o => o.ServerResponseCompare.OrdStatus).Count() == 1)
-        //                            TLStatus = ApplicationOrders.Where(o => o.OrderType == ZoneRecoveryOrderType.TL).Select(o => o.ServerResponseCompare.OrdStatus).Single();
+        public void Evaluate()
+        {
+            // Check if one of the expected scenarios has happened and take action.
+            // If an unexpected scenario happened, handle the anomaly.
 
-        //                        long TPAccount = ApplicationOrders.Where(o => o.OrderType == ZoneRecoveryOrderType.TP).Select(o => o.ServerResponseCompare.Account).Single();
-        //                        long TLAccount = Connections.Where(c => c.Key != TPAccount).Select(c => c.Key).First();
+            try
+            {
+                EvaluationMutex.WaitOne();
 
-        //                        // Check all possible cases + response to the case
-        //                        if (TPStatus == "New" && (TLStatus == "New" || TLStatus == "N/A") && REVStatus == "Filled")            // Reversed
-        //                        {
-        //                            // ----------
-        //                            exitCode = 5;
-        //                            // ----------
+                if (ZROrderLedger.Count == 0)
+                {
+                    EvaluateInitStart();
+                }
+                else if (CurrentStatus == ZoneRecoveryStatus.Init)
+                {
+                    EvaluateInit();
+                }
+                //else if (CurrentStatus == ZoneRecoveryStatus.Winding)
+                //{
+                //    EvaluateWinding();
+                //}
+                //else if (CurrentStatus == ZoneRecoveryStatus.Unwinding)
+                //{
+                //    EvaluateUnwinding();
+                //}
+                //else if (CurrentStatus == ZoneRecoveryStatus.Finish)
+                //{
+                //    HandleFinish();
+                //}
+                //else
+                //{
+                //    HandleAnomaly();
+                //}
+            }
+            catch (Exception exc)
+            {
+                Log.Error($"Evaluate: {exc.Message}");
+            }
+            finally
+            {
+                EvaluationMutex.ReleaseMutex();
+            }
+        }
 
-        //                            var cancelTP = Connections[TPAccount].CancelAllOrders(Symbol, "", "Reversed. Close all open orders.");
-        //                            var cancelTL = Connections[TLAccount].CancelAllOrders(Symbol, "", "Reversed. Close all open orders.");
+        private void EvaluateInitStart()
+        {
+            // Prepare variables for initial check.
+            var nrOfOrdersA = LiveOrders[ZoneRecoveryAccount.A].Where(x => x.Symbol == Symbol).Count();
+            var nrOfOrdersB = LiveOrders[ZoneRecoveryAccount.B].Where(x => x.Symbol == Symbol).Count();
+            var nrOfClosedPositionA = LastKnownPosition[ZoneRecoveryAccount.A].Where(x => x.Symbol == Symbol && x.CurrentQty == 0).Count();
+            var nrOfClosedPositionB = LastKnownPosition[ZoneRecoveryAccount.B].Where(x => x.Symbol == Symbol && x.CurrentQty == 0).Count();
 
-        //                            // Throw an exception if not all orders could have been canceled
-        //                            if (!cancelTP || !cancelTL)
-        //                                throw new Exception("Unable to cancel orders.");
+            //var nrOfFilledOrdersA = LiveOrders[ZoneRecoveryAccount.A].Where(x => x.Symbol == Symbol && x.OrdStatus == OrderStatus.Filled && x.OrderQty == UnitSize).Count();
+            //var nrOfFilledOrdersB = LiveOrders[ZoneRecoveryAccount.B].Where(x => x.Symbol == Symbol && x.OrdStatus == OrderStatus.Filled && x.OrderQty == UnitSize).Count();
 
-        //                            // Go one step forward in the Calculator status.
-        //                            TakeStepForward();
+            //var nrOfNewOrdersA = LiveOrders[ZoneRecoveryAccount.A].Where(x => x.Symbol == Symbol && x.OrdStatus == OrderStatus.New && x.OrderQty == UnitSize).Count();
+            //var nrOfNewOrdersB = LiveOrders[ZoneRecoveryAccount.B].Where(x => x.Symbol == Symbol && x.OrdStatus == OrderStatus.New && x.OrderQty == UnitSize).Count();
+            
+            //var nrOfOpenPositionsA = LastKnownPosition[ZoneRecoveryAccount.A].Where(x => x.Symbol == Symbol && x.CurrentQty == UnitSize).Count();
+            //var nrOfOpenPositionsB = LastKnownPosition[ZoneRecoveryAccount.B].Where(x => x.Symbol == Symbol && x.CurrentQty == UnitSize).Count();
+            
+            // No orders and both positions closed
+            if (nrOfOrdersA == 0 && nrOfOrdersB == 0 && nrOfClosedPositionA == 1 && nrOfClosedPositionB == 1)
+            {
+                // Create a batchNr
+                RunningBatchNr = CreateBatchNr(DateTime.Now);
+                var zrob = new ZoneRecoveryOrderBatch(RunningBatchNr, 2);
+                ZROrderLedger.Add(RunningBatchNr, zrob);
+                ZoneRecoveryOrder zro;
+                
+                // Create initial Orders on both sides
+                var OrderParamsA = OrderPOSTRequestParams.CreateSimpleLimitWithID(Symbol, CreatedNewClOrdID(), UnitSize, (decimal)(InitPrice - StandardPegDistance), OrderSide.Buy);
+                zro = new ZoneRecoveryOrder(RunningBatchNr, ZoneRecoveryAccount.A, OrderParamsA);
+                ZROrderLedger[RunningBatchNr].AddOrder(zro);
+                bitmexApiServiceA.Execute(BitmexApiUrls.Order.PostOrder, OrderParamsA).ContinueWith(ProcessPostOrderResult);
 
-        //                            // Create App orders and send to server. TP is the old TL.
-        //                            UpdateAppOrderAndSync(TLAccount);
+                var OrderParamsB = OrderPOSTRequestParams.CreateSimpleLimitWithID(Symbol, CreatedNewClOrdID(), UnitSize, (decimal)(InitPrice + StandardPegDistance), OrderSide.Sell);
+                zro = new ZoneRecoveryOrder(RunningBatchNr, ZoneRecoveryAccount.B, OrderParamsB);
+                ZROrderLedger[RunningBatchNr].AddOrder(zro);
+                bitmexApiServiceB.Execute(BitmexApiUrls.Order.PostOrder, OrderParamsB).ContinueWith(ProcessPostOrderResult);
+            }
+            else
+            {
+                // Anomaly
+            }
+        }
 
-        //                        }
-        //                        else if (TPStatus == "Filled" && (TLStatus == "Filled" || TLStatus == "N/A") && REVStatus == "New")     // Profit taken
-        //                        {
-        //                            // ----------
-        //                            exitCode = 6;
-        //                            // ----------
+        // TODO Compare the orders in ZROrderLedger with the copy of the orders on the server LiveOrders.
+        private void EvaluateInit()
+        {
+            // TODO Handle Error
+            if (ZROrderLedger[RunningBatchNr].CurrentZROBStatus == ZoneRecoveryOrderBatchStatus.Alert)
+                return;
 
-        //                            // Try to cancel a previous order.
-        //                            var cancelRev = Connections[TLAccount].CancelAllOrders(Symbol, "", "TP Reached. Close all open orders.");
+            switch (ZROrderLedger[RunningBatchNr].CurrentZROBStatus)
+            {
+                case ZoneRecoveryOrderBatchStatus.Resting:
 
-        //                            // Throw an exception if not all orders could have been canceled
-        //                            if (!cancelRev)
-        //                                throw new Exception("Unable to cancel orders.");
+                    break;
+                case ZoneRecoveryOrderBatchStatus.Alert:
+                    break;
+                case ZoneRecoveryOrderBatchStatus.Init:
+                    break;
+                case ZoneRecoveryOrderBatchStatus.OrderFilled:
+                    break;
+                case ZoneRecoveryOrderBatchStatus.PartialResting:
+                    break;
+                default:
+                    break;
+            }
+            
+        }
 
-        //                            // Reset the Calculator internal variables
-        //                            InitializeCalculator();
+        private string CreatedNewClOrdID()
+        {
+            return Guid.NewGuid().ToString("N");
+        }
 
-        //                        }
-        //                        else if (TPStatus == "Filled" && TLStatus == "New" && REVStatus == "New")
-        //                        {
-        //                            // ----------
-        //                            exitCode = 7;
-        //                            // ----------
-        //                            // Profit side taken without loss side
+        private void ProcessPostOrderResult(Task<BitmexApiResult<OrderDto>> task)
+        {
+            // TODO: Perform some kind of check if all orders were placed successfully...
+            if (task.Exception != null)
+            {
+                Log.Error((task.Exception.InnerException ?? task.Exception).Message);
+                // TODO Handle Exception !!!
+                //ZROrderLedger[RunningBatchNr].CurrentZROBStatus = ZoneRecoveryOrderBatchStatus.Alert;
+            }
+            else //if (task.Result.Result.OrdStatus == "New" || task.Result.Result.OrdStatus == "New,Triggered")
+            {
+                ZROrderLedger[RunningBatchNr].SetLastResponse(task.Result.Result);
+                Log.Information($"Order placed with Id [{task.Result.Result.OrderId}] and status [{task.Result.Result.OrdStatus}]");
+            }
 
-        //                        }
-        //                        else if (TPStatus == "New" && TLStatus == "Filled" && REVStatus == "New")
-        //                        {
-        //                            // ----------
-        //                            exitCode = 8;
-        //                            // ----------
-        //                            // Loss side taken without profit side
+            ZROrderLedger[RunningBatchNr].EvaluateStatus();
+        }
 
-        //                        }
-        //                        else if (TPStatus == "Filled" && (TLStatus == "New" || TLStatus == "N/A") && REVStatus == "Filled")
-        //                        {
-        //                            // ----------
-        //                            exitCode = 9;
-        //                            // ----------
-        //                            // Profit and reverse side taken without loss side
+        private void EvaluateWinding()
+        {
 
-        //                        }
-        //                        else if (TPStatus == "New" && TLStatus == "Filled" && REVStatus == "Filled")
-        //                        {
-        //                            // ----------
-        //                            exitCode = 10;
-        //                            // ----------
-        //                            // Profit side take without loss side
+        }
 
-        //                        }
-        //                        else if (TPStatus == "Filled" && TLStatus == "Filled" && REVStatus == "Filled")
-        //                        {
-        //                            // ----------
-        //                            exitCode = 11;
-        //                            // ----------
-        //                            // Profit side take without loss side
+        private void EvaluateUnwinding()
+        {
 
-        //                        }
-        //                    }
-        //                }
-        //                else if (CurrentStatus == ZoneRecoveryStatus.Init)    // No Application orders OR ZoneRecoveryStatus = Init
-        //                {
-        //                    // ----------
-        //                    exitCode = 12;
-        //                    // ----------
+        }
+        
+        private void HandleFinish()
+        {
 
-        //                    // Synchronize the internal positions
-        //                    SyncPositions();
+        }
 
-        //                    long errorCounter = 0;
+        private void HandleAnomaly()
+        {
 
-        //                    if (Math.Abs(Positions[AccountShort].CurrentQty) == 0 && Math.Abs(Positions[AccountLong].CurrentQty) == 0)
-        //                    {
-        //                        // Do nothing
-        //                        // ----------
-        //                        exitCode = 13;
-        //                        // ----------
-        //                    }
-        //                    else if (Math.Abs(Positions[AccountShort].CurrentQty) == 0 && Math.Abs(Positions[AccountLong].CurrentQty) > 0)
-        //                    {
-        //                        // ----------
-        //                        exitCode = 14;
-        //                        // ----------
+        }
 
-        //                        // Set the initial unit size
-        //                        UnitSize = Positions[AccountLong].CurrentQty;
-
-        //                        // Create App orders and send to server
-        //                        errorCounter = UpdateAppOrderAndSync(Positions[AccountLong].Account);
-
-        //                        // check if Orders are placed with success
-        //                        if (errorCounter == 0)
-        //                            // Turn the wheel
-        //                            TakeStepForward();
-        //                        else
-        //                            throw new Exception("Error: UpdateAppOrderAndSync(Positions[AccountLong].Account)");
-
-        //                    }
-        //                    else if (Math.Abs(Positions[AccountLong].CurrentQty) == 0 && Math.Abs(Positions[AccountShort].CurrentQty) > 0)
-        //                    {
-        //                        // ----------
-        //                        exitCode = 15;
-        //                        // ----------
-
-        //                        // Set the initial unit size
-        //                        UnitSize = Math.Abs(Positions[AccountShort].CurrentQty);
-
-        //                        // Create App orders and send to server
-        //                        errorCounter = UpdateAppOrderAndSync(Positions[AccountShort].Account);
-
-        //                        // check if Orders are placed with success
-        //                        if (errorCounter == 0)
-        //                            // Turn the wheel
-        //                            TakeStepForward();
-        //                        else
-        //                            throw new Exception("Error: UpdateAppOrderAndSync(Positions[AccountShort].Account)");
-
-        //                    }
-        //                    else
-        //                    {
-        //                        // ----------
-        //                        exitCode = 16;
-        //                        // ----------
-        //                        // Cancel all open orders
-        //                        //var closeLongOrders = Connections[AccountLong].CancelAllOrders(Symbol);
-        //                        //var closeShortOrders = Connections[AccountShort].CancelAllOrders(Symbol);
-        //                        //var closeLongPosition = Connections[AccountLong].ClosePosition(Symbol);
-        //                        //var closeShortPosition = Connections[AccountShort].ClosePosition(Symbol);
-
-        //                        ////TODO: handle whatever this returns
-
-        //                        //// Throw an exception if not all orders could have been canceled
-        //                        //if (!closeLongOrders || !closeShortOrders)
-        //                        //    throw new Exception("Unable to cancel orders.");
-        //                        //else
-        //                        //    InitializeCalculator();
-
-        //                        //TODO: Send mail
-        //                    }
-        //                }
-        //                else if (CurrentStatus == ZoneRecoveryStatus.Alert)
-        //                {
-        //                    // ----------
-        //                    exitCode = 17;
-        //                    // ----------
-        //                }
-        //                else if (CurrentStatus == ZoneRecoveryStatus.Finish)
-        //                {
-        //                    // ----------
-        //                    exitCode = 18;
-        //                    // ----------
-        //                }
-        //            }
-        //        }
-        //        catch (Exception e)
-        //        {
-        //            CurrentStatus = ZoneRecoveryStatus.Alert;
-        //            MessageBox.Show("[" + exitCode.ToString() + "]:" + e.Message);
-        //        }
-        //        finally
-        //        {
-        //            // Ensure that the lock is released.
-        //            if (acquiredLock)
-        //            {
-        //                // Reset server query timer
-        //                DateTime dt = DateTime.Now;
-        //                NextServerReleaseDateTime = dt.AddMilliseconds((timeOutMS > 0) ? timeOutMS : StandardTimeOut);
-
-        //                // Exit the lock
-        //                Monitor.Exit(_Lock);
-        //            }
-        //        }
-        //    }
-
-        //    return exitCode;
-        //}
+        private static long CreateBatchNr(DateTime dt)
+        {
+            return dt.Ticks;
+        }
     }
 }

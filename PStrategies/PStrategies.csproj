@@ -9,9 +9,10 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>PStrategies</RootNamespace>
     <AssemblyName>PStrategies</AssemblyName>
-    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -31,6 +32,21 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Bitmex.Client.Websocket">
+      <HintPath>..\..\bitmex-client-websocket\src\Bitmex.Client.Websocket\bin\Debug\netstandard2.0\Bitmex.Client.Websocket.dll</HintPath>
+    </Reference>
+    <Reference Include="BitMEXRest">
+      <HintPath>..\BitMEXRest\bin\Debug\BitMEXRest.dll</HintPath>
+    </Reference>
+    <Reference Include="RestSharp">
+      <HintPath>..\packages\RestSharp.105.1.0\lib\net45\RestSharp.dll</HintPath>
+    </Reference>
+    <Reference Include="Serilog, Version=2.0.0.0, Culture=neutral, PublicKeyToken=24c2f752a8e58a10, processorArchitecture=MSIL">
+      <HintPath>..\packages\Serilog.2.9.0\lib\net46\Serilog.dll</HintPath>
+    </Reference>
+    <Reference Include="Serilog.Sinks.File, Version=2.0.0.0, Culture=neutral, PublicKeyToken=24c2f752a8e58a10, processorArchitecture=MSIL">
+      <HintPath>..\packages\Serilog.Sinks.File.4.1.0\lib\net45\Serilog.Sinks.File.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
@@ -49,13 +65,11 @@
     <Compile Include="ZoneRecovery\Calculator.cs" />
     <Compile Include="ZoneRecovery\ZoneRecoveryComputer.cs" />
     <Compile Include="ZoneRecovery\ZoneRecoveryOrder.cs" />
+    <Compile Include="ZoneRecovery\ZoneRecoveryOrderBatch.cs" />
+    <Compile Include="ZoneRecovery\ZoneRecoveryStuff.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\BitMEX\BitMEX.csproj">
-      <Project>{f8d81e53-f615-4d90-abb8-857c8c617eeb}</Project>
-      <Name>BitMEX</Name>
-    </ProjectReference>
+    <None Include="packages.config" />
   </ItemGroup>
-  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

@@ -19,8 +19,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "UnitTests", "UnitTests", "{
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Junk", "Junk", "{87A15711-E499-4C31-A0CC-0F9CB36A9F91}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RESTSharpConsumer", "RESTSharpConsumer\RESTSharpConsumer.csproj", "{158DF3EA-52E8-40F0-8E22-F38E8AE9E992}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MoneyTron", "MoneyTron\MoneyTron.csproj", "{BF2EF0E0-931D-4CB7-B6BB-F077DF2A269D}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Bitmex.Client.Websocket", "..\bitmex-client-websocket\src\Bitmex.Client.Websocket\Bitmex.Client.Websocket.csproj", "{8C7D216D-43C8-4098-9456-FD457115D438}"
@@ -63,10 +61,6 @@ Global
 		{3E890B1B-62AB-4DEA-92AD-AEDFB1483EB7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3E890B1B-62AB-4DEA-92AD-AEDFB1483EB7}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3E890B1B-62AB-4DEA-92AD-AEDFB1483EB7}.Release|Any CPU.Build.0 = Release|Any CPU
-		{158DF3EA-52E8-40F0-8E22-F38E8AE9E992}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{158DF3EA-52E8-40F0-8E22-F38E8AE9E992}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{158DF3EA-52E8-40F0-8E22-F38E8AE9E992}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{158DF3EA-52E8-40F0-8E22-F38E8AE9E992}.Release|Any CPU.Build.0 = Release|Any CPU
 		{BF2EF0E0-931D-4CB7-B6BB-F077DF2A269D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{BF2EF0E0-931D-4CB7-B6BB-F077DF2A269D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{BF2EF0E0-931D-4CB7-B6BB-F077DF2A269D}.Release|Any CPU.ActiveCfg = Release|Any CPU

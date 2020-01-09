@@ -35,6 +35,9 @@
             this.menuStrip1 = new System.Windows.Forms.MenuStrip();
             this.connectionsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.liveToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.bitMEXToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.onToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.offToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.testToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.bitMEXToolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
             this.connectToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -116,6 +119,7 @@
             this.tabPageOrdersB = new System.Windows.Forms.TabPage();
             this.dGVOrdersB = new System.Windows.Forms.DataGridView();
             this.panelHeader = new System.Windows.Forms.Panel();
+            this.btnTest = new System.Windows.Forms.Button();
             this.label8 = new System.Windows.Forms.Label();
             this.label11 = new System.Windows.Forms.Label();
             this.label12 = new System.Windows.Forms.Label();
@@ -156,10 +160,8 @@
             this.label33 = new System.Windows.Forms.Label();
             this.label23 = new System.Windows.Forms.Label();
             this.label27 = new System.Windows.Forms.Label();
-            this.btnTest = new System.Windows.Forms.Button();
-            this.bitMEXToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.onToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.offToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.btnZRStartStop = new System.Windows.Forms.Button();
+            this.label58 = new System.Windows.Forms.Label();
             this.menuStrip1.SuspendLayout();
             this.tlpMain.SuspendLayout();
             this.tlpSplitA_B.SuspendLayout();
@@ -212,8 +214,31 @@
             this.liveToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.bitMEXToolStripMenuItem});
             this.liveToolStripMenuItem.Name = "liveToolStripMenuItem";
-            this.liveToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.liveToolStripMenuItem.Size = new System.Drawing.Size(95, 22);
             this.liveToolStripMenuItem.Text = "Live";
+            // 
+            // bitMEXToolStripMenuItem
+            // 
+            this.bitMEXToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.onToolStripMenuItem,
+            this.offToolStripMenuItem});
+            this.bitMEXToolStripMenuItem.Name = "bitMEXToolStripMenuItem";
+            this.bitMEXToolStripMenuItem.Size = new System.Drawing.Size(112, 22);
+            this.bitMEXToolStripMenuItem.Text = "BitMEX";
+            // 
+            // onToolStripMenuItem
+            // 
+            this.onToolStripMenuItem.Name = "onToolStripMenuItem";
+            this.onToolStripMenuItem.Size = new System.Drawing.Size(91, 22);
+            this.onToolStripMenuItem.Text = "On";
+            this.onToolStripMenuItem.Click += new System.EventHandler(this.onToolStripMenuItem_Click);
+            // 
+            // offToolStripMenuItem
+            // 
+            this.offToolStripMenuItem.Name = "offToolStripMenuItem";
+            this.offToolStripMenuItem.Size = new System.Drawing.Size(91, 22);
+            this.offToolStripMenuItem.Text = "Off";
+            this.offToolStripMenuItem.Click += new System.EventHandler(this.offToolStripMenuItem_Click);
             // 
             // testToolStripMenuItem
             // 
@@ -1129,6 +1154,7 @@
             // panelHeader
             // 
             this.panelHeader.BackColor = System.Drawing.Color.Black;
+            this.panelHeader.Controls.Add(this.btnZRStartStop);
             this.panelHeader.Controls.Add(this.btnTest);
             this.panelHeader.Controls.Add(this.label8);
             this.panelHeader.Controls.Add(this.label11);
@@ -1146,11 +1172,22 @@
             this.panelHeader.Controls.Add(this.lblTrades1Min);
             this.panelHeader.Controls.Add(this.lblBidAmount);
             this.panelHeader.Controls.Add(this.lblBid);
+            this.panelHeader.Controls.Add(this.label58);
             this.panelHeader.Dock = System.Windows.Forms.DockStyle.Fill;
             this.panelHeader.Location = new System.Drawing.Point(3, 3);
             this.panelHeader.Name = "panelHeader";
             this.panelHeader.Size = new System.Drawing.Size(1086, 94);
             this.panelHeader.TabIndex = 3;
+            // 
+            // btnTest
+            // 
+            this.btnTest.Location = new System.Drawing.Point(207, 58);
+            this.btnTest.Name = "btnTest";
+            this.btnTest.Size = new System.Drawing.Size(75, 23);
+            this.btnTest.TabIndex = 3;
+            this.btnTest.Text = "Test";
+            this.btnTest.UseVisualStyleBackColor = true;
+            this.btnTest.Click += new System.EventHandler(this.btnTest_Click);
             // 
             // label8
             // 
@@ -1621,38 +1658,30 @@
             this.label27.TabIndex = 2;
             this.label27.Text = "PNL since started:";
             // 
-            // btnTest
+            // btnZRStartStop
             // 
-            this.btnTest.Location = new System.Drawing.Point(896, 16);
-            this.btnTest.Name = "btnTest";
-            this.btnTest.Size = new System.Drawing.Size(75, 23);
-            this.btnTest.TabIndex = 3;
-            this.btnTest.Text = "Test";
-            this.btnTest.UseVisualStyleBackColor = true;
-            this.btnTest.Click += new System.EventHandler(this.btnTest_Click);
+            this.btnZRStartStop.BackColor = System.Drawing.Color.DeepSkyBlue;
+            this.btnZRStartStop.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnZRStartStop.Font = new System.Drawing.Font("Microsoft Sans Serif", 6.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.btnZRStartStop.Location = new System.Drawing.Point(954, 7);
+            this.btnZRStartStop.Name = "btnZRStartStop";
+            this.btnZRStartStop.Size = new System.Drawing.Size(37, 19);
+            this.btnZRStartStop.TabIndex = 3;
+            this.btnZRStartStop.Text = "OFF";
+            this.btnZRStartStop.UseCompatibleTextRendering = true;
+            this.btnZRStartStop.UseVisualStyleBackColor = false;
+            this.btnZRStartStop.Click += new System.EventHandler(this.btnZRStartStop_Click);
             // 
-            // bitMEXToolStripMenuItem
+            // label58
             // 
-            this.bitMEXToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.onToolStripMenuItem,
-            this.offToolStripMenuItem});
-            this.bitMEXToolStripMenuItem.Name = "bitMEXToolStripMenuItem";
-            this.bitMEXToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
-            this.bitMEXToolStripMenuItem.Text = "BitMEX";
-            // 
-            // onToolStripMenuItem
-            // 
-            this.onToolStripMenuItem.Name = "onToolStripMenuItem";
-            this.onToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
-            this.onToolStripMenuItem.Text = "On";
-            this.onToolStripMenuItem.Click += new System.EventHandler(this.onToolStripMenuItem_Click);
-            // 
-            // offToolStripMenuItem
-            // 
-            this.offToolStripMenuItem.Name = "offToolStripMenuItem";
-            this.offToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
-            this.offToolStripMenuItem.Text = "Off";
-            this.offToolStripMenuItem.Click += new System.EventHandler(this.offToolStripMenuItem_Click);
+            this.label58.AutoSize = true;
+            this.label58.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label58.ForeColor = System.Drawing.Color.White;
+            this.label58.Location = new System.Drawing.Point(830, 7);
+            this.label58.Name = "label58";
+            this.label58.Size = new System.Drawing.Size(118, 16);
+            this.label58.TabIndex = 2;
+            this.label58.Text = "Zone Recovery:";
             // 
             // MTMainForm
             // 
@@ -1834,6 +1863,8 @@
         private System.Windows.Forms.ToolStripMenuItem bitMEXToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem onToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem offToolStripMenuItem;
+        private System.Windows.Forms.Button btnZRStartStop;
+        private System.Windows.Forms.Label label58;
     }
 }
 

@@ -25,6 +25,13 @@ using Websocket.Client;
 using MoneyTron.ResponseHandlers;
 using Serilog;
 
+using PStrategies.ZoneRecovery;
+
+using BitMEXRest.Authorization;
+using BitMEXRest.Client;
+using BitMEXRest.Dto;
+using BitMEXRest.Model;
+
 namespace MoneyTron.Presenter
 {
     class MTMainPresenter
@@ -32,6 +39,12 @@ namespace MoneyTron.Presenter
         #region Declarations
 
         private readonly IMTMainForm _view;
+
+        //private readonly IBitmexAuthorization _bitmexAuthorizationA;
+        //private readonly IBitmexAuthorization _bitmexAuthorizationB;
+
+        private IBitmexApiService bitmexApiServiceA;
+        private IBitmexApiService bitmexApiServiceB;
 
         private OrderBookStatsComputer _orderBookStatsComputer;
         private TradeStatsComputer _tradeStatsComputer;
@@ -75,10 +88,58 @@ namespace MoneyTron.Presenter
             _view = view;
 
             ConfigureAccounts();
+
+            ConfigureRestApi();
+
             HandleTasks();
         }
 
         #region Configuration
+
+        // TODO: Simplify
+        private void ConfigureRestApi()
+        {
+            var appSettings = ConfigurationManager.AppSettings;
+            string apiA, secA, apiB, secB;
+            BitmexEnvironment env;
+
+            if (_view.isTest)
+            {
+                apiA = appSettings["API_KEY_BITMEX_A_TEST"] ?? string.Empty;
+                secA = appSettings["API_SECRET_BITMEX_A_TEST"] ?? string.Empty;
+                apiB = appSettings["API_KEY_BITMEX_B_TEST"] ?? string.Empty;
+                secB = appSettings["API_SECRET_BITMEX_B_TEST"] ?? string.Empty;
+                env = BitmexEnvironment.Test;
+            }
+            else
+            {
+                apiA = appSettings["API_KEY_BITMEX_A_LIVE"] ?? string.Empty;
+                secA = appSettings["API_SECRET_BITMEX_A_LIVE"] ?? string.Empty;
+                apiB = appSettings["API_KEY_BITMEX_B_LIVE"] ?? string.Empty;
+                secB = appSettings["API_SECRET_BITMEX_B_LIVE"] ?? string.Empty;
+                env = BitmexEnvironment.Prod;
+            }
+
+            if (!string.IsNullOrEmpty(apiA) && !string.IsNullOrEmpty(secA) && !string.IsNullOrEmpty(apiB) && !string.IsNullOrEmpty(secB))
+            {
+
+                bitmexApiServiceA = BitmexApiService.CreateDefaultApi(new BitmexAuthorization
+                {
+                    BitmexEnvironment = env,
+                    Key = apiA,
+                    Secret = secA
+                });
+
+                bitmexApiServiceB = BitmexApiService.CreateDefaultApi(new BitmexAuthorization
+                {
+                    BitmexEnvironment = env,
+                    Key = apiB,
+                    Secret = secB
+                });
+            }
+            else
+                throw new NullReferenceException("API key or secret missing"); 
+        }
 
         private void ConfigureAccounts()
         {
@@ -122,6 +183,7 @@ namespace MoneyTron.Presenter
             _communicatorA = new BitmexWebsocketCommunicator(url);
             _clientA = new BitmexWebsocketClient(_communicatorA);
 
+            // Enable stream listeners
             Subscribe(_clientA, MTAccount.A);
 
             _communicatorA.ReconnectionHappened.Subscribe(async type =>

@@ -9,8 +9,6 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Collections;
-using BitMEX.Client;
-using BitMEX.Model;
 using Bitmex.Client.Websocket.Responses.Orders;
 
 namespace MoneyTron
@@ -589,24 +587,6 @@ namespace MoneyTron
             }));
         }
 
-        private void SetPBOnGuiThread(ProgressBar pb, int value)
-        {
-            if (pb.Value == value)
-            {               return;
-            }
-                
-            if (!InvokeRequired)
-            {
-                pb.Value = value;
-                return;
-            }
-
-            this.Invoke(new Action(() =>
-            {
-                pb.Value = value;
-            }));
-        }
-
         #endregion SetGUIThread methods
 
         private void btnTest_Click(object sender, EventArgs e)
@@ -615,6 +595,18 @@ namespace MoneyTron
             //MessageBox.Show(ConfigurationManager.AppSettings["ClientValidationEnabled"]);
         }
 
-        
+        private void btnZRStartStop_Click(object sender, EventArgs e)
+        {
+            if (((Button)sender).Text == "OFF")
+            {
+                ((Button)sender).Text = "ON";
+                ((Button)sender).BackColor = Color.LightGreen;
+            }
+            else
+            {
+                ((Button)sender).Text = "OFF";
+                ((Button)sender).BackColor = Color.DeepSkyBlue;
+            }
+        }
     }
 }
