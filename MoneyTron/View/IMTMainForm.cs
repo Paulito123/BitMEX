@@ -53,7 +53,9 @@ namespace MoneyTron
         Action OnStop { set; }
         Action OnStartA { set; }
         Action OnStartB { set; }
-        
+        Action OnStartZoneRecovery { get; set; }
+        Action OnStopZoneRecovery { get; set; }
+
         void Trades1Min(string value, Side side);
         void Trades5Min(string value, Side side);
         void Trades15Min(string value, Side side);

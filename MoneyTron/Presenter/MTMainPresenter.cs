@@ -43,6 +43,8 @@ namespace MoneyTron.Presenter
         //private readonly IBitmexAuthorization _bitmexAuthorizationA;
         //private readonly IBitmexAuthorization _bitmexAuthorizationB;
 
+        private ZoneRecoveryComputer ZRComputer;
+
         private IBitmexApiService bitmexApiServiceA;
         private IBitmexApiService bitmexApiServiceB;
 
@@ -160,6 +162,39 @@ namespace MoneyTron.Presenter
 
         #region Start and stop tasks
 
+        private void OnStartZoneRecovery()
+        {
+            if (_communicatorA != null && _communicatorB != null)
+            {
+                double tmp, walletBalance;
+                if (double.TryParse(_view.TotalFundsA, out tmp))
+                {
+                    walletBalance = tmp;
+                    if (double.TryParse(_view.TotalFundsB, out tmp))
+                    {
+                        walletBalance = walletBalance + tmp;
+                    }
+                    else
+                        return;
+                }
+                else
+                    return;
+
+                var stats = _orderBookStatsComputer.GetStats();
+
+                ZRComputer = new ZoneRecoveryComputer(bitmexApiServiceA, bitmexApiServiceB, stats.Bid, walletBalance, _defaultPair, 4, 50, 0.10, 1, 0.02);
+            }
+            else
+                return;
+        }
+
+        private void OnStopZoneRecovery()
+        {
+            // TODO: Proper closing of all positions...
+            if (ZRComputer != null)
+                ZRComputer = null;
+        }
+
         private void OnInit()
         {
             Clear();
@@ -271,6 +306,7 @@ namespace MoneyTron.Presenter
 
         private void OnStop()
         {
+            OnStopZoneRecovery();
             if (_pingSubscriptionA != null)
                 _pingSubscriptionA.Dispose();
             if (_clientA != null)
@@ -425,7 +461,11 @@ namespace MoneyTron.Presenter
                             _orderStatsHandlerA.HandleDeleteOrder(o);
                         }
                     }
-                    
+
+                    // TODO Check if this shit makes sense...
+                    if (ZRComputer != null)
+                        ZRComputer.EvaluateOrders(_orderStatsHandlerA.Clone(), ZoneRecoveryAccount.A);
+
                     var bs = _orderStatsHandlerA.GetBindingSource();
                     _view.bSRCOrdersA = bs;
                     _view.TabOrdersATitle = $"Orders [{bs.Count.ToString()}]";
@@ -453,6 +493,10 @@ namespace MoneyTron.Presenter
                             _orderStatsHandlerB.HandleDeleteOrder(o);
                         }
                     }
+
+                    // TODO Check if this shit makes sense...
+                    if (ZRComputer != null)
+                        ZRComputer.EvaluateOrders(_orderStatsHandlerB.Clone(), ZoneRecoveryAccount.B);
 
                     var bs = _orderStatsHandlerB.GetBindingSource();
                     _view.bSRCOrdersB = bs;

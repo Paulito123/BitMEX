@@ -66,6 +66,7 @@
     <Compile Include="ZoneRecovery\ZoneRecoveryComputer.cs" />
     <Compile Include="ZoneRecovery\ZoneRecoveryOrder.cs" />
     <Compile Include="ZoneRecovery\ZoneRecoveryOrderBatch.cs" />
+    <Compile Include="ZoneRecovery\ZoneRecoveryScenario.cs" />
     <Compile Include="ZoneRecovery\ZoneRecoveryStuff.cs" />
   </ItemGroup>
   <ItemGroup>

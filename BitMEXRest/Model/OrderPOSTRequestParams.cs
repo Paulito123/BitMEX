@@ -62,7 +62,7 @@ namespace BitMEXRest.Model
                 OrdType = Enum.GetName(typeof(OrderType), OrderType.Limit),
                 DisplayQty = quantity,
                 Price = price,
-                //ExecInst = "ParticipateDoNotInitiate",
+                ExecInst = "ParticipateDoNotInitiate",
             };
         }
 

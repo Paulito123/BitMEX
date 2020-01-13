@@ -43,7 +43,7 @@ namespace MoneyTron.ResponseHandlers
                 _orderList.Add(newOrder);
             else if (_orderList.Where(o => o.OrderId == newOrder.OrderId).Count() > 0)
             {
-                Log.Error($"Multipe Orders in list for single OrderId.");
+                Log.Error($"HandleNewOrder: multipe Orders in list for single OrderId [{newOrder.OrderId}].");
                 List<string> removeList = new List<string>() { newOrder.OrderId };
                 _orderList.RemoveAll(r => removeList.Any(a => a == r.OrderId));
                 _orderList.Add(newOrder);

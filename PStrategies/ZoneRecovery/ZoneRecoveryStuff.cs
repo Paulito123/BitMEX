@@ -13,6 +13,24 @@ namespace PStrategies.ZoneRecovery
         Undefined
     }
 
+    /// <summary>
+    /// An enumeration that represents the status of an order as known in the application.
+    /// New     = Resting order
+    /// Filled  = Filled order
+    /// Cancel  = Canceled order
+    /// Error   = Error occurred at the time the order was being transferred to the server.
+    /// </summary>
+    public enum ZoneRecoveryOrderStatus
+    {
+        New,
+        Filled,
+        PartiallyFilled,
+        Canceled,
+        Rejected,
+        Error,
+        Undefined
+    }
+
     public enum ZoneRecoveryOrderBatchStatus
     {
         Init,               // Orders have just been created
@@ -23,14 +41,23 @@ namespace PStrategies.ZoneRecovery
         Undefined
     }
 
+    public enum ZoneRecoveryScenarioSetup
+    {
+        PDNI_TwoSides,  // Participate Do No Initiate on both Buy and Sell side
+        UPWinding,
+        DOWNWinding,
+        UPUnwinding,
+        DOWNUnwinding
+    }
+
     /// <summary>
     /// The direction in which profits (or lesser loss) can be made for the current positions.
     /// </summary>
-    public enum ZoneRecoveryDirection {
-        Undefined,
-        Up,
-        Down
-    }
+    //public enum ZoneRecoveryDirection {
+    //    Undefined,
+    //    Up,
+    //    Down
+    //}
 
     /// <summary>
     /// An enumeration that represents the type of order within the Zone Recovery strategy.
@@ -38,27 +65,12 @@ namespace PStrategies.ZoneRecovery
     /// TL  = Take Loss
     /// REV = Reverse
     /// </summary>
-    public enum ZoneRecoveryInstructionType {
-        TP,
-        TL,
-        REV,
-        Cancel
-    }
-
-    /// <summary>
-    /// An enumeration that represents the status of an order as known in the application.
-    /// New     = Resting order
-    /// Filled  = Filled order
-    /// Cancel  = Canceled order
-    /// Error   = Error occurred at the time the order was being transferred to the server.
-    /// </summary>
-    public enum ZoneRecoveryOrderStatus {
-        New,
-        Filled,
-        PartiallyFilled,
-        Canceled,
-        Error,
-        Unknown
+    public enum ZoneRecoveryOrderType
+    {
+        TP,     //Take profit
+        TL,     //Take loss
+        REV,    //Reverse
+        FB      //First bid
     }
 
     public enum ZoneRecoveryAccount

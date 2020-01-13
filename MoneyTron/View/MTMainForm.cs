@@ -316,7 +316,9 @@ namespace MoneyTron
         public Action OnInit { get; set; }
         public Action OnStartA { get; set; }
         public Action OnStop { get; set; }
-        public Action OnStartB { get; set; }
+        public Action OnStartB { get; set; } 
+        public Action OnStartZoneRecovery { get; set; }
+        public Action OnStopZoneRecovery { get; set; }
 
         #endregion Actions
 
@@ -599,11 +601,13 @@ namespace MoneyTron
         {
             if (((Button)sender).Text == "OFF")
             {
+                OnStartZoneRecovery?.Invoke();
                 ((Button)sender).Text = "ON";
                 ((Button)sender).BackColor = Color.LightGreen;
             }
             else
             {
+                OnStopZoneRecovery?.Invoke();
                 ((Button)sender).Text = "OFF";
                 ((Button)sender).BackColor = Color.DeepSkyBlue;
             }
