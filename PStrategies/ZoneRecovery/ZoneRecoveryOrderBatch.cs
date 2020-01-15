@@ -33,23 +33,25 @@ namespace PStrategies.ZoneRecovery
 
         private long BatchNumber { get; }
         private int NrOfOrdersExpected { get; set; }
+        private ZoneRecoveryDirection ProfitDirection { get; set; }
 
         #endregion Core variables
-        
+
         #region Containers
 
         public List<ZoneRecoveryOrder> OrdersList;
         public ZoneRecoveryScenario Scenario;
 
         #endregion Containers
-        
+
         #region Constructors
 
-        public ZoneRecoveryOrderBatch(long batchNumber, ZoneRecoveryScenario scenario)
+        public ZoneRecoveryOrderBatch(long batchNumber, ZoneRecoveryScenario scenario, ZoneRecoveryDirection direction = ZoneRecoveryDirection.Undefined)
         {
             BatchNumber = batchNumber;
             OrdersList = new List<ZoneRecoveryOrder>();
             Scenario = scenario;
+            ProfitDirection = direction;
         }
 
         #endregion Constructors
@@ -91,23 +93,32 @@ namespace PStrategies.ZoneRecovery
             return OrdersList.Select(x => x.PostParams.ClOrdID).ToList();
         }
 
-        public void KillRestingOrders()
+        public bool KillRestingOrders()
         {
+            int errorCounter = 0;
             // Iterate all known orders
             foreach (ZoneRecoveryOrder zro in OrdersList)
             {
-                // If order is New (resting), kill it.
-                if (zro.CurrentStatus == ZoneRecoveryOrderStatus.New)
+                try
                 {
-                    //var result = zro.KillOrder();
+                    // If order is New (resting), kill it.
+                    if (zro.CurrentStatus == ZoneRecoveryOrderStatus.New)
+                    {
+                        zro.KillMe();
 
-                    //if (result.Result.Single().OrdStatus != "Canceled")
-                    //{
-                    //    throw new Exception($"KillRestingOrders: order {result.Result.Single().ClOrdId} did not return a Canceled status after trying to kill it");
-                    //}
+                        if (zro.CurrentStatus != ZoneRecoveryOrderStatus.Canceled)
+                        {
+                            throw new Exception($"order {zro.DeleteServerResponse.ClOrdId} did not return a Canceled status after trying to kill it");
+                        }
+                    }
                 }
-                //else if (zro.CurrentStatus == ZoneRecoveryOrderStatus.)
+                catch (Exception exc)
+                {
+                    errorCounter++;
+                    Log.Error($"KillRestingOrders: { exc.Message}");
+                }
             }
+            return (errorCounter > 0) ? false : true;
         }
 
         public void ProcessPostOrderResult(Task<BitmexApiResult<OrderDto>> task)
@@ -130,8 +141,6 @@ namespace PStrategies.ZoneRecovery
 
         public bool EvaluateAndInitiate()
         {
-            bool isSuccess = false;
-
             // Iterate the scenarios
             foreach (int k in Scenario.Orders.Keys)
             {
@@ -147,18 +156,20 @@ namespace PStrategies.ZoneRecovery
                 }
                 if (OrdersList.Count() == successCounter)
                 {
-                    isSuccess = true;
-                    break;
-                }   
+                    if (ProfitDirection == ZoneRecoveryDirection.Undefined)
+                        ProfitDirection = 
+                            (OrdersList
+                                .Where(x => 
+                                    x.LastServerResponse.OrdStatus == OrderStatus.Filled && 
+                                    (x.ZROrderType == ZoneRecoveryOrderType.FS || x.ZROrderType == ZoneRecoveryOrderType.TP))
+                                .Single()
+                                .ZRAccount == ZoneRecoveryAccount.A) ? ZoneRecoveryDirection.Up : ZoneRecoveryDirection.Down;
+
+                    return KillRestingOrders();
+                } 
             }
-
-            if (isSuccess)
-            {
-
-            }
-
             // TODO do not return anything but initiate the actions required
-            return isSuccess;
+            return false;
         }
 
         #endregion Evaluators

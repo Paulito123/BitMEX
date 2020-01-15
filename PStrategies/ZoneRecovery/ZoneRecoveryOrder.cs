@@ -4,6 +4,7 @@ using Bitmex.Client.Websocket.Responses.Orders;
 using BitMEXRest.Model;
 using BitMEXRest.Dto;
 using BitMEXRest.Client;
+using Serilog;
 
 namespace PStrategies.ZoneRecovery
 {
@@ -126,27 +127,12 @@ namespace PStrategies.ZoneRecovery
 
         #region External cheese
 
-        //public BitmexApiResult<List<OrderDto>> KillOrder()
-        //{
-        //    // TODO
-        //    var OrderParams = new OrderDELETERequestParams() { ClOrdID = PostParams.ClOrdID };
-        //    var result = Api.Execute(BitmexApiUrls.Order.DeleteOrder, OrderParams).Result;
-
-        //    //if (result.Exception != null)
-        //    //{
-        //    //    Log.Error((task.Exception.InnerException ?? task.Exception).Message);
-        //    //    // TODO Handle Exception !!!
-        //    //    //ZROrderLedger[RunningBatchNr].CurrentZROBStatus = ZoneRecoveryOrderBatchStatus.Alert;
-        //    //}
-        //    //else //if (task.Result.Result.OrdStatus == "New" || task.Result.Result.OrdStatus == "New,Triggered")
-        //    //{
-        //    //    ZROrderLedger[RunningBatchNr].SetFirstResponse(task.Result.Result);
-        //    //    Log.Information($"ProcessPostOrderResult: order placed with Id [{task.Result.Result.OrderId}] and status [{task.Result.Result.OrdStatus}]");
-        //    //}
-
-        //    SetDeleteServerResponse(result.Result.Where(x => x.ClOrdId == PostParams.ClOrdID).Single());
-        //    return result;
-        //}
+        public void KillMe()
+        {
+            var OrderParams = new OrderDELETERequestParams() { ClOrdID = PostParams.ClOrdID };
+            var result = Api.Execute(BitmexApiUrls.Order.DeleteOrder, OrderParams).Result;
+            DeleteServerResponse = result.Result.Where(x => x.ClOrdId == PostParams.ClOrdID).Single();
+        }
 
         #endregion External cheese
     }

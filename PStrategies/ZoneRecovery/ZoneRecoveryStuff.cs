@@ -41,23 +41,15 @@ namespace PStrategies.ZoneRecovery
         Undefined
     }
 
-    public enum ZoneRecoveryScenarioSetup
-    {
-        PDNI_TwoSides,  // Participate Do No Initiate on both Buy and Sell side
-        UPWinding,
-        DOWNWinding,
-        UPUnwinding,
-        DOWNUnwinding
-    }
-
     /// <summary>
     /// The direction in which profits (or lesser loss) can be made for the current positions.
     /// </summary>
-    //public enum ZoneRecoveryDirection {
-    //    Undefined,
-    //    Up,
-    //    Down
-    //}
+    public enum ZoneRecoveryDirection
+    {
+        Undefined,
+        Up,
+        Down
+    }
 
     /// <summary>
     /// An enumeration that represents the type of order within the Zone Recovery strategy.
@@ -70,7 +62,7 @@ namespace PStrategies.ZoneRecovery
         TP,     //Take profit
         TL,     //Take loss
         REV,    //Reverse
-        FB      //First bid
+        FS      //First served
     }
 
     public enum ZoneRecoveryAccount

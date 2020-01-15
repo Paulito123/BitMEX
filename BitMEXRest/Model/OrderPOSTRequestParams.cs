@@ -51,7 +51,7 @@ namespace BitMEXRest.Model
             };
         }
 
-        public static OrderPOSTRequestParams CreateSimpleLimitWithID(string symbol, string clOrdId, decimal quantity, decimal price, OrderSide side)
+        public static OrderPOSTRequestParams CreateSimpleLimit(string symbol, string clOrdId, decimal quantity, decimal price, OrderSide side)
         {
             return new OrderPOSTRequestParams
             {
@@ -93,6 +93,20 @@ namespace BitMEXRest.Model
                 OrdType = Enum.GetName(typeof(OrderType), OrderType.Stop),
                 StopPx = stopPrice,
                 ExecInst = "ReduceOnly,LastPrice",
+            };
+        }
+
+        public static OrderPOSTRequestParams CreateMarketStopOrder(string symbol, string clOrdId, decimal quantity, decimal stopPrice, OrderSide side)
+        {
+            return new OrderPOSTRequestParams
+            {
+                Symbol = symbol,
+                ClOrdID = clOrdId,
+                Side = Enum.GetName(typeof(OrderSide), side),
+                OrderQty = quantity,
+                OrdType = Enum.GetName(typeof(OrderType), OrderType.Stop),
+                StopPx = stopPrice,
+                ExecInst = "LastPrice",
             };
         }
 

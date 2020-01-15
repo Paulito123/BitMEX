@@ -336,6 +336,11 @@ namespace MoneyTron
             disconnectToolStripMenuItem.Enabled = false;
         }
 
+        private void Form1_Unload(object sender, FormClosingEventArgs e)
+        {
+            OnStop?.Invoke();
+        }
+
         private void InitDataGrids()
         {
             InitOrdersDataGrid(dGVOrdersA);

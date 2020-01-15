@@ -1,10 +1,11 @@
 ﻿using System;
 using System.Configuration;
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Linq;
 using System.Reactive.Linq;
 using System.Reactive.Concurrency;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Collections;
 using System.Windows.Forms;
@@ -52,15 +53,18 @@ namespace MoneyTron.Presenter
         private TradeStatsComputer _tradeStatsComputer;
         private GeneralStatsHandler _generalStatsHandler;
 
+        // TODO reduce nr of stats handlers by using mutex
         private OrdersStatsHandler _orderStatsHandlerA;
         private OrdersStatsHandler _orderStatsHandlerB;
 
-        private PositionStatsHandler _posStatsHandlerA;
-        private PositionStatsHandler _posStatsHandlerB;
+        private PositionStatsHandler _posStatsHandler;
+        private Mutex PositionStatsMutex = new Mutex();
 
+        // TODO reduce nr of stats handlers by using mutex
         private ErrorStatsHandler _errorStatsHandlerA;
         private ErrorStatsHandler _errorStatsHandlerB;
 
+        // TODO reduce nr of stats handlers by using mutex
         private MarginStatsHandler _marginStatsHandlerA;
         private MarginStatsHandler _marginStatsHandlerB;
 
@@ -156,6 +160,8 @@ namespace MoneyTron.Presenter
             _view.OnStop = OnStop;
             _view.OnStartA = async () => await OnStartA();
             _view.OnStartB = async () => await OnStartB();
+            _view.OnStartZoneRecovery = OnStartZoneRecovery;
+            _view.OnStopZoneRecovery = OnStopZoneRecovery;
         }
 
         #endregion Configuration
@@ -164,6 +170,8 @@ namespace MoneyTron.Presenter
 
         private void OnStartZoneRecovery()
         {
+            System.Windows.Forms.MessageBox.Show("Start the engines!");
+
             if (_communicatorA != null && _communicatorB != null)
             {
                 double tmp, walletBalance;
@@ -182,7 +190,24 @@ namespace MoneyTron.Presenter
 
                 var stats = _orderBookStatsComputer.GetStats();
 
-                ZRComputer = new ZoneRecoveryComputer(bitmexApiServiceA, bitmexApiServiceB, stats.Bid, walletBalance, _defaultPair, 4, 50, 0.10, 1, 0.02);
+                ZRComputer = new ZoneRecoveryComputer(
+                    bitmexApiServiceA, 
+                    bitmexApiServiceB, 
+                    (decimal)stats.Bid,             // TODO: _tradeStatsComputer.
+                    (decimal)walletBalance,        // TODO: _tradeStatsComputer.
+                    _defaultPair, 
+                    4, 
+                    50, 
+                    (decimal)0.10, 
+                    1, 
+                    (decimal)0.02);
+
+                System.Windows.Forms.MessageBox.Show(ZRComputer.TestMe(1).ToString());
+                System.Windows.Forms.MessageBox.Show(ZRComputer.TestMe(2).ToString());
+                System.Windows.Forms.MessageBox.Show(ZRComputer.TestMe(3).ToString());
+                System.Windows.Forms.MessageBox.Show(ZRComputer.TestMe(4).ToString());
+
+                ZRComputer.Evaluate();
             }
             else
                 return;
@@ -206,11 +231,12 @@ namespace MoneyTron.Presenter
             _generalStatsHandler = new GeneralStatsHandler(dt);
 
             var pair = _defaultPair.ToUpper();
-            
+
+            _posStatsHandler = new PositionStatsHandler();
+
             _tradeStatsComputer = new TradeStatsComputer();
             _orderBookStatsComputer = new OrderBookStatsComputer();
             _orderStatsHandlerA = new OrdersStatsHandler();
-            _posStatsHandlerA = new PositionStatsHandler();
             _errorStatsHandlerA = new ErrorStatsHandler();
             _marginStatsHandlerA = new MarginStatsHandler();
 
@@ -260,7 +286,6 @@ namespace MoneyTron.Presenter
             var pair = _defaultPair.ToUpper();
 
             _orderStatsHandlerB = new OrdersStatsHandler();
-            _posStatsHandlerB = new PositionStatsHandler();
             _errorStatsHandlerB = new ErrorStatsHandler();
             _marginStatsHandlerB = new MarginStatsHandler();
 
@@ -399,8 +424,8 @@ namespace MoneyTron.Presenter
                     sec = appSettings["API_SECRET_BITMEX_A_LIVE"] ?? string.Empty;
                 }
 
-                //await client.Send(new TradesSubscribeRequest(pair));
-                //await client.Send(new BookSubscribeRequest(pair));
+                await client.Send(new TradesSubscribeRequest(pair));
+                await client.Send(new BookSubscribeRequest(pair));
             }
             else
             {
@@ -431,14 +456,13 @@ namespace MoneyTron.Presenter
         
         private void HandleOrderResponse(OrderResponse response)
         {
+            // Continue without action when there is no Data
             if (response.Data.Count() == 0)
                 return;
 
             try
             {
-                var acc = response.Data.First().Account;
-
-                if (acc == Accounts[MTAccount.A])
+                if (response.Data.First().Account == Accounts[MTAccount.A])
                 {
                     if (response.Action == BitmexAction.Insert || response.Action == BitmexAction.Partial)
                     {
@@ -461,16 +485,25 @@ namespace MoneyTron.Presenter
                             _orderStatsHandlerA.HandleDeleteOrder(o);
                         }
                     }
+                    else if (response.Action == BitmexAction.Undefined)
+                    {
+                        Log.Warning($"HandleOrderResponse: order response ");
+
+                        foreach (Order o in response.Data)
+                        {
+                            _orderStatsHandlerA.HandleNewOrder(o);
+                        }
+                    }
 
                     // TODO Check if this shit makes sense...
                     if (ZRComputer != null)
                         ZRComputer.EvaluateOrders(_orderStatsHandlerA.Clone(), ZoneRecoveryAccount.A);
-
+                    
                     var bs = _orderStatsHandlerA.GetBindingSource();
                     _view.bSRCOrdersA = bs;
                     _view.TabOrdersATitle = $"Orders [{bs.Count.ToString()}]";
                 }
-                else if (acc == Accounts[MTAccount.B])
+                else if (response.Data.First().Account == Accounts[MTAccount.B])
                 {
                     if (response.Action == BitmexAction.Insert || response.Action == BitmexAction.Partial)
                     {
@@ -516,61 +549,44 @@ namespace MoneyTron.Presenter
 
             try
             {
-                var acc = response.Data.First().Account;
+                PositionStatsMutex.WaitOne();
 
-                if (acc == Accounts[MTAccount.A])
+                var acc = (response.Data.First().Account == Accounts[MTAccount.A]) ? ZoneRecoveryAccount.A : ZoneRecoveryAccount.B;
+                
+                if (response.Action == BitmexAction.Insert || response.Action == BitmexAction.Partial)
                 {
-                    if (response.Action == BitmexAction.Insert || response.Action == BitmexAction.Partial)
+                    foreach (Position p in response.Data)
                     {
-                        foreach (Position p in response.Data)
-                        {
-                            _posStatsHandlerA.HandleNewPosition(p);
-                        }
+                        _posStatsHandler.HandleNewPosition(p, acc);
                     }
-                    else if (response.Action == BitmexAction.Update)
+                }
+                else if (response.Action == BitmexAction.Update)
+                {
+                    foreach (Position p in response.Data)
                     {
-                        foreach (Position p in response.Data)
-                        {
-                            _posStatsHandlerA.HandleUpdatePosition(p);
-                        }
+                        _posStatsHandler.HandleUpdatePosition(p, acc);
                     }
-                    else if (response.Action == BitmexAction.Delete)
+                }
+                else if (response.Action == BitmexAction.Delete)
+                {
+                    foreach (Position p in response.Data)
                     {
-                        foreach (Position p in response.Data)
-                        {
-                            _posStatsHandlerA.HandleDeletePosition(p);
-                        }
+                        _posStatsHandler.HandleDeletePosition(p, acc);
                     }
+                }
 
-                    var bs = _posStatsHandlerA.GetBindingSource();
+                //if (ZRComputer != null)
+                //    ZRComputer.EvaluateOrders(_orderStatsHandlerA.Clone(), ZoneRecoveryAccount.A);
+
+                var bs = _posStatsHandler.GetBindingSource(acc);
+
+                if (acc == ZoneRecoveryAccount.A)
+                {
                     _view.bSRCPosA = bs;
                     _view.TabPosATitle = $"Positions [{bs.Count.ToString()}]";
                 }
-                else if (acc == Accounts[MTAccount.B])
+                else if (acc == ZoneRecoveryAccount.B)
                 {
-                    if (response.Action == BitmexAction.Insert || response.Action == BitmexAction.Partial)
-                    {
-                        foreach (Position p in response.Data)
-                        {
-                            _posStatsHandlerB.HandleNewPosition(p);
-                        }
-                    }
-                    else if (response.Action == BitmexAction.Update)
-                    {
-                        foreach (Position p in response.Data)
-                        {
-                            _posStatsHandlerB.HandleUpdatePosition(p);
-                        }
-                    }
-                    else if (response.Action == BitmexAction.Delete)
-                    {
-                        foreach (Position p in response.Data)
-                        {
-                            _posStatsHandlerB.HandleDeletePosition(p);
-                        }
-                    }
-
-                    var bs = _posStatsHandlerB.GetBindingSource();
                     _view.bSRCPosB = bs;
                     _view.TabPosBTitle = $"Positions [{bs.Count.ToString()}]";
                 }
@@ -578,6 +594,10 @@ namespace MoneyTron.Presenter
             catch (Exception exc)
             {
                 Log.Error("[HandlePositionResponse]:" + exc.Message);
+            }
+            finally
+            {
+                PositionStatsMutex.ReleaseMutex();
             }
         }
         

@@ -10,13 +10,13 @@ namespace PStrategies.ZoneRecovery
 {
     public class ZoneRecoveryScenario
     {
-        private ZoneRecoveryScenarioSetup Setup { get; }
+        //private ZoneRecoveryScenarioSetup Setup { get; }
         private int CurrentID = 0; 
         public readonly Dictionary<int, List<Order>> Orders;
 
-        public ZoneRecoveryScenario(ZoneRecoveryScenarioSetup setup)
+        public ZoneRecoveryScenario(/*ZoneRecoveryScenarioSetup setup*/)
         {
-            Setup = setup;
+            //Setup = setup;
             Orders = new Dictionary<int, List<Order>>();
         }
         
@@ -41,27 +41,27 @@ namespace PStrategies.ZoneRecovery
         // This would be (Filled + New) and (New + Filled) with the Unitsize calculated at the time
         // the Orders ar posted. 
         // Next steps should have the orders to be placed in case the conditions of Orders have been met... or something
-        public void SetUpInitial (ZoneRecoveryScenarioSetup setup)
-        {
-            switch (setup)
-            {
-                case ZoneRecoveryScenarioSetup.PDNI_TwoSides:
-                    // Action: TP in same direction, REV in opposite direction
-                    break;
-                case ZoneRecoveryScenarioSetup.UPWinding:
+        //public void SetUpInitial (ZoneRecoveryScenarioSetup setup)
+        //{
+        //    switch (setup)
+        //    {
+        //        case ZoneRecoveryScenarioSetup.PDNI_TwoSides:
+        //            // Action: TP in same direction, REV in opposite direction
+        //            break;
+        //        case ZoneRecoveryScenarioSetup.UPWinding:
 
-                    break;
-                case ZoneRecoveryScenarioSetup.DOWNWinding:
+        //            break;
+        //        case ZoneRecoveryScenarioSetup.DOWNWinding:
 
-                    break;
-                case ZoneRecoveryScenarioSetup.UPUnwinding:
+        //            break;
+        //        case ZoneRecoveryScenarioSetup.UPUnwinding:
 
-                    break;
-                case ZoneRecoveryScenarioSetup.DOWNUnwinding:
+        //            break;
+        //        case ZoneRecoveryScenarioSetup.DOWNUnwinding:
 
-                    break;
-            }
-        }
+        //            break;
+        //    }
+        //}
 
         
     }

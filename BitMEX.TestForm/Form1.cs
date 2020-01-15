@@ -43,7 +43,7 @@ namespace BitMEX.TestForm
         private IBitmexApiService bitmexApiServiceB;
 
         private BindingSource bs;
-        private long ID = 0;
+        //private long ID = 0;
 
         // TESTING
 
