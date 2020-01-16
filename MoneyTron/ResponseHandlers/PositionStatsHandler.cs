@@ -13,20 +13,25 @@ namespace MoneyTron.ResponseHandlers
     class PositionStatsHandler
     {
         private readonly Dictionary<ZoneRecoveryAccount, List<Position>> _posList = new Dictionary<ZoneRecoveryAccount, List<Position>>();
+        bool DontKeepEmptyPositions;
+
+        public PositionStatsHandler()
+        {
+            _posList.Add(ZoneRecoveryAccount.A, new List<Position>());
+            _posList.Add(ZoneRecoveryAccount.B, new List<Position>());
+            DontKeepEmptyPositions = true;
+        }
 
         public void HandleNewPosition(Position newPos, ZoneRecoveryAccount acc)
         {
             List<string> removeList = new List<string>() { newPos.Symbol };
 
-            // If the list does not yet exist in the dictionary, create it.
-            if (!_posList.ContainsKey(acc))
-                _posList.Add(acc, new List<Position>());
-
             // If the there is already an entry in the list for the given symbol and account, remove the entry.
-            if (_posList[acc].Where(o => o.Symbol == newPos.Symbol).Count() > 0)
+            if (_posList[acc].Where(o => o.Symbol == newPos.Symbol).Count() > 0 || (DontKeepEmptyPositions && newPos.CurrentQty == 0))
                 _posList[acc].RemoveAll(r => removeList.Any(a => a == r.Symbol));
 
             // Add the new position to the list
+            if (!(DontKeepEmptyPositions && newPos.CurrentQty == 0))
             _posList[acc].Add(newPos);
         }
 
@@ -34,9 +39,9 @@ namespace MoneyTron.ResponseHandlers
         {
             List<string> removeList = new List<string>() { newPos.Symbol };
 
-            if (!_posList.ContainsKey(acc) || _posList[acc] == null || _posList[acc].Where(p => p.Symbol == newPos.Symbol).Count() == 0)
+            if (_posList[acc].Where(p => p.Symbol == newPos.Symbol).Count() == 0 || (DontKeepEmptyPositions && newPos.CurrentQty == 0))
                 HandleNewPosition(newPos, acc);
-
+            
             else
             {
                 Position oldPos = _posList[acc].Where(p => p.Symbol == newPos.Symbol).First();
@@ -72,7 +77,7 @@ namespace MoneyTron.ResponseHandlers
             return bs;
         }
 
-        private Dictionary<ZoneRecoveryAccount, List<Position>> GetPositionDictionary()
+        public Dictionary<ZoneRecoveryAccount, List<Position>> GetPositionDictionary()
         {
             return _posList;
         }

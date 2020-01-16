@@ -36,6 +36,10 @@ namespace BitMEX.TestForm
         //ApiClient ClientA;
         //ApiClient ClientB;
 
+        private List<int> lijst;
+        private TestThreadSafePassedList test;
+        private int Counter = 0;
+
         private readonly IBitmexAuthorization _bitmexAuthorizationA;
         private readonly IBitmexAuthorization _bitmexAuthorizationB;
 
@@ -111,31 +115,24 @@ namespace BitMEX.TestForm
                 _bitmexAuthorizationA.Secret = secA;
                 _bitmexAuthorizationB.Key = apiB;
                 _bitmexAuthorizationB.Secret = secB;
-
-                //try
-                //{
-
-                //}
-                //catch (Exception e)
-                //{
-                //    MessageBox.Show(e.Message);
-                //}
+                
             }
 
-            //if (connLong.TryConnect() == BitMEXConnectorStatus.Connected && connShort.TryConnect() == BitMEXConnectorStatus.Connected)
-            //{
-            //    Connections.Add(connLong.Account, connLong);
-            //    Connections.Add(connShort.Account, connShort);
-            //    calc = new Calculator("XBTUSD", maxExp, leverage, maxDepth, zoneSize, minProfit, connLong, connShort);
-            //    lblConnectionStatus.Text = maxExp.ToString() + "-" + leverage.ToString() + "-" + maxDepth.ToString() + "-" + zoneSize.ToString() + "-" + minProfit.ToString() + "-";
-            //}
         }
 
         private void InitForm()
         {
+            lijst = new List<int>();
+            lijst.Add(Counter);
+            test = new TestThreadSafePassedList(lijst);
+            TimerTest.Interval = 1000;
+            TimerTest.Enabled = true;
+
+            MessageBox.Show(test.ToString());
+
             //btn1.Text = "Start/Stops";
             //btn8.Text = "calc.Evaluate()";
-            
+
             LabelOnOff.Text = "OFF";
             Heartbeat.Interval = 2000;
             TimerTest.Interval = 250;
@@ -356,7 +353,8 @@ namespace BitMEX.TestForm
 
         private void TimerTest_Tick(object sender, EventArgs e)
         {
-
+            Counter++;
+            lijst.Add(Counter);
         }
 
         #endregion Timer handlers
@@ -414,17 +412,18 @@ namespace BitMEX.TestForm
 
         private void btn4_Click(object sender, EventArgs e)
         {
-            if (Heartbeat.Enabled)
-            {
-                Heartbeat.Stop();
-                LabelOnOff.Text = "OFF";
-            }
-            else
-            {
-                //PrepareConnections();
-                Heartbeat.Start();
-                LabelOnOff.Text = "ON";
-            }
+            MessageBox.Show(test.ToString());
+            //if (Heartbeat.Enabled)
+            //{
+            //    Heartbeat.Stop();
+            //    LabelOnOff.Text = "OFF";
+            //}
+            //else
+            //{
+            //    //PrepareConnections();
+            //    Heartbeat.Start();
+            //    LabelOnOff.Text = "ON";
+            //}
         }
 
         // Market Order

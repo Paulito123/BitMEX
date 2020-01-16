@@ -5,28 +5,39 @@ using System;
 using System.Reflection;
 using Bitmex.Client.Websocket.Responses.Margins;
 using Serilog;
+using PStrategies.ZoneRecovery;
 
 namespace MoneyTron.ResponseHandlers
 {
     class MarginStatsHandler
     {
-        private long WalletBalance = 0;
-        private long MarginBalance = 0;
-        private long AvailableMargin = 0;
+        private readonly Dictionary<ZoneRecoveryAccount, long> WalletBalance   = new Dictionary<ZoneRecoveryAccount, long>();
+        private readonly Dictionary<ZoneRecoveryAccount, long> MarginBalance   = new Dictionary<ZoneRecoveryAccount, long>();
+        private readonly Dictionary<ZoneRecoveryAccount, long> AvailableMargin = new Dictionary<ZoneRecoveryAccount, long>();
 
-        public void UpdateBalances(long? walletBalance = null, long? marginBalance = null, long? availableBalance = null)
+        public MarginStatsHandler ()
         {
-            if (walletBalance != null && walletBalance != 0)
-                WalletBalance = (long)walletBalance;
-            if (marginBalance != null && marginBalance != 0)
-                MarginBalance = (long)marginBalance;
-            if (availableBalance != null && availableBalance != 0)
-                AvailableMargin = (long)availableBalance;
+            WalletBalance.Add(ZoneRecoveryAccount.A, 0);
+            WalletBalance.Add(ZoneRecoveryAccount.B, 0);
+            MarginBalance.Add(ZoneRecoveryAccount.A, 0);
+            MarginBalance.Add(ZoneRecoveryAccount.B, 0);
+            AvailableMargin.Add(ZoneRecoveryAccount.A, 0);
+            AvailableMargin.Add(ZoneRecoveryAccount.B, 0);
         }
 
-        public MarginStats GetMarginBalances()
+        public void UpdateBalances(ZoneRecoveryAccount acc, long? walletBalance = null, long? marginBalance = null, long? availableBalance = null)
         {
-            return new MarginStats(WalletBalance, MarginBalance, AvailableMargin);
+            if (walletBalance != null)
+                WalletBalance[acc] = (long)walletBalance;
+            if (marginBalance != null)
+                MarginBalance[acc] = (long)marginBalance;
+            if (availableBalance != null)
+                AvailableMargin[acc] = (long)availableBalance;
+        }
+
+        public MarginStats GetMarginBalances(ZoneRecoveryAccount acc)
+        {
+            return new MarginStats(WalletBalance[acc], MarginBalance[acc], AvailableMargin[acc]);
         }
     }
 

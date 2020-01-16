@@ -44,7 +44,7 @@ namespace MoneyTron.Presenter
         //private readonly IBitmexAuthorization _bitmexAuthorizationA;
         //private readonly IBitmexAuthorization _bitmexAuthorizationB;
 
-        private ZoneRecoveryComputer ZRComputer;
+        private ZoneRecoveryComputer ZRComputer = new ZoneRecoveryComputer();
 
         private IBitmexApiService bitmexApiServiceA;
         private IBitmexApiService bitmexApiServiceB;
@@ -54,19 +54,17 @@ namespace MoneyTron.Presenter
         private GeneralStatsHandler _generalStatsHandler;
 
         // TODO reduce nr of stats handlers by using mutex
-        private OrdersStatsHandler _orderStatsHandlerA;
-        private OrdersStatsHandler _orderStatsHandlerB;
+        private OrdersStatsHandler _orderStatsHandler;
+        private Mutex OrderStatsMutex = new Mutex();
 
         private PositionStatsHandler _posStatsHandler;
         private Mutex PositionStatsMutex = new Mutex();
-
-        // TODO reduce nr of stats handlers by using mutex
-        private ErrorStatsHandler _errorStatsHandlerA;
-        private ErrorStatsHandler _errorStatsHandlerB;
-
-        // TODO reduce nr of stats handlers by using mutex
-        private MarginStatsHandler _marginStatsHandlerA;
-        private MarginStatsHandler _marginStatsHandlerB;
+        
+        private ErrorStatsHandler _errorStatsHandler;
+        private Mutex ErrorStatsMutex = new Mutex();
+        
+        private MarginStatsHandler _marginStatsHandler;
+        private Mutex MarginStatsMutex = new Mutex();
 
         private Dictionary<MTAccount, long> Accounts;
 
@@ -157,55 +155,59 @@ namespace MoneyTron.Presenter
         private void HandleTasks()
         {
             _view.OnInit = OnInit;
-            _view.OnStop = OnStop;
+            _view.OnStopA = OnStopA;
+            _view.OnStopB = OnStopB;
             _view.OnStartA = async () => await OnStartA();
             _view.OnStartB = async () => await OnStartB();
             _view.OnStartZoneRecovery = OnStartZoneRecovery;
             _view.OnStopZoneRecovery = OnStopZoneRecovery;
+            _view.ZRComputer = ZRComputer;
         }
 
         #endregion Configuration
 
         #region Start and stop tasks
 
-        private void OnStartZoneRecovery()
+        private decimal GetTotalBalance()
         {
-            System.Windows.Forms.MessageBox.Show("Start the engines!");
+            double tmp, walletBalance;
 
-            if (_communicatorA != null && _communicatorB != null)
+            if (double.TryParse(_view.TotalFundsA, out tmp))
             {
-                double tmp, walletBalance;
-                if (double.TryParse(_view.TotalFundsA, out tmp))
+                walletBalance = tmp;
+                if (double.TryParse(_view.TotalFundsB, out tmp))
                 {
-                    walletBalance = tmp;
-                    if (double.TryParse(_view.TotalFundsB, out tmp))
-                    {
-                        walletBalance = walletBalance + tmp;
-                    }
-                    else
-                        return;
+                    return (decimal)(walletBalance + tmp);
                 }
                 else
-                    return;
+                    return 0;
+            }
+            else
+                return 0;
+        }
 
+        private void OnStartZoneRecovery()
+        {
+            if (_communicatorA != null && _communicatorB != null)
+            {
+                var WalletBalance = GetTotalBalance();
                 var stats = _orderBookStatsComputer.GetStats();
 
-                ZRComputer = new ZoneRecoveryComputer(
+                ZRComputer.Initialise(
                     bitmexApiServiceA, 
                     bitmexApiServiceB, 
-                    (decimal)stats.Bid,             // TODO: _tradeStatsComputer.
-                    (decimal)walletBalance,        // TODO: _tradeStatsComputer.
+                    (decimal)stats.Bid,
+                    WalletBalance,
+                    _orderStatsHandler.GetOrderDictionary(),
+                    OrderStatsMutex,
+                    _posStatsHandler.GetPositionDictionary(),
+                    PositionStatsMutex,
                     _defaultPair, 
                     4, 
                     50, 
                     (decimal)0.10, 
                     1, 
                     (decimal)0.02);
-
-                System.Windows.Forms.MessageBox.Show(ZRComputer.TestMe(1).ToString());
-                System.Windows.Forms.MessageBox.Show(ZRComputer.TestMe(2).ToString());
-                System.Windows.Forms.MessageBox.Show(ZRComputer.TestMe(3).ToString());
-                System.Windows.Forms.MessageBox.Show(ZRComputer.TestMe(4).ToString());
 
                 ZRComputer.Evaluate();
             }
@@ -216,13 +218,14 @@ namespace MoneyTron.Presenter
         private void OnStopZoneRecovery()
         {
             // TODO: Proper closing of all positions...
-            if (ZRComputer != null)
-                ZRComputer = null;
+            //if (ZRComputer != null)
+            //    ZRComputer = null;
         }
 
         private void OnInit()
         {
-            Clear();
+            Clear(ZoneRecoveryAccount.A);
+            Clear(ZoneRecoveryAccount.B);
         }
         
         private async Task OnStartA()
@@ -236,9 +239,9 @@ namespace MoneyTron.Presenter
 
             _tradeStatsComputer = new TradeStatsComputer();
             _orderBookStatsComputer = new OrderBookStatsComputer();
-            _orderStatsHandlerA = new OrdersStatsHandler();
-            _errorStatsHandlerA = new ErrorStatsHandler();
-            _marginStatsHandlerA = new MarginStatsHandler();
+            _orderStatsHandler = new OrdersStatsHandler();
+            _errorStatsHandler = new ErrorStatsHandler();
+            _marginStatsHandler = new MarginStatsHandler();
 
             var url = BitmexValues.ApiWebsocketTestnetUrl;
             _communicatorA = new BitmexWebsocketCommunicator(url);
@@ -249,13 +252,26 @@ namespace MoneyTron.Presenter
 
             _communicatorA.ReconnectionHappened.Subscribe(async type =>
             {
-                if (type != ReconnectionType.Initial)
+                try
                 {
-                    Log.Warning($"Reconnected A (type: {type})");
-                    _errorStatsHandlerA.Add2Reconnections(1);
+                    ErrorStatsMutex.WaitOne();
+
+                    if (type != ReconnectionType.Initial)
+                    {
+                        Log.Warning($"Reconnected A (type: {type})");
+                        _errorStatsHandler.Add2Reconnections(1, ZoneRecoveryAccount.A);
+                    }
+                    else if (type == ReconnectionType.Error)
+                        _errorStatsHandler.Add2ErrorCnt(1, ZoneRecoveryAccount.A);
                 }
-                else if (type == ReconnectionType.Error)
-                    _errorStatsHandlerA.Add2ErrorCnt(1);
+                catch (Exception exc)
+                {
+                    Log.Error($"_communicatorA.ReconnectionHappened: {exc.Message}");
+                }
+                finally
+                {
+                    ErrorStatsMutex.ReleaseMutex();
+                }
 
                 _view.StatusA($"Reconnected (type: {type})", StatusType.Info);
                 _view.ConnStartA = dt.ToString("dd-MM-yy HH:mm:ss");
@@ -265,14 +281,28 @@ namespace MoneyTron.Presenter
 
             _communicatorA.DisconnectionHappened.Subscribe(type =>
             {
-                _errorStatsHandlerA.Add2Disconnections(1);
-
-                if (type == DisconnectionType.Error)
+                try
                 {
-                    _errorStatsHandlerA.Add2ErrorCnt(1);
-                    _view.StatusA($"Disconnected by error, next try in {_communicatorA.ErrorReconnectTimeoutMs / 1000} sec", StatusType.Error);
-                    return;
+                    ErrorStatsMutex.WaitOne();
+
+                    _errorStatsHandler.Add2Disconnections(1, ZoneRecoveryAccount.A);
+
+                    if (type == DisconnectionType.Error)
+                    {
+                        _errorStatsHandler.Add2ErrorCnt(1, ZoneRecoveryAccount.A);
+                        _view.StatusA($"Disconnected by error, next try in {_communicatorA.ErrorReconnectTimeoutMs / 1000} sec", StatusType.Error);
+                        return;
+                    }
                 }
+                catch (Exception exc)
+                {
+                    Log.Error($"_communicatorA.DisconnectionHappened: {exc.Message}");
+                }
+                finally
+                {
+                    ErrorStatsMutex.ReleaseMutex();
+                }
+                
                 _view.StatusA($"Disconnected (type: {type})", StatusType.Warning);
             });
             
@@ -285,10 +315,6 @@ namespace MoneyTron.Presenter
         {
             var pair = _defaultPair.ToUpper();
 
-            _orderStatsHandlerB = new OrdersStatsHandler();
-            _errorStatsHandlerB = new ErrorStatsHandler();
-            _marginStatsHandlerB = new MarginStatsHandler();
-
             var url = BitmexValues.ApiWebsocketTestnetUrl;
             _communicatorB = new BitmexWebsocketCommunicator(url);
             _clientB = new BitmexWebsocketClient(_communicatorB);
@@ -297,13 +323,26 @@ namespace MoneyTron.Presenter
             
             _communicatorB.ReconnectionHappened.Subscribe(async type =>
             {
-                if (type != ReconnectionType.Initial)
+                try
                 {
-                    Log.Warning($"Reconnected B (type: {type})");
-                    _errorStatsHandlerB.Add2Reconnections(1);
+                    ErrorStatsMutex.WaitOne();
+
+                    if (type != ReconnectionType.Initial)
+                    {
+                        Log.Warning($"Reconnected B (type: {type})");
+                        _errorStatsHandler.Add2Reconnections(1, ZoneRecoveryAccount.B);
+                    }
+                    else if (type == ReconnectionType.Error)
+                        _errorStatsHandler.Add2ErrorCnt(1, ZoneRecoveryAccount.B);
                 }
-                else if (type == ReconnectionType.Error)
-                    _errorStatsHandlerB.Add2ErrorCnt(1);
+                catch (Exception exc)
+                {
+                    Log.Error($"_communicatorB.ReconnectionHappened: {exc.Message}");
+                }
+                finally
+                {
+                    ErrorStatsMutex.ReleaseMutex();
+                }
 
                 _view.StatusB($"Reconnected (type: {type})", StatusType.Info);
                 _view.ConnStartB = System.DateTime.Now.ToString("dd-MM-yy HH:mm:ss");
@@ -313,14 +352,28 @@ namespace MoneyTron.Presenter
             
             _communicatorB.DisconnectionHappened.Subscribe(type =>
             {
-                _errorStatsHandlerB.Add2Disconnections(1);
-
-                if (type == DisconnectionType.Error)
+                try
                 {
-                    _errorStatsHandlerB.Add2ErrorCnt(1);
-                    _view.StatusB($"Disconnected by error, next try in {_communicatorB.ErrorReconnectTimeoutMs / 1000} sec", StatusType.Error);
-                    return;
+                    ErrorStatsMutex.WaitOne();
+
+                    _errorStatsHandler.Add2Disconnections(1, ZoneRecoveryAccount.B);
+
+                    if (type == DisconnectionType.Error)
+                    {
+                        _errorStatsHandler.Add2ErrorCnt(1, ZoneRecoveryAccount.B);
+                        _view.StatusB($"Disconnected by error, next try in {_communicatorB.ErrorReconnectTimeoutMs / 1000} sec", StatusType.Error);
+                        return;
+                    }
                 }
+                catch (Exception exc)
+                {
+                    Log.Error($"_communicatorB.DisconnectionHappened: {exc.Message}");
+                }
+                finally
+                {
+                    ErrorStatsMutex.ReleaseMutex();
+                }
+                
                 _view.StatusB($"Disconnected (type: {type})", StatusType.Warning);
             });
             
@@ -329,7 +382,7 @@ namespace MoneyTron.Presenter
             StartPingCheckB(_clientB);
         }
 
-        private void OnStop()
+        private void OnStopA()
         {
             OnStopZoneRecovery();
             if (_pingSubscriptionA != null)
@@ -340,6 +393,13 @@ namespace MoneyTron.Presenter
                 _communicatorA.Dispose();
             _clientA = null;
             _communicatorA = null;
+            
+            Clear(ZoneRecoveryAccount.A);
+        }
+
+        private void OnStopB()
+        {
+            //OnStopZoneRecovery();
             if (_pingSubscriptionB != null)
                 _pingSubscriptionB.Dispose();
             if (_clientB != null)
@@ -348,7 +408,7 @@ namespace MoneyTron.Presenter
                 _communicatorB.Dispose();
             _clientB = null;
             _communicatorB = null;
-            Clear();
+            Clear(ZoneRecoveryAccount.B);
         }
 
         #endregion Start and stop tasks
@@ -462,76 +522,50 @@ namespace MoneyTron.Presenter
 
             try
             {
-                if (response.Data.First().Account == Accounts[MTAccount.A])
+                OrderStatsMutex.WaitOne();
+
+                var acc = (response.Data.First().Account == Accounts[MTAccount.A]) ? ZoneRecoveryAccount.A : ZoneRecoveryAccount.B;
+
+                if (response.Action == BitmexAction.Insert || response.Action == BitmexAction.Partial)
                 {
-                    if (response.Action == BitmexAction.Insert || response.Action == BitmexAction.Partial)
+                    foreach (Order o in response.Data)
                     {
-                        foreach (Order o in response.Data)
-                        {
-                            _orderStatsHandlerA.HandleNewOrder(o);
-                        }
+                        _orderStatsHandler.HandleNewOrder(o, acc);
                     }
-                    else if (response.Action == BitmexAction.Update)
+                }
+                else if (response.Action == BitmexAction.Update)
+                {
+                    foreach (Order o in response.Data)
                     {
-                        foreach (Order o in response.Data)
-                        {
-                            _orderStatsHandlerA.HandleUpdateOrder(o);
-                        }
+                        _orderStatsHandler.HandleUpdateOrder(o, acc);
                     }
-                    else if (response.Action == BitmexAction.Delete)
+                }
+                else if (response.Action == BitmexAction.Delete)
+                {
+                    foreach (Order o in response.Data)
                     {
-                        foreach (Order o in response.Data)
-                        {
-                            _orderStatsHandlerA.HandleDeleteOrder(o);
-                        }
+                        _orderStatsHandler.HandleDeleteOrder(o, acc);
                     }
-                    else if (response.Action == BitmexAction.Undefined)
-                    {
-                        Log.Warning($"HandleOrderResponse: order response ");
+                }
+                else if (response.Action == BitmexAction.Undefined)
+                {
+                    Log.Warning($"HandleOrderResponse: order response ");
 
-                        foreach (Order o in response.Data)
-                        {
-                            _orderStatsHandlerA.HandleNewOrder(o);
-                        }
+                    foreach (Order o in response.Data)
+                    {
+                        _orderStatsHandler.HandleNewOrder(o, acc);
                     }
+                }
 
-                    // TODO Check if this shit makes sense...
-                    if (ZRComputer != null)
-                        ZRComputer.EvaluateOrders(_orderStatsHandlerA.Clone(), ZoneRecoveryAccount.A);
-                    
-                    var bs = _orderStatsHandlerA.GetBindingSource();
+                var bs = _orderStatsHandler.GetBindingSource(acc);
+
+                if (acc == ZoneRecoveryAccount.A)
+                {
                     _view.bSRCOrdersA = bs;
                     _view.TabOrdersATitle = $"Orders [{bs.Count.ToString()}]";
                 }
-                else if (response.Data.First().Account == Accounts[MTAccount.B])
+                else if (acc == ZoneRecoveryAccount.B)
                 {
-                    if (response.Action == BitmexAction.Insert || response.Action == BitmexAction.Partial)
-                    {
-                        foreach (Order o in response.Data)
-                        {
-                            _orderStatsHandlerB.HandleNewOrder(o);
-                        }
-                    }
-                    else if (response.Action == BitmexAction.Update)
-                    {
-                        foreach (Order o in response.Data)
-                        {
-                            _orderStatsHandlerB.HandleUpdateOrder(o);
-                        }
-                    }
-                    else if (response.Action == BitmexAction.Delete)
-                    {
-                        foreach (Order o in response.Data)
-                        {
-                            _orderStatsHandlerB.HandleDeleteOrder(o);
-                        }
-                    }
-
-                    // TODO Check if this shit makes sense...
-                    if (ZRComputer != null)
-                        ZRComputer.EvaluateOrders(_orderStatsHandlerB.Clone(), ZoneRecoveryAccount.B);
-
-                    var bs = _orderStatsHandlerB.GetBindingSource();
                     _view.bSRCOrdersB = bs;
                     _view.TabOrdersBTitle = $"Orders [{bs.Count.ToString()}]";
                 }
@@ -539,6 +573,10 @@ namespace MoneyTron.Presenter
             catch(Exception exc)
             {
                 Log.Error("[HandleOrderResponse]:" + exc.Message);
+            }
+            finally
+            {
+                OrderStatsMutex.ReleaseMutex();
             }
         }
 
@@ -574,10 +612,7 @@ namespace MoneyTron.Presenter
                         _posStatsHandler.HandleDeletePosition(p, acc);
                     }
                 }
-
-                //if (ZRComputer != null)
-                //    ZRComputer.EvaluateOrders(_orderStatsHandlerA.Clone(), ZoneRecoveryAccount.A);
-
+                
                 var bs = _posStatsHandler.GetBindingSource(acc);
 
                 if (acc == ZoneRecoveryAccount.A)
@@ -608,6 +643,8 @@ namespace MoneyTron.Presenter
 
             try
             {
+                MarginStatsMutex.WaitOne();
+
                 if (response.Action == BitmexAction.Partial || response.Action == BitmexAction.Insert || response.Action == BitmexAction.Update)
                 {
                     MarginStats ma = null;
@@ -619,8 +656,8 @@ namespace MoneyTron.Presenter
                         {
                             _view.AccountAID = m.Account.ToString();
 
-                            _marginStatsHandlerA.UpdateBalances(m.WalletBalance, m.MarginBalance, m.AvailableMargin);
-                            ma = _marginStatsHandlerA.GetMarginBalances();
+                            _marginStatsHandler.UpdateBalances(ZoneRecoveryAccount.A, m.WalletBalance, m.MarginBalance, m.AvailableMargin);
+                            ma = _marginStatsHandler.GetMarginBalances(ZoneRecoveryAccount.A);
                             
                             _view.TotalFundsA = BitmexConverter.ConvertToBtc("XBt", ma.WalletBalance).ToString();
                             _view.AvailableFundsA = BitmexConverter.ConvertToBtc("XBt", ma.MarginBalance).ToString();
@@ -630,8 +667,8 @@ namespace MoneyTron.Presenter
                         {
                             _view.AccountBID = m.Account.ToString();
 
-                            _marginStatsHandlerB.UpdateBalances(m.WalletBalance, m.MarginBalance, m.AvailableMargin);
-                            mb = _marginStatsHandlerB.GetMarginBalances();
+                            _marginStatsHandler.UpdateBalances(ZoneRecoveryAccount.B, m.WalletBalance, m.MarginBalance, m.AvailableMargin);
+                            mb = _marginStatsHandler.GetMarginBalances(ZoneRecoveryAccount.B);
 
                             _view.TotalFundsB = BitmexConverter.ConvertToBtc("XBt", mb.WalletBalance).ToString();
                             _view.AvailableFundsB = BitmexConverter.ConvertToBtc("XBt", mb.MarginBalance).ToString();
@@ -639,8 +676,8 @@ namespace MoneyTron.Presenter
                         }
                     }
 
-                    var a = (string.IsNullOrEmpty(_view.TotalFundsA)) ? 0.0 : double.Parse(_view.TotalFundsA);
-                    var b = (string.IsNullOrEmpty(_view.TotalFundsB)) ? 0.0 : double.Parse(_view.TotalFundsB);
+                    var a = string.IsNullOrEmpty(_view.TotalFundsA) ? 0.0 : double.Parse(_view.TotalFundsA);
+                    var b = string.IsNullOrEmpty(_view.TotalFundsB) ? 0.0 : double.Parse(_view.TotalFundsB);
                     
                     _view.CashImbalance = "L " + Math.Round((a / (a + b) * 100), 2).ToString() + " - S " + Math.Round((b / (b + a) * 100), 2).ToString();
                 }
@@ -648,6 +685,10 @@ namespace MoneyTron.Presenter
             catch (Exception exc)
             {
                 Log.Error("[HandleMargin]:" + exc.Message);
+            }
+            finally
+            {
+                MarginStatsMutex.ReleaseMutex();
             }
         }
 
@@ -743,41 +784,43 @@ namespace MoneyTron.Presenter
 
         private void ComputePing(DateTime current, DateTime before, MTAccount acc)
         {
-            var diff = current.Subtract(before);
-            if (acc == MTAccount.A)
+            try
             {
-                _view.PingL = $"{diff.TotalMilliseconds:###} ms";
-                _view.StatusA("Connected", StatusType.Info);
-                _view.DisconnectionsA = $"{_errorStatsHandlerA.GetDisconnections()}";
-                _view.ReconnectionsA = $"{_errorStatsHandlerA.GetReconnections()}";
-                _view.ErrorsCounterA = $"{_errorStatsHandlerA.GetErrorCnt()}";
+                ErrorStatsMutex.WaitOne();
+
+                var diff = current.Subtract(before);
+
+                if (acc == MTAccount.A)
+                {
+                    _view.PingL = $"{diff.TotalMilliseconds:###} ms";
+                    _view.StatusA("Connected", StatusType.Info);
+                    _view.DisconnectionsA = $"{_errorStatsHandler.GetDisconnections(ZoneRecoveryAccount.A)}";
+                    _view.ReconnectionsA = $"{_errorStatsHandler.GetReconnections(ZoneRecoveryAccount.A)}";
+                    _view.ErrorsCounterA = $"{_errorStatsHandler.GetErrorCnt(ZoneRecoveryAccount.A)}";
+                }
+                else
+                {
+                    _view.PingS = $"{diff.TotalMilliseconds:###} ms";
+                    _view.StatusB("Connected", StatusType.Info);
+                    _view.DisconnectionsB = $"{_errorStatsHandler.GetDisconnections(ZoneRecoveryAccount.B)}";
+                    _view.ReconnectionsB = $"{_errorStatsHandler.GetReconnections(ZoneRecoveryAccount.B)}";
+                    _view.ErrorsCounterB = $"{_errorStatsHandler.GetErrorCnt(ZoneRecoveryAccount.B)}";
+                }
+                _view.TimeConnected = $"{_generalStatsHandler.GetTimeActive()}";
+                _view.ErrorsCounterTotal = $"{_errorStatsHandler.GetErrorCnt(ZoneRecoveryAccount.A) + _errorStatsHandler.GetErrorCnt(ZoneRecoveryAccount.B)}";
             }
-            else
+            catch (Exception exc)
             {
-                _view.PingS = $"{diff.TotalMilliseconds:###} ms";
-                _view.StatusB("Connected", StatusType.Info);
-                _view.DisconnectionsB = $"{_errorStatsHandlerB.GetDisconnections()}";
-                _view.ReconnectionsB = $"{_errorStatsHandlerB.GetReconnections()}";
-                _view.ErrorsCounterB = $"{_errorStatsHandlerB.GetErrorCnt()}";
+                Log.Error($"ComputePing: {exc.Message}");
             }
-            _view.TimeConnected = $"{_generalStatsHandler.GetTimeActive()}";
-            _view.ErrorsCounterTotal = $"{_errorStatsHandlerA.GetErrorCnt() + _errorStatsHandlerB.GetErrorCnt()}";
+            finally
+            {
+                ErrorStatsMutex.ReleaseMutex();
+            }
         }
 
-        private void Clear()
+        private void Clear(ZoneRecoveryAccount acc)
         {
-            _view.AccountAID = string.Empty;
-            _view.AvailableFundsA = string.Empty;
-            _view.ConnStartA = string.Empty;
-            _view.ConnStatusA = string.Empty;
-            _view.PingL = string.Empty;
-            _view.TabOrdersATitle = "Orders [0]";
-            _view.TabPosATitle = "Positions [0]";
-            _view.TotalFundsA = string.Empty;
-            _view.MarginBalanceA = string.Empty;
-            _view.bSRCOrdersA = new BindingSource();
-            _view.bSRCPosA = new BindingSource();
-
             _view.Bid = string.Empty;
             _view.Ask = string.Empty;
             _view.BidAmount = string.Empty;
@@ -787,33 +830,53 @@ namespace MoneyTron.Presenter
             _view.Trades15Min(string.Empty, Side.Buy);
             _view.Trades1Hour(string.Empty, Side.Buy);
             _view.Trades24Hours(string.Empty, Side.Buy);
-            
-            _view.AccountBID = string.Empty;
-            _view.AvailableFundsB = string.Empty;
-            _view.ConnStartB = string.Empty;
-            _view.ConnStatusB = string.Empty;
-            _view.PingS = string.Empty;
-            _view.TabOrdersBTitle = "Orders [0]";
-            _view.TabPosBTitle = "Positions [0]";
-            _view.TotalFundsB = string.Empty;
-            _view.MarginBalanceB = string.Empty;
-            _view.bSRCOrdersB = new BindingSource();
-            _view.bSRCPosB = new BindingSource();
-
-            _view.DisconnectionsB = string.Empty;
-            _view.ReconnectionsB = string.Empty;
-            _view.ErrorsCounterB = string.Empty;
-            _view.DisconnectionsA = string.Empty;
-            _view.ReconnectionsA = string.Empty;
-            _view.ErrorsCounterA = string.Empty;
 
             _view.TimeConnected = string.Empty;
             _view.ErrorsCounterTotal = string.Empty;
             _view.CashImbalance = string.Empty;
-            _view.TotalCostA = string.Empty;
-            _view.TotalCostB = string.Empty;
-            _view.PNLA = string.Empty;
-            _view.PNLB = string.Empty;
+
+            if (acc == ZoneRecoveryAccount.A)
+            {
+                _view.AccountAID = string.Empty;
+                _view.AvailableFundsA = string.Empty;
+                _view.ConnStartA = string.Empty;
+                _view.ConnStatusA = string.Empty;
+                _view.PingL = string.Empty;
+                _view.TabOrdersATitle = "Orders [0]";
+                _view.TabPosATitle = "Positions [0]";
+                _view.TotalFundsA = string.Empty;
+                _view.MarginBalanceA = string.Empty;
+                _view.bSRCOrdersA = new BindingSource();
+                _view.bSRCPosA = new BindingSource();
+
+                _view.DisconnectionsA = string.Empty;
+                _view.ReconnectionsA = string.Empty;
+                _view.ErrorsCounterA = string.Empty;
+
+                _view.TotalCostA = string.Empty;
+                _view.PNLA = string.Empty;
+            }
+            else
+            {
+                _view.AccountBID = string.Empty;
+                _view.AvailableFundsB = string.Empty;
+                _view.ConnStartB = string.Empty;
+                _view.ConnStatusB = string.Empty;
+                _view.PingS = string.Empty;
+                _view.TabOrdersBTitle = "Orders [0]";
+                _view.TabPosBTitle = "Positions [0]";
+                _view.TotalFundsB = string.Empty;
+                _view.MarginBalanceB = string.Empty;
+                _view.bSRCOrdersB = new BindingSource();
+                _view.bSRCPosB = new BindingSource();
+
+                _view.DisconnectionsB = string.Empty;
+                _view.ReconnectionsB = string.Empty;
+                _view.ErrorsCounterB = string.Empty;
+
+                _view.TotalCostB = string.Empty;
+                _view.PNLB = string.Empty;
+            }
         }
 
         //private delegate void ShowMessageBoxDelegate(string strMessage, string strCaption/*, MessageBoxButton enmButton, MessageBoxImage enmImage*/);

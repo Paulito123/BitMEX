@@ -2,6 +2,7 @@
 using System.Windows.Forms;
 using Bitmex.Client.Websocket.Responses.Orders;
 using Bitmex.Client.Websocket.Responses.Positions;
+using PStrategies.ZoneRecovery;
 
 namespace MoneyTron
 {
@@ -50,11 +51,14 @@ namespace MoneyTron
         BindingSource bSRCPosB { get; set; }
 
         Action OnInit { get; set; }
-        Action OnStop { set; }
+        Action OnStopA { set; }
+        Action OnStopB { set; }
         Action OnStartA { set; }
         Action OnStartB { set; }
         Action OnStartZoneRecovery { get; set; }
         Action OnStopZoneRecovery { get; set; }
+
+        ZoneRecoveryComputer ZRComputer { get; set; }
 
         void Trades1Min(string value, Side side);
         void Trades5Min(string value, Side side);

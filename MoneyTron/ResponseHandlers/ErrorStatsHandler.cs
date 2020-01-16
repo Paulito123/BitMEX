@@ -3,50 +3,54 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using PStrategies.ZoneRecovery;
 
 namespace MoneyTron.ResponseHandlers
 {
     class ErrorStatsHandler
     {
-        private long ErrorCount;
-        private long Reconnections;
-        private long Disconnections;
+        private readonly Dictionary<ZoneRecoveryAccount, int> ErrorCount = new Dictionary<ZoneRecoveryAccount, int>();
+        private readonly Dictionary<ZoneRecoveryAccount, int> Reconnections = new Dictionary<ZoneRecoveryAccount, int>();
+        private readonly Dictionary<ZoneRecoveryAccount, int> Disconnections = new Dictionary<ZoneRecoveryAccount, int>();
         
         public ErrorStatsHandler()
         {
-            ErrorCount = 0;
-            Reconnections = 0;
-            Disconnections = 0;
+            ErrorCount.Add(ZoneRecoveryAccount.A, 0);
+            ErrorCount.Add(ZoneRecoveryAccount.B, 0);
+            Reconnections.Add(ZoneRecoveryAccount.A, 0);
+            Reconnections.Add(ZoneRecoveryAccount.B, 0);
+            Disconnections.Add(ZoneRecoveryAccount.A, 0);
+            Disconnections.Add(ZoneRecoveryAccount.B, 0);
         }
 
-        public void Add2ErrorCnt(long errCnt)
+        public void Add2ErrorCnt(int errCnt, ZoneRecoveryAccount acc)
         {
-            ErrorCount = ErrorCount + errCnt;
+            ErrorCount[acc] = ErrorCount[acc] + errCnt;
         }
 
-        public void Add2Reconnections(long errCnt)
+        public void Add2Reconnections(int errCnt, ZoneRecoveryAccount acc)
         {
-            Reconnections = Reconnections + errCnt;
+            Reconnections[acc] = Reconnections[acc] + errCnt;
         }
 
-        public void Add2Disconnections(long errCnt)
+        public void Add2Disconnections(int errCnt, ZoneRecoveryAccount acc)
         {
-            Disconnections = Disconnections + errCnt;
+            Disconnections[acc] = Disconnections[acc] + errCnt;
         }
 
-        public long GetErrorCnt()
+        public int GetErrorCnt(ZoneRecoveryAccount acc)
         {
-            return ErrorCount;
+            return ErrorCount[acc];
         }
 
-        public long GetReconnections()
+        public int GetReconnections(ZoneRecoveryAccount acc)
         {
-            return Reconnections;
+            return Reconnections[acc];
         }
 
-        public long GetDisconnections()
+        public int GetDisconnections(ZoneRecoveryAccount acc)
         {
-            return Disconnections;
+            return Disconnections[acc];
         }
     }
 }

@@ -35,7 +35,7 @@ namespace MoneyTron
             var executingDir = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location);
             var logPath = Path.Combine(executingDir, "logs", "verbose.log");
             Log.Logger = new LoggerConfiguration()
-                .MinimumLevel.Verbose()
+                .MinimumLevel.Debug()
                 .WriteTo.File(logPath, rollingInterval: RollingInterval.Day)
                 //.WriteTo.Console(LogEventLevel.Information)
                 .WriteTo.Debug(LogEventLevel.Debug)

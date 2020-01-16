@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Drawing;
+using System.Threading;
 using System.Configuration;
 using System.Linq;
 using System.Text;
@@ -10,6 +11,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Collections;
 using Bitmex.Client.Websocket.Responses.Orders;
+using PStrategies.ZoneRecovery;
 
 namespace MoneyTron
 {
@@ -315,10 +317,13 @@ namespace MoneyTron
 
         public Action OnInit { get; set; }
         public Action OnStartA { get; set; }
-        public Action OnStop { get; set; }
-        public Action OnStartB { get; set; } 
+        public Action OnStopA { get; set; }
+        public Action OnStartB { get; set; }
+        public Action OnStopB { get; set; }
         public Action OnStartZoneRecovery { get; set; }
         public Action OnStopZoneRecovery { get; set; }
+
+        public ZoneRecoveryComputer ZRComputer { get; set; }
 
         #endregion Actions
 
@@ -338,7 +343,8 @@ namespace MoneyTron
 
         private void Form1_Unload(object sender, FormClosingEventArgs e)
         {
-            OnStop?.Invoke();
+            OnStopA?.Invoke();
+            OnStopB?.Invoke();
         }
 
         private void InitDataGrids()
@@ -496,7 +502,8 @@ namespace MoneyTron
         /// <param name="e"></param>
         private void disconnectToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            OnStop?.Invoke();
+            OnStopA?.Invoke();
+            OnStopB?.Invoke();
             connectToolStripMenuItem.Enabled = true;
             disconnectToolStripMenuItem.Enabled = false;
             onToolStripMenuItem.Enabled = true;
@@ -516,7 +523,8 @@ namespace MoneyTron
 
         private void offToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            OnStop?.Invoke();
+            OnStopA?.Invoke();
+            OnStopB?.Invoke();
             connectToolStripMenuItem.Enabled = true;
             disconnectToolStripMenuItem.Enabled = false;
             onToolStripMenuItem.Enabled = true;
