@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -20,6 +21,8 @@ namespace MoneyTron
         #region Linked variables
 
         public bool isTest { get; set; } = true;
+        public bool isConnected { get; set; } = false;
+
         public string AccountAID
         {
             get => lblAAccountID.Text;
@@ -221,11 +224,58 @@ namespace MoneyTron
             get => lblTotalCostB.Text;
             set => SetLabelOnGuiThread(lblTotalCostB, value);
         }
+        public decimal Leverage
+        {
+            get => nudLeverage.Value;
+            set => SetNudOnGuiThread(nudLeverage, value);
+        }
+        public decimal MaxDepth
+        {
+            get => nudMaxDepth.Value;
+            set => SetNudOnGuiThread(nudMaxDepth, value);
+        }
+        public decimal ZoneSize
+        {
+            get => nudZoneSize.Value;
+            set => SetNudOnGuiThread(nudZoneSize, value);
+        }
+        public decimal MaxExposure
+        {
+            get => nudMaxExposure.Value;
+            set => SetNudOnGuiThread(nudMaxExposure, value);
+        }
+        public decimal MinProfit
+        {
+            get => nudMinProfit.Value;
+            set => SetNudOnGuiThread(nudMinProfit, value);
+        }
+        public string Direction
+        {
+            get => lblDirection.Text;
+            set => SetLabelOnGuiThread(lblDirection, value);
+        }
+        public string UnitSize
+        {
+            get => lblUnitSize.Text;
+            set => SetLabelOnGuiThread(lblUnitSize, value);
+        }
+        public string ZRStatus
+        {
+            get => lblZRStatus.Text;
+            set => SetLabelOnGuiThread(lblZRStatus, value);
+        }
+        public string ZRIndex
+        {
+            get => lblZRIndex.Text;
+            set => SetLabelOnGuiThread(lblZRIndex, value);
+        }
+
+        TextBoxStreamWriter _writer = null;
 
         #endregion Linked variables
 
         #region Linked controls
-
+        
         public BindingSource bSRCOrdersA
         {
             get => (BindingSource)dGVOrdersA.DataSource;
@@ -328,11 +378,17 @@ namespace MoneyTron
         #endregion Actions
 
         #region Init methods
-
+        
         public MTMainForm()
         {
             InitializeComponent();
             InitDataGrids();
+            _writer = new TextBoxStreamWriter(txtConsole);
+        }
+
+        public TextBoxStreamWriter GetWriter()
+        {
+            return _writer;
         }
 
         private void Form1_Load(object sender, EventArgs e)
@@ -493,6 +549,7 @@ namespace MoneyTron
             disconnectToolStripMenuItem.Enabled = true;
             onToolStripMenuItem.Enabled = false;
             offToolStripMenuItem.Enabled = false;
+            isConnected = true;
         }
 
         /// <summary>
@@ -508,6 +565,7 @@ namespace MoneyTron
             disconnectToolStripMenuItem.Enabled = false;
             onToolStripMenuItem.Enabled = true;
             offToolStripMenuItem.Enabled = false;
+            isConnected = false;
         }
 
         private void onToolStripMenuItem_Click(object sender, EventArgs e)
@@ -519,6 +577,7 @@ namespace MoneyTron
             disconnectToolStripMenuItem.Enabled = false;
             onToolStripMenuItem.Enabled = false;
             offToolStripMenuItem.Enabled = true;
+            isConnected = true;
         }
 
         private void offToolStripMenuItem_Click(object sender, EventArgs e)
@@ -529,6 +588,7 @@ namespace MoneyTron
             disconnectToolStripMenuItem.Enabled = false;
             onToolStripMenuItem.Enabled = true;
             offToolStripMenuItem.Enabled = false;
+            isConnected = false;
         }
 
         #endregion Menu event handlers
@@ -602,27 +662,111 @@ namespace MoneyTron
             }));
         }
 
+        private void WriteConsoleOnGuiThread(TextBox tb, string value)
+        {
+            if (!InvokeRequired)
+            {
+                tb.Text = value;
+                return;
+            }
+
+            Invoke(new Action(() =>
+            {
+                tb.Text = value;
+            }));
+        }
+
+        private void SetNudOnGuiThread(NumericUpDown nud, decimal value)
+        {
+            if (nud.Value == value)
+                return;
+
+            if (!InvokeRequired)
+            {
+                nud.Value = value;
+                return;
+            }
+
+            this.Invoke(new Action(() =>
+            {
+                nud.Value = value;
+            }));
+        }
+
         #endregion SetGUIThread methods
 
         private void btnTest_Click(object sender, EventArgs e)
         {
-            //MessageBox.Show(ConfigurationManager.AppSettings["API_KEY_BITMEX_A_TEST"]);
-            //MessageBox.Show(ConfigurationManager.AppSettings["ClientValidationEnabled"]);
+            //List<Order> lijst1 = new List<Order>();
+            //lijst1.Add(new Order { Account = 1 });
+            //List<Order> lijst2 = new List<Order>();
+            //lijst2.Add(new Order { Account = 2 });
+            //List<Order> listMain = new List<Order>();
+            //listMain.AddRange(lijst1);
+            //listMain.AddRange(lijst2);
+
+            //StringBuilder sb = new StringBuilder();
+
+            //foreach (Order o in lijst1)
+            //    sb.Append($"lijst1:{o.Account.ToString()}").Append(Environment.NewLine);
+
+            //foreach (Order o in lijst2)
+            //    sb.Append($"lijst2:{o.Account.ToString()}").Append(Environment.NewLine);
+
+            //foreach (Order o in listMain)
+            //    sb.Append($"listMain:{o.Account.ToString()}").Append(Environment.NewLine);
+
+            //Console.WriteLine(sb.ToString());
+
+            Console.WriteLine("Button clicked");
+            
+            //TestClass t = new TestClass();
+            //t.WriteSomething();
         }
 
         private void btnZRStartStop_Click(object sender, EventArgs e)
         {
-            if (((Button)sender).Text == "OFF")
+            if (isConnected)
             {
-                OnStartZoneRecovery?.Invoke();
-                ((Button)sender).Text = "ON";
-                ((Button)sender).BackColor = Color.LightGreen;
+                if (((Button)sender).BackColor == Color.DeepSkyBlue)
+                {
+                    OnStartZoneRecovery?.Invoke();
+                    ((Button)sender).BackColor = Color.LightGreen;
+
+                    nudLeverage.Enabled = false;
+                    nudMaxDepth.Enabled = false;
+                    nudZoneSize.Enabled = false;
+                    nudMaxExposure.Enabled = false;
+                    nudMinProfit.Enabled = false;
+                }
+                else
+                {
+                    OnStopZoneRecovery?.Invoke();
+                    ((Button)sender).BackColor = Color.DeepSkyBlue;
+
+                    nudLeverage.Enabled = true;
+                    nudMaxDepth.Enabled = true;
+                    nudZoneSize.Enabled = true;
+                    nudMaxExposure.Enabled = true;
+                    nudMinProfit.Enabled = true;
+                }
             }
-            else
+        }
+
+        private void btnTradeStats_Click(object sender, EventArgs e)
+        {
+            if (isConnected)
             {
-                OnStopZoneRecovery?.Invoke();
-                ((Button)sender).Text = "OFF";
-                ((Button)sender).BackColor = Color.DeepSkyBlue;
+                if (((Button)sender).BackColor == Color.DeepSkyBlue)
+                {
+                    ((Button)sender).BackColor = Color.LightGreen;
+                    
+                }
+                else
+                {
+                    ((Button)sender).BackColor = Color.DeepSkyBlue;
+                    
+                }
             }
         }
     }

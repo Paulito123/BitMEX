@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Configuration;
 using System.Collections.Generic;
 using System.Threading;
@@ -40,11 +41,8 @@ namespace MoneyTron.Presenter
         #region Declarations
 
         private readonly IMTMainForm _view;
-
-        //private readonly IBitmexAuthorization _bitmexAuthorizationA;
-        //private readonly IBitmexAuthorization _bitmexAuthorizationB;
-
-        private ZoneRecoveryComputer ZRComputer = new ZoneRecoveryComputer();
+        
+        private ZoneRecoveryComputer ZRComputer;
 
         private IBitmexApiService bitmexApiServiceA;
         private IBitmexApiService bitmexApiServiceB;
@@ -87,14 +85,14 @@ namespace MoneyTron.Presenter
         /// Constructor
         /// </summary>
         /// <param name="view"></param>
-        public MTMainPresenter(IMTMainForm view)
+        public MTMainPresenter(IMTMainForm formInterface)
         {
-            _view = view;
+            _view = formInterface;
 
             ConfigureAccounts();
 
             ConfigureRestApi();
-
+            
             HandleTasks();
         }
 
@@ -188,38 +186,46 @@ namespace MoneyTron.Presenter
 
         private void OnStartZoneRecovery()
         {
+            if (ZRComputer == null)
+                return;
+
             if (_communicatorA != null && _communicatorB != null)
             {
                 var WalletBalance = GetTotalBalance();
                 var stats = _orderBookStatsComputer.GetStats();
 
-                ZRComputer.Initialise(
+                if (ZRComputer.Initialise(
                     bitmexApiServiceA, 
                     bitmexApiServiceB, 
                     (decimal)stats.Bid,
+                    (decimal)stats.Ask,
                     WalletBalance,
                     _orderStatsHandler.GetOrderDictionary(),
                     OrderStatsMutex,
                     _posStatsHandler.GetPositionDictionary(),
                     PositionStatsMutex,
-                    _defaultPair, 
-                    4, 
-                    50, 
-                    (decimal)0.10, 
-                    1, 
-                    (decimal)0.02);
-
-                ZRComputer.Evaluate();
+                    _defaultPair,
+                    (int)_view.MaxDepth, 
+                    _view.ZoneSize, 
+                    _view.MaxExposure, 
+                    _view.Leverage, 
+                    _view.MinProfit))
+                    ZRComputer.Evaluate();
+                else
+                    Log.Error($"OnStartZoneRecovery: error while initializing ZRComputer");
             }
             else
+            {
+                Log.Error($"OnStartZoneRecovery: Communicators are null");
                 return;
+            }
         }
 
         private void OnStopZoneRecovery()
         {
             // TODO: Proper closing of all positions...
-            //if (ZRComputer != null)
-            //    ZRComputer = null;
+            if (ZRComputer != null)
+                ZRComputer.BringDown();
         }
 
         private void OnInit()
@@ -230,6 +236,9 @@ namespace MoneyTron.Presenter
         
         private async Task OnStartA()
         {
+            if (ZRComputer == null)
+                ZRComputer = new ZoneRecoveryComputer();
+
             DateTime dt = DateTime.Now;
             _generalStatsHandler = new GeneralStatsHandler(dt);
 
@@ -484,8 +493,13 @@ namespace MoneyTron.Presenter
                     sec = appSettings["API_SECRET_BITMEX_A_LIVE"] ?? string.Empty;
                 }
 
-                await client.Send(new TradesSubscribeRequest(pair));
+                // Trade stats
+                //await client.Send(new TradesSubscribeRequest(pair));
+
+                // Bid and Ask
                 await client.Send(new BookSubscribeRequest(pair));
+
+
             }
             else
             {
@@ -559,6 +573,9 @@ namespace MoneyTron.Presenter
 
                 var bs = _orderStatsHandler.GetBindingSource(acc);
 
+                if (ZRComputer.Live())
+                    ZRComputer.Evaluate();
+
                 if (acc == ZoneRecoveryAccount.A)
                 {
                     _view.bSRCOrdersA = bs;
@@ -569,6 +586,8 @@ namespace MoneyTron.Presenter
                     _view.bSRCOrdersB = bs;
                     _view.TabOrdersBTitle = $"Orders [{bs.Count.ToString()}]";
                 }
+
+                SetZRStats();
             }
             catch(Exception exc)
             {
@@ -694,7 +713,19 @@ namespace MoneyTron.Presenter
 
         #endregion Main response handlers
 
-        #region Copied or irrelevant stuff
+        #region Copied stuff
+
+        private void SetZRStats()
+        {
+            if (ZRComputer != null)
+            {
+                _view.Direction = ZRComputer.CurrentDirection.ToString();
+                _view.UnitSize = ZRComputer.UnitSize.ToString();
+                _view.ZRStatus = ZRComputer.CurrentStatus.ToString();
+                _view.ZRIndex = ZRComputer.CurrentZRPosition.ToString();
+            }
+            
+        }
 
         private void HandleOrderBook(BookResponse response)
         {
@@ -835,6 +866,17 @@ namespace MoneyTron.Presenter
             _view.ErrorsCounterTotal = string.Empty;
             _view.CashImbalance = string.Empty;
 
+            _view.Direction = string.Empty;
+            _view.UnitSize = string.Empty;
+            _view.ZRStatus = string.Empty;
+            _view.ZRIndex = string.Empty;
+
+            _view.Leverage = 1;
+            _view.MaxDepth = 2;
+            _view.ZoneSize = 25;
+            _view.MaxExposure = (decimal)0.01;
+            _view.MinProfit = (decimal)0.01;
+
             if (acc == ZoneRecoveryAccount.A)
             {
                 _view.AccountAID = string.Empty;
@@ -894,6 +936,6 @@ namespace MoneyTron.Presenter
         //    caller.Invoke(strMessage, strCaption/*, enmButton, enmImage, null, null*/);
         //}
 
-        #endregion Copied or irrelevant stuff
+        #endregion Copied stuff
     }
 }

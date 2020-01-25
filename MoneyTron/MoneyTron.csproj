@@ -140,6 +140,8 @@
     <Compile Include="ResponseHandlers\OrdersStatsHandler.cs" />
     <Compile Include="ResponseHandlers\PositionStatsHandler.cs" />
     <Compile Include="ResponseHandlers\TradeStatsComputer.cs" />
+    <Compile Include="TestClass.cs" />
+    <Compile Include="TextBoxStreamWriter.cs" />
     <Compile Include="View\IMTMainForm.cs" />
     <Compile Include="View\MTMainForm.cs">
       <SubType>Form</SubType>

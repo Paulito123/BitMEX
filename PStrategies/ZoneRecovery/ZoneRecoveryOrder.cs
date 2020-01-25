@@ -29,11 +29,6 @@ namespace PStrategies.ZoneRecovery
             get => FirstServerResponse;
             set => SetFirstServerResponse(value);
         }
-        public Order LastServerResponse
-        {
-            get => LastServerResponse;
-            set => SetLastServerResponse(value);
-        }
         public OrderDto DeleteServerResponse
         {
             get => DeleteServerResponse;
@@ -56,31 +51,32 @@ namespace PStrategies.ZoneRecovery
             PostParams = postParams;
             Api = api;
             ZROrderType = type;
+            DeleteServerResponse = new OrderDto();
+            FirstServerResponse = new OrderDto();
         }
 
         #endregion Constructors
 
         #region Internal cheese
 
-        private Order SetLastServerResponse(Order o)
+        private void SetLastOrderStatus(Order o)
         {
-            CurrentStatus = GetCurrentStatus(o);
-            return o;
+            CurrentStatus = GetOrderStatus(o);
         }
 
         private OrderDto SetFirstServerResponse(OrderDto o)
         {
-            CurrentStatus = GetCurrentStatus(o);
+            CurrentStatus = GetOrderStatus(o);
             return o;
         }
 
         private OrderDto SetDeleteServerResponse(OrderDto o)
         {
-            CurrentStatus = GetCurrentStatus(o);
+            CurrentStatus = GetOrderStatus(o);
             return o;
         }
 
-        private ZoneRecoveryOrderStatus GetCurrentStatus(object o)
+        private ZoneRecoveryOrderStatus GetOrderStatus(object o)
         {
             if (o != null && o is Order)
             {

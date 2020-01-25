@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Collections.Generic;
 //using System.Collections.Concurrent;
 using System.Threading;
@@ -21,9 +22,10 @@ namespace PStrategies.ZoneRecovery
     {
         #region Core variables and classes
 
+        private bool IsLive { get; set; }
         private string Symbol { get; set; }
         private int MaxDepthIndex { get; set; }
-        private int ZoneSize { get; set; }
+        private decimal ZoneSize { get; set; }
         private decimal MaxExposurePerc { get; set; }
         private decimal Leverage { get; set; }
         private decimal MinimumProfitPercentage { get; set; }
@@ -35,7 +37,7 @@ namespace PStrategies.ZoneRecovery
 
         #region Static variables
 
-        private static int StandardPegDistance { get; } = 15;
+        private static int StandardPegDistance { get; } = 10;
         private static int[] FactorArray = new int[] { 1, 2, 3, 6, 12, 24, 48, 96 };
 
         #endregion Static variables
@@ -43,9 +45,10 @@ namespace PStrategies.ZoneRecovery
         #region Working Variables
 
         private decimal InitPrice { get; set; }
-        private long UnitSize { get; set; }
+        public long UnitSize { get; set; }
         private decimal TotalBalance { get; set; }
-        private ZoneRecoveryDirection CurrentProfitDirection { get; set; }
+        public ZoneRecoveryDirection CurrentDirection { get; set; }
+        public DateTime LastWorkDone { get; set; }
 
         #endregion Working Variables
 
@@ -82,9 +85,8 @@ namespace PStrategies.ZoneRecovery
         /// The last BatchNr that is currently considered active.
         /// </summary>
         private long RunningBatchNr;
-        private int CurrentZRPosition;
-        private ZoneRecoveryStatus CurrentStatus;
-        //private ZoneRecoveryDirection CurrentDirection;
+        public int CurrentZRPosition;
+        public ZoneRecoveryStatus CurrentStatus;
 
         #endregion Variables used to define the current "state"
 
@@ -93,12 +95,15 @@ namespace PStrategies.ZoneRecovery
         public ZoneRecoveryComputer()
         {
             ZROrderLedger = new SortedDictionary<long, ZoneRecoveryOrderBatch>();
+            IsLive = false;
+            Console.WriteLine("ZRComputer constructed.");
         }
 
-        public void Initialise(
+        public bool Initialise(
             IBitmexApiService apiSA,
             IBitmexApiService apiSB,
-            decimal mostRecentPrice,
+            decimal bidPrice,
+            decimal askPrice,
             decimal totalWalletBalance,
             Dictionary<ZoneRecoveryAccount, List<Order>> liveOrders,
             Mutex orderMutex,
@@ -106,15 +111,13 @@ namespace PStrategies.ZoneRecovery
             Mutex positionMutex,
             string symbol = "XBTUSD",
             int maxDepthIndex = 1,
-            int zoneSize = 20,
+            decimal zoneSize = 20,
             decimal maxExposurePerc = (decimal)0.01,
             decimal leverage = 1,
             decimal minPrftPerc = (decimal)0.01)
         {
-            // Should never be reset during the lifetime of this ZoneRecoveryComputer instance...
-            
+            // RunningBatchNr should never be reset during the lifetime of this ZoneRecoveryComputer instance...
             RunningBatchNr = 0;
-            CurrentProfitDirection = ZoneRecoveryDirection.Undefined;
 
             try
             {
@@ -174,29 +177,35 @@ namespace PStrategies.ZoneRecovery
                 else
                     throw new Exception("MinimumProfitPercentage not within permitted bounds");
 
-
                 // TODO Da klopt ier nie eh moat!
-                if (mostRecentPrice <= 0)
+                if (bidPrice <= 0 || askPrice <= 0)
                     throw new Exception("MostRecentPrice does not have a permitted value");
 
                 if (totalWalletBalance <= 0)
                     throw new Exception("TotalWalletBalance does not have a permitted value");
 
-                Reset(mostRecentPrice, totalWalletBalance);
+                Reset(bidPrice, totalWalletBalance);
+
+                IsLive = true;
+                Console.WriteLine("ZRComputer is Live.");
             }
             catch (Exception exc)
             {
                 Log.Error($"ZoneRecoveryComputer: {exc.Message}");
-                throw exc;
+                return false;
             }
+            return true;
         }
 
         #endregion Constructors
 
         #region ZoneRecovery core methods
 
-        private void TakeStepForward(Bitmex.Client.Websocket.Responses.BitmexSide sideHint = Bitmex.Client.Websocket.Responses.BitmexSide.Undefined)
+        private void TakeStepForward(ZoneRecoveryDirection sideHint = ZoneRecoveryDirection.Undefined)
         {
+            if (CurrentDirection == ZoneRecoveryDirection.Undefined && sideHint == ZoneRecoveryDirection.Undefined)
+                return;
+
             if (CurrentStatus == ZoneRecoveryStatus.Winding)
             {
                 CurrentZRPosition++;
@@ -219,20 +228,28 @@ namespace PStrategies.ZoneRecovery
                 CurrentZRPosition++;
             }
 
-            if (sideHint != Bitmex.Client.Websocket.Responses.BitmexSide.Undefined)
-            {
-                if (sideHint == Bitmex.Client.Websocket.Responses.BitmexSide.Buy)
-                    CurrentProfitDirection = ZoneRecoveryDirection.Up;
-                else
-                    CurrentProfitDirection = ZoneRecoveryDirection.Down;
-            }
+            // Determine new direction
+            if (CurrentDirection == ZoneRecoveryDirection.Down)
+                CurrentDirection = ZoneRecoveryDirection.Up;
+            else if (CurrentDirection == ZoneRecoveryDirection.Up)
+                CurrentDirection = ZoneRecoveryDirection.Down;
             else
-            {
-                if (GetDirection() == 1)
-                    CurrentProfitDirection = ZoneRecoveryDirection.Down;
-                else if (GetDirection() == -1)
-                    CurrentProfitDirection = ZoneRecoveryDirection.Up;
-            }
+                CurrentDirection = sideHint;
+        }
+
+        public bool Live()
+        {
+            return IsLive;
+        }
+
+        public void BringDown()
+        {
+            IsLive = false;
+        }
+
+        public void Enable()
+        {
+            IsLive = true;
         }
 
         #endregion
@@ -252,7 +269,7 @@ namespace PStrategies.ZoneRecovery
 
         private decimal CalculatePriceForOrderType(ZoneRecoveryOrderType ot)
         {
-            var dir = GetDirection();
+            var dir = GetDirectionForCalculation();
 
             if (dir == 0)
                 return 0;
@@ -279,7 +296,7 @@ namespace PStrategies.ZoneRecovery
 
         private decimal CalculateQtyForOrderType(ZoneRecoveryOrderType ot)
         {
-            var dir = GetDirection();
+            var dir = GetDirectionForCalculation();
             decimal output = 0;
 
             if (dir == 0)
@@ -298,19 +315,19 @@ namespace PStrategies.ZoneRecovery
                 switch (ot)
                 {
                     case ZoneRecoveryOrderType.TP:
-                        if (GetNextDirection() == 1)
+                        if (GetNextDirectionForCalculation() == 1)
                             output = posB.CurrentQty ?? 0;
                         else
                             output = -(posA.CurrentQty ?? 0);
                         break;
                     case ZoneRecoveryOrderType.TL:
-                        if (GetNextDirection() == 1)
+                        if (GetNextDirectionForCalculation() == 1)
                             output = -(posA.CurrentQty ?? 0);
                         else
                             output = posB.CurrentQty ?? 0;
                         break;
                     case ZoneRecoveryOrderType.REV:
-                        output = GetNextDirection() * UnitSize * FactorArray[GetNextZRPosition()];
+                        output = GetNextDirectionForCalculation() * UnitSize * FactorArray[GetNextZRPosition()];
                         break;
                     default:
                         output = 0;
@@ -342,7 +359,7 @@ namespace PStrategies.ZoneRecovery
                     throw new Exception($"one or more positions do not exist");
 
                 if ((posA.IsOpen ?? false) && (posB.IsOpen ?? false))
-                    result = Math.Round((-GetDirection() == 1) ? (decimal)posB.AvgEntryPrice : (decimal)posA.AvgEntryPrice, 2);
+                    result = Math.Round((-GetDirectionForCalculation() == 1) ? (decimal)posB.AvgEntryPrice : (decimal)posA.AvgEntryPrice, 2);
                 else if (posA.IsOpen ?? false)
                     result = Math.Round((decimal)posA.AvgEntryPrice - ZoneSize, 2);
                 else if (posB.IsOpen ?? false)
@@ -452,7 +469,7 @@ namespace PStrategies.ZoneRecovery
         {
             try
             {
-                CurrentProfitDirection = ZoneRecoveryDirection.Undefined;
+                CurrentDirection = ZoneRecoveryDirection.Undefined;
                 CurrentStatus = ZoneRecoveryStatus.Init;
                 CurrentZRPosition = 0;
 
@@ -490,31 +507,22 @@ namespace PStrategies.ZoneRecovery
                 return 0;
         }
 
-        private int GetDirection()
+        private int GetDirectionForCalculation()
         {
-            if (CurrentProfitDirection == ZoneRecoveryDirection.Up)
+            if (CurrentDirection == ZoneRecoveryDirection.Up)
                 return 1;
-            else if (CurrentProfitDirection == ZoneRecoveryDirection.Down)
+            else if (CurrentDirection == ZoneRecoveryDirection.Down)
                 return -1;
             else
                 return 0;
         }
 
-        private int GetNextDirection()
+        private int GetNextDirectionForCalculation()
         {
-            if (GetDirection() == 1)
+            if (GetDirectionForCalculation() == 1)
                 return -1;
-            else if (GetDirection() == -1)
+            else if (GetDirectionForCalculation() == -1)
                 return 1;
-            else
-                return 0;
-        }
-
-        // To be called within the parent OrderMutex context !!!!!!
-        private int GetNrOfNewOrdersForAccount(ZoneRecoveryAccount acc)
-        {
-            if (LiveOrders != null && LiveOrders.ContainsKey(acc) && LiveOrders[acc] != null)
-                return LiveOrders[acc].Where(x => x.Symbol == Symbol && x.OrdStatus == OrderStatus.New).Count();
             else
                 return 0;
         }
@@ -536,89 +544,94 @@ namespace PStrategies.ZoneRecovery
         {
             // Check if one of the expected scenarios has happened and take action.
             // If an unexpected scenario happened, handle the anomaly.
-            try
+            if (IsLive)
             {
-                if (RunningBatchNr == 0)
-                {   // Dit moet achteraan samen met wanneer er een batch status => Finish heeft bereikt.
-                    Initiate();
+                try
+                {
+                    OrderMutex.WaitOne();
+
+                    Log.Debug($"Evaluate: {DateTime.Now}");
+
+                    if (LiveOrders == null || LiveOrders.Count() == 0)
+                        return;
+
+                    List<Order> listConcat = new List<Order>();
+
+                    if (LiveOrders.ContainsKey(ZoneRecoveryAccount.A) && LiveOrders[ZoneRecoveryAccount.A] != null && LiveOrders[ZoneRecoveryAccount.A].Count() > 0)
+                        listConcat.AddRange(LiveOrders[ZoneRecoveryAccount.A]);
+
+                    if (LiveOrders.ContainsKey(ZoneRecoveryAccount.B) && LiveOrders[ZoneRecoveryAccount.B] != null && LiveOrders[ZoneRecoveryAccount.B].Count() > 0)
+                        listConcat.AddRange(LiveOrders[ZoneRecoveryAccount.B]);
+
+                    if (listConcat.Count() > 0 && (CurrentStatus == ZoneRecoveryStatus.Init ||
+                                                   CurrentStatus == ZoneRecoveryStatus.Winding ||
+                                                   CurrentStatus == ZoneRecoveryStatus.Unwinding))
+                        EvaluateNormal(listConcat);
+
+                    //else if (CurrentStatus == ZoneRecoveryStatus.Finish)
+                    //{
+                    //    HandleFinish();
+                    //}
+                    //else // Alert || Undefined
+                    //{
+                    //    EvaluateAnomaly();
+                    //}
+
+                    if (CurrentStatus == ZoneRecoveryStatus.Init)
+                        Initiate(listConcat);
                 }
-                //else if (CurrentStatus == ZoneRecoveryStatus.Init || CurrentStatus == ZoneRecoveryStatus.Winding || CurrentStatus == ZoneRecoveryStatus.Unwinding)
-                //{
-                //    EvaluateNormal(lo);
-                //}
-                //else if (CurrentStatus == ZoneRecoveryStatus.Finish)
-                //{
-                //    HandleFinish();
-                //}
-                //else // Alert || Undefined
-                //{
-                //    EvaluateAnomaly();
-                //}
-            }
-            catch (Exception exc)
-            {
-                Log.Error($"Evaluate: {exc.Message}");
+                catch (Exception exc)
+                {
+                    Log.Error($"Evaluate: {exc.Message}");
+                }
+                finally
+                {
+                    OrderMutex.ReleaseMutex();
+                }
             }
         }
 
-        private void Initiate()
+        private bool AccountsFlat()
         {
-
-            bool noMoreOrdersOnA = false, noMoreOrdersOnB = false;
-
-            try
-            {
-                OrderMutex.WaitOne();
-
-                noMoreOrdersOnA = (GetNrOfNewOrdersForAccount(ZoneRecoveryAccount.A) > 0) ? false : true;
-                noMoreOrdersOnB = (GetNrOfNewOrdersForAccount(ZoneRecoveryAccount.B) > 0) ? false : true;
-            }
-            catch (Exception exc)
-            {
-                Log.Error($"Initiate[1]: {exc.Message}");
-            }
-            finally
-            {
-                OrderMutex.ReleaseMutex();
-            }
-
-            // TODO << Consider introducing a delay to make sure the position is synchronized
-            //int milliseconds = 2000;
-            //Thread.Sleep(milliseconds);
-
-            bool isPositionAClosed = false, isPositionBClosed = false;
+            bool areAccountsFlat = false;
 
             try
             {
                 PositionMutex.WaitOne();
 
-                isPositionAClosed = (GetOpenQtyForAccount(ZoneRecoveryAccount.A) == 0) ? true : false;
-                isPositionBClosed = (GetOpenQtyForAccount(ZoneRecoveryAccount.B) == 0) ? true : false;
+                if (GetOpenQtyForAccount(ZoneRecoveryAccount.A) == 0 || GetOpenQtyForAccount(ZoneRecoveryAccount.B) == 0)
+                    areAccountsFlat = true;
             }
             catch (Exception exc)
             {
-                Log.Error($"Initiate[2]: {exc.Message}");
+                Log.Error($"AccountsFlat: {exc.Message}");
             }
             finally
             {
                 PositionMutex.ReleaseMutex();
             }
-
-            if (noMoreOrdersOnA && noMoreOrdersOnB && isPositionAClosed && isPositionBClosed)
+            return areAccountsFlat;
+        }
+        
+        private void Initiate(List<Order> listConcat)
+        {
+            if (AccountsFlat() && listConcat.Where(x => x.Symbol == Symbol && x.OrdStatus == OrderStatus.New).Count() == 0)
             {
+                LastWorkDone = DateTime.Now;
+
                 // Create a batchNr
                 RunningBatchNr = CreateBatchNr(DateTime.Now);
                 var zrob = new ZoneRecoveryOrderBatch(RunningBatchNr, new ZoneRecoveryScenario());
                 ZROrderLedger.Add(RunningBatchNr, zrob);
                 ZoneRecoveryOrder zro;
-
+                
                 // Create initial Orders
                 var idA = CreateNewClOrdID();
                 var OrderParamsA =
                     OrderPOSTRequestParams
                         .CreateSimpleLimit(Symbol, idA, UnitSize, (InitPrice - StandardPegDistance), OrderSide.Buy);
                 zro = new ZoneRecoveryOrder(ZoneRecoveryAccount.A, OrderParamsA, bitmexApiServiceA, ZoneRecoveryOrderType.FS);
-                ZROrderLedger[RunningBatchNr].OrdersList.Add(zro);
+                ZROrderLedger[RunningBatchNr].ZROrdersList.Add(zro);
                 bitmexApiServiceA
                     .Execute(BitmexApiUrls.Order.PostOrder, OrderParamsA)
                     .ContinueWith(ZROrderLedger[RunningBatchNr].ProcessPostOrderResult, TaskContinuationOptions.AttachedToParent);
@@ -628,7 +641,7 @@ namespace PStrategies.ZoneRecovery
                     OrderPOSTRequestParams
                         .CreateSimpleLimit(Symbol, idB, UnitSize, (InitPrice + StandardPegDistance), OrderSide.Sell);
                 zro = new ZoneRecoveryOrder(ZoneRecoveryAccount.B, OrderParamsB, bitmexApiServiceB, ZoneRecoveryOrderType.FS);
-                ZROrderLedger[RunningBatchNr].OrdersList.Add(zro);
+                ZROrderLedger[RunningBatchNr].ZROrdersList.Add(zro);
                 bitmexApiServiceB
                     .Execute(BitmexApiUrls.Order.PostOrder, OrderParamsB)
                     .ContinueWith(ZROrderLedger[RunningBatchNr].ProcessPostOrderResult, TaskContinuationOptions.AttachedToParent);
@@ -638,38 +651,67 @@ namespace PStrategies.ZoneRecovery
                 tmpList = new List<Order>();
                 tmpList.Add(new Order() { ClOrdId = idA, OrdStatus = OrderStatus.Filled });
                 tmpList.Add(new Order() { ClOrdId = idB, OrdStatus = OrderStatus.New });
-                ZROrderLedger[RunningBatchNr].Scenario.AddSuccessOrderList(tmpList);
+                ZROrderLedger[RunningBatchNr].Scenario.AddSuccessOrderList(tmpList, ZoneRecoveryDirection.Up);
                 tmpList = new List<Order>();
                 tmpList.Add(new Order() { ClOrdId = idA, OrdStatus = OrderStatus.New });
                 tmpList.Add(new Order() { ClOrdId = idB, OrdStatus = OrderStatus.Filled });
-                ZROrderLedger[RunningBatchNr].Scenario.AddSuccessOrderList(tmpList);
+                ZROrderLedger[RunningBatchNr].Scenario.AddSuccessOrderList(tmpList, ZoneRecoveryDirection.Down);
+
+                
             }
             else
             {
-                // Anomaly
-                Log.Debug($"EvaluateInitStart: cannot initiate ZR strategy because the preferred conditions are not met");
+                // TODO: Check LastWorkDone if a possible anomaly needs to be checked
+                Log.Information($"Initiate: cannot initiate ZR strategy because the preferred conditions are not met");
                 return;
-                // TODO: Handle anomaly
             }
         }
 
-        private void EvaluateNormal(List<Order> lo)
+        private void RemoveFromOrderList(List<string> clOrdIdList)
         {
-            // Add the new shit
-            ZROrderLedger[RunningBatchNr].SetMultipleLastResponse(lo);
+            if (LiveOrders == null || !LiveOrders.ContainsKey(ZoneRecoveryAccount.A) || !LiveOrders.ContainsKey(ZoneRecoveryAccount.B))
+                throw new Exception("RemoveFromOrderList: LiveOrders == null");
 
-            // Check if action needs to be taken
-            if (ZROrderLedger[RunningBatchNr].EvaluateAndInitiate())
+            foreach (string id in clOrdIdList)
             {
-                // Check the last TP result
-                var lastRespTP =
-                        ZROrderLedger[RunningBatchNr]
-                            .OrdersList
-                            .Where(x => x.ZROrderType == ZoneRecoveryOrderType.TP || (x.ZROrderType == ZoneRecoveryOrderType.FS && x.CurrentStatus == ZoneRecoveryOrderStatus.Filled))
-                            .Single();
+                int cnt;
+
+                cnt = LiveOrders[ZoneRecoveryAccount.A].Where(x => x.ClOrdId == id).Count();
+                if (cnt > 0)
+                {
+                    LiveOrders[ZoneRecoveryAccount.A].Remove(LiveOrders[ZoneRecoveryAccount.A].Single(s => s.ClOrdId == id));
+                }
+                else
+                {
+                    cnt = LiveOrders[ZoneRecoveryAccount.B].Where(x => x.ClOrdId == id).Count();
+
+                    if (cnt > 0)
+                        LiveOrders[ZoneRecoveryAccount.B].Remove(LiveOrders[ZoneRecoveryAccount.B].Single(s => s.ClOrdId == id));
+                }
+            }
+        }
+
+        private void EvaluateNormal(List<Order> orders)
+        {
+            Log.Debug($"EvaluateNormal started and the RunningBatchNr=[{RunningBatchNr}]");
+
+            if (ZROrderLedger == null || !ZROrderLedger.ContainsKey(RunningBatchNr))
+                return;
+            
+            Log.Debug("EvaluateAndInitiate going to start");
+
+            // TODO: Retrun a specific status instead of a bool
+            // Check if action needs to be taken 
+            bool isBatchClosed = ZROrderLedger[RunningBatchNr].EvaluateAndInitiate(orders);
+
+            Log.Debug($"EvaluateNormal: {isBatchClosed}");
+            
+            if (isBatchClosed)
+            {
+                RemoveFromOrderList(ZROrderLedger[RunningBatchNr].GetClOrdIDList());
 
                 // Turn the wheel...
-                TakeStepForward(lastRespTP.LastServerResponse.Side ?? Bitmex.Client.Websocket.Responses.BitmexSide.Undefined);
+                TakeStepForward(ZROrderLedger[RunningBatchNr].Direction);
 
                 // Create the condition that allows TL orders to be created or not.
                 bool tlCondition =
@@ -679,7 +721,7 @@ namespace PStrategies.ZoneRecovery
                 // Open orders for the next step. Volume is added to the current position.
                 if (CurrentStatus == ZoneRecoveryStatus.Winding)
                 {
-                    if (CurrentProfitDirection == ZoneRecoveryDirection.Up)
+                    if (CurrentDirection == ZoneRecoveryDirection.Up)
                     {
                         // Create a batchNr
                         RunningBatchNr = CreateBatchNr(DateTime.Now);
@@ -687,13 +729,16 @@ namespace PStrategies.ZoneRecovery
                         ZROrderLedger.Add(RunningBatchNr, zrob);
                         ZoneRecoveryOrder zro;
 
+                        // A => TP
+                        // B => REV,TL
+
                         // Create TP
                         var idTP = CreateNewClOrdID();
                         var OrderParamsTP =
                             OrderPOSTRequestParams
                                 .CreateSimpleLimit(Symbol, idTP, CalculateQtyForOrderType(ZoneRecoveryOrderType.TP), CalculatePriceForOrderType(ZoneRecoveryOrderType.TP), OrderSide.Buy);
                         zro = new ZoneRecoveryOrder(ZoneRecoveryAccount.A, OrderParamsTP, bitmexApiServiceA, ZoneRecoveryOrderType.TP);
-                        ZROrderLedger[RunningBatchNr].OrdersList.Add(zro);
+                        ZROrderLedger[RunningBatchNr].ZROrdersList.Add(zro);
                         bitmexApiServiceA
                             .Execute(BitmexApiUrls.Order.PostOrder, OrderParamsTP)
                             .ContinueWith(ZROrderLedger[RunningBatchNr].ProcessPostOrderResult, TaskContinuationOptions.AttachedToParent);
@@ -704,7 +749,7 @@ namespace PStrategies.ZoneRecovery
                             OrderPOSTRequestParams
                                 .CreateMarketStopOrder(Symbol, idREV, CalculateQtyForOrderType(ZoneRecoveryOrderType.REV), CalculatePriceForOrderType(ZoneRecoveryOrderType.REV), OrderSide.Sell);
                         zro = new ZoneRecoveryOrder(ZoneRecoveryAccount.B, OrderParamsREV, bitmexApiServiceB, ZoneRecoveryOrderType.REV);
-                        ZROrderLedger[RunningBatchNr].OrdersList.Add(zro);
+                        ZROrderLedger[RunningBatchNr].ZROrdersList.Add(zro);
                         bitmexApiServiceB
                             .Execute(BitmexApiUrls.Order.PostOrder, OrderParamsREV)
                             .ContinueWith(ZROrderLedger[RunningBatchNr].ProcessPostOrderResult, TaskContinuationOptions.AttachedToParent);
@@ -717,7 +762,7 @@ namespace PStrategies.ZoneRecovery
                                 OrderPOSTRequestParams
                                     .CreateSimpleLimit(Symbol, idTL, CalculateQtyForOrderType(ZoneRecoveryOrderType.TL), CalculatePriceForOrderType(ZoneRecoveryOrderType.TL), OrderSide.Buy);
                             zro = new ZoneRecoveryOrder(ZoneRecoveryAccount.B, OrderParamsTL, bitmexApiServiceB, ZoneRecoveryOrderType.TL);
-                            ZROrderLedger[RunningBatchNr].OrdersList.Add(zro);
+                            ZROrderLedger[RunningBatchNr].ZROrdersList.Add(zro);
                             bitmexApiServiceB
                                 .Execute(BitmexApiUrls.Order.PostOrder, OrderParamsTL)
                                 .ContinueWith(ZROrderLedger[RunningBatchNr].ProcessPostOrderResult, TaskContinuationOptions.AttachedToParent);
@@ -730,15 +775,16 @@ namespace PStrategies.ZoneRecovery
                         tmpList.Add(new Order() { ClOrdId = idREV, OrdStatus = OrderStatus.New });
                         if (tlCondition)
                             tmpList.Add(new Order() { ClOrdId = idTL, OrdStatus = OrderStatus.Filled });
-                        ZROrderLedger[RunningBatchNr].Scenario.AddSuccessOrderList(tmpList);
+                        ZROrderLedger[RunningBatchNr].Scenario.AddSuccessOrderList(tmpList, ZoneRecoveryDirection.Up);
+
                         tmpList = new List<Order>();
                         tmpList.Add(new Order() { ClOrdId = idTP, OrdStatus = OrderStatus.New });
                         tmpList.Add(new Order() { ClOrdId = idREV, OrdStatus = OrderStatus.Filled });
                         if (tlCondition)
                             tmpList.Add(new Order() { ClOrdId = idTL, OrdStatus = OrderStatus.New });
-                        ZROrderLedger[RunningBatchNr].Scenario.AddSuccessOrderList(tmpList);
+                        ZROrderLedger[RunningBatchNr].Scenario.AddSuccessOrderList(tmpList, ZoneRecoveryDirection.Down);
                     }
-                    else if (CurrentProfitDirection == ZoneRecoveryDirection.Down)
+                    else if (CurrentDirection == ZoneRecoveryDirection.Down)
                     {
                         // Create a new batch
                         RunningBatchNr = CreateBatchNr(DateTime.Now);
@@ -746,13 +792,16 @@ namespace PStrategies.ZoneRecovery
                         ZROrderLedger.Add(RunningBatchNr, zrob);
                         ZoneRecoveryOrder zro;
 
+                        // B => TP
+                        // A => REV,TL
+
                         // Create TP
                         var idTP = CreateNewClOrdID();
                         var OrderParamsTP =
                             OrderPOSTRequestParams
                                 .CreateSimpleLimit(Symbol, idTP, CalculateQtyForOrderType(ZoneRecoveryOrderType.TP), CalculatePriceForOrderType(ZoneRecoveryOrderType.TP), OrderSide.Sell);
                         zro = new ZoneRecoveryOrder(ZoneRecoveryAccount.B, OrderParamsTP, bitmexApiServiceB, ZoneRecoveryOrderType.TP);
-                        ZROrderLedger[RunningBatchNr].OrdersList.Add(zro);
+                        ZROrderLedger[RunningBatchNr].ZROrdersList.Add(zro);
                         bitmexApiServiceB
                             .Execute(BitmexApiUrls.Order.PostOrder, OrderParamsTP)
                             .ContinueWith(ZROrderLedger[RunningBatchNr].ProcessPostOrderResult, TaskContinuationOptions.AttachedToParent);
@@ -763,7 +812,7 @@ namespace PStrategies.ZoneRecovery
                             OrderPOSTRequestParams
                                 .CreateMarketStopOrder(Symbol, idREV, CalculateQtyForOrderType(ZoneRecoveryOrderType.REV), CalculatePriceForOrderType(ZoneRecoveryOrderType.REV), OrderSide.Buy);
                         zro = new ZoneRecoveryOrder(ZoneRecoveryAccount.A, OrderParamsREV, bitmexApiServiceA, ZoneRecoveryOrderType.REV);
-                        ZROrderLedger[RunningBatchNr].OrdersList.Add(zro);
+                        ZROrderLedger[RunningBatchNr].ZROrdersList.Add(zro);
                         bitmexApiServiceA
                             .Execute(BitmexApiUrls.Order.PostOrder, OrderParamsREV)
                             .ContinueWith(ZROrderLedger[RunningBatchNr].ProcessPostOrderResult, TaskContinuationOptions.AttachedToParent);
@@ -776,7 +825,7 @@ namespace PStrategies.ZoneRecovery
                                 OrderPOSTRequestParams
                                     .CreateSimpleLimit(Symbol, idTL, CalculateQtyForOrderType(ZoneRecoveryOrderType.TL), CalculatePriceForOrderType(ZoneRecoveryOrderType.TL), OrderSide.Sell);
                             zro = new ZoneRecoveryOrder(ZoneRecoveryAccount.A, OrderParamsTL, bitmexApiServiceA, ZoneRecoveryOrderType.TL);
-                            ZROrderLedger[RunningBatchNr].OrdersList.Add(zro);
+                            ZROrderLedger[RunningBatchNr].ZROrdersList.Add(zro);
                             bitmexApiServiceA
                                 .Execute(BitmexApiUrls.Order.PostOrder, OrderParamsTL)
                                 .ContinueWith(ZROrderLedger[RunningBatchNr].ProcessPostOrderResult, TaskContinuationOptions.AttachedToParent);
@@ -789,13 +838,13 @@ namespace PStrategies.ZoneRecovery
                         tmpList.Add(new Order() { ClOrdId = idTP, OrdStatus = OrderStatus.New });
                         if (tlCondition)
                             tmpList.Add(new Order() { ClOrdId = idTL, OrdStatus = OrderStatus.New });
-                        ZROrderLedger[RunningBatchNr].Scenario.AddSuccessOrderList(tmpList);
+                        ZROrderLedger[RunningBatchNr].Scenario.AddSuccessOrderList(tmpList, ZoneRecoveryDirection.Up);
                         tmpList = new List<Order>();
                         tmpList.Add(new Order() { ClOrdId = idREV, OrdStatus = OrderStatus.New });
                         tmpList.Add(new Order() { ClOrdId = idTP, OrdStatus = OrderStatus.Filled });
                         if (tlCondition)
                             tmpList.Add(new Order() { ClOrdId = idTL, OrdStatus = OrderStatus.Filled });
-                        ZROrderLedger[RunningBatchNr].Scenario.AddSuccessOrderList(tmpList);
+                        ZROrderLedger[RunningBatchNr].Scenario.AddSuccessOrderList(tmpList, ZoneRecoveryDirection.Down);
                     }
                     else
                     {
@@ -805,7 +854,7 @@ namespace PStrategies.ZoneRecovery
                 // Open orders for the next step. Volume is removed from the current position.
                 else if (CurrentStatus == ZoneRecoveryStatus.Unwinding)
                 {
-                    if (CurrentProfitDirection == ZoneRecoveryDirection.Up)
+                    if (CurrentDirection == ZoneRecoveryDirection.Up)
                     {
                         // Create a batchNr
                         RunningBatchNr = CreateBatchNr(DateTime.Now);
@@ -813,13 +862,16 @@ namespace PStrategies.ZoneRecovery
                         ZROrderLedger.Add(RunningBatchNr, zrob);
                         ZoneRecoveryOrder zro;
 
+                        // A => TP
+                        // B => REV,TL
+
                         // Create TP
                         var idTP = CreateNewClOrdID();
                         var OrderParamsTP =
                             OrderPOSTRequestParams
                                 .CreateSimpleLimit(Symbol, idTP, CalculateQtyForOrderType(ZoneRecoveryOrderType.TP), CalculatePriceForOrderType(ZoneRecoveryOrderType.TP), OrderSide.Buy);
                         zro = new ZoneRecoveryOrder(ZoneRecoveryAccount.A, OrderParamsTP, bitmexApiServiceA, ZoneRecoveryOrderType.TP);
-                        ZROrderLedger[RunningBatchNr].OrdersList.Add(zro);
+                        ZROrderLedger[RunningBatchNr].ZROrdersList.Add(zro);
                         bitmexApiServiceA
                             .Execute(BitmexApiUrls.Order.PostOrder, OrderParamsTP)
                             .ContinueWith(ZROrderLedger[RunningBatchNr].ProcessPostOrderResult, TaskContinuationOptions.AttachedToParent);
@@ -830,7 +882,7 @@ namespace PStrategies.ZoneRecovery
                             OrderPOSTRequestParams
                                 .CreateMarketStopOrder(Symbol, idREV, CalculateQtyForOrderType(ZoneRecoveryOrderType.REV), CalculatePriceForOrderType(ZoneRecoveryOrderType.REV), OrderSide.Sell);
                         zro = new ZoneRecoveryOrder(ZoneRecoveryAccount.B, OrderParamsREV, bitmexApiServiceB, ZoneRecoveryOrderType.REV);
-                        ZROrderLedger[RunningBatchNr].OrdersList.Add(zro);
+                        ZROrderLedger[RunningBatchNr].ZROrdersList.Add(zro);
                         bitmexApiServiceB
                             .Execute(BitmexApiUrls.Order.PostOrder, OrderParamsREV)
                             .ContinueWith(ZROrderLedger[RunningBatchNr].ProcessPostOrderResult, TaskContinuationOptions.AttachedToParent);
@@ -843,7 +895,7 @@ namespace PStrategies.ZoneRecovery
                                 OrderPOSTRequestParams
                                     .CreateSimpleLimit(Symbol, idTL, CalculateQtyForOrderType(ZoneRecoveryOrderType.TL), CalculatePriceForOrderType(ZoneRecoveryOrderType.TL), OrderSide.Buy);
                             zro = new ZoneRecoveryOrder(ZoneRecoveryAccount.B, OrderParamsTL, bitmexApiServiceB, ZoneRecoveryOrderType.TL);
-                            ZROrderLedger[RunningBatchNr].OrdersList.Add(zro);
+                            ZROrderLedger[RunningBatchNr].ZROrdersList.Add(zro);
                             bitmexApiServiceB
                                 .Execute(BitmexApiUrls.Order.PostOrder, OrderParamsTL)
                                 .ContinueWith(ZROrderLedger[RunningBatchNr].ProcessPostOrderResult, TaskContinuationOptions.AttachedToParent);
@@ -856,15 +908,15 @@ namespace PStrategies.ZoneRecovery
                         tmpList.Add(new Order() { ClOrdId = idREV, OrdStatus = OrderStatus.New });
                         if (tlCondition)
                             tmpList.Add(new Order() { ClOrdId = idTL, OrdStatus = OrderStatus.Filled });
-                        ZROrderLedger[RunningBatchNr].Scenario.AddSuccessOrderList(tmpList);
+                        ZROrderLedger[RunningBatchNr].Scenario.AddSuccessOrderList(tmpList, ZoneRecoveryDirection.Up);
                         tmpList = new List<Order>();
                         tmpList.Add(new Order() { ClOrdId = idTP, OrdStatus = OrderStatus.New });
                         tmpList.Add(new Order() { ClOrdId = idREV, OrdStatus = OrderStatus.Filled });
                         if (tlCondition)
                             tmpList.Add(new Order() { ClOrdId = idTL, OrdStatus = OrderStatus.New });
-                        ZROrderLedger[RunningBatchNr].Scenario.AddSuccessOrderList(tmpList);
+                        ZROrderLedger[RunningBatchNr].Scenario.AddSuccessOrderList(tmpList, ZoneRecoveryDirection.Down);
                     }
-                    else if (CurrentProfitDirection == ZoneRecoveryDirection.Down)
+                    else if (CurrentDirection == ZoneRecoveryDirection.Down)
                     {
                         // Create a new batch
                         RunningBatchNr = CreateBatchNr(DateTime.Now);
@@ -872,13 +924,16 @@ namespace PStrategies.ZoneRecovery
                         ZROrderLedger.Add(RunningBatchNr, zrob);
                         ZoneRecoveryOrder zro;
 
+                        // B => TP
+                        // A => REV,TL
+
                         // Create TP
                         var idTP = CreateNewClOrdID();
                         var OrderParamsTP =
                             OrderPOSTRequestParams
                                 .CreateSimpleLimit(Symbol, idTP, CalculateQtyForOrderType(ZoneRecoveryOrderType.TP), CalculatePriceForOrderType(ZoneRecoveryOrderType.TP), OrderSide.Sell);
                         zro = new ZoneRecoveryOrder(ZoneRecoveryAccount.B, OrderParamsTP, bitmexApiServiceB, ZoneRecoveryOrderType.TP);
-                        ZROrderLedger[RunningBatchNr].OrdersList.Add(zro);
+                        ZROrderLedger[RunningBatchNr].ZROrdersList.Add(zro);
                         bitmexApiServiceB
                             .Execute(BitmexApiUrls.Order.PostOrder, OrderParamsTP)
                             .ContinueWith(ZROrderLedger[RunningBatchNr].ProcessPostOrderResult, TaskContinuationOptions.AttachedToParent);
@@ -889,7 +944,7 @@ namespace PStrategies.ZoneRecovery
                             OrderPOSTRequestParams
                                 .CreateMarketStopOrder(Symbol, idREV, CalculateQtyForOrderType(ZoneRecoveryOrderType.REV), CalculatePriceForOrderType(ZoneRecoveryOrderType.REV), OrderSide.Buy);
                         zro = new ZoneRecoveryOrder(ZoneRecoveryAccount.A, OrderParamsREV, bitmexApiServiceA, ZoneRecoveryOrderType.REV);
-                        ZROrderLedger[RunningBatchNr].OrdersList.Add(zro);
+                        ZROrderLedger[RunningBatchNr].ZROrdersList.Add(zro);
                         bitmexApiServiceA
                             .Execute(BitmexApiUrls.Order.PostOrder, OrderParamsREV)
                             .ContinueWith(ZROrderLedger[RunningBatchNr].ProcessPostOrderResult, TaskContinuationOptions.AttachedToParent);
@@ -902,7 +957,7 @@ namespace PStrategies.ZoneRecovery
                                 OrderPOSTRequestParams
                                     .CreateSimpleLimit(Symbol, idTL, CalculateQtyForOrderType(ZoneRecoveryOrderType.TL), CalculatePriceForOrderType(ZoneRecoveryOrderType.TL), OrderSide.Sell);
                             zro = new ZoneRecoveryOrder(ZoneRecoveryAccount.A, OrderParamsTL, bitmexApiServiceA, ZoneRecoveryOrderType.TL);
-                            ZROrderLedger[RunningBatchNr].OrdersList.Add(zro);
+                            ZROrderLedger[RunningBatchNr].ZROrdersList.Add(zro);
                             bitmexApiServiceA
                                 .Execute(BitmexApiUrls.Order.PostOrder, OrderParamsTL)
                                 .ContinueWith(ZROrderLedger[RunningBatchNr].ProcessPostOrderResult, TaskContinuationOptions.AttachedToParent);
@@ -915,13 +970,13 @@ namespace PStrategies.ZoneRecovery
                         tmpList.Add(new Order() { ClOrdId = idTP, OrdStatus = OrderStatus.New });
                         if (tlCondition)
                             tmpList.Add(new Order() { ClOrdId = idTL, OrdStatus = OrderStatus.New });
-                        ZROrderLedger[RunningBatchNr].Scenario.AddSuccessOrderList(tmpList);
+                        ZROrderLedger[RunningBatchNr].Scenario.AddSuccessOrderList(tmpList, ZoneRecoveryDirection.Up);
                         tmpList = new List<Order>();
                         tmpList.Add(new Order() { ClOrdId = idREV, OrdStatus = OrderStatus.New });
                         tmpList.Add(new Order() { ClOrdId = idTP, OrdStatus = OrderStatus.Filled });
                         if (tlCondition)
                             tmpList.Add(new Order() { ClOrdId = idTL, OrdStatus = OrderStatus.Filled });
-                        ZROrderLedger[RunningBatchNr].Scenario.AddSuccessOrderList(tmpList);
+                        ZROrderLedger[RunningBatchNr].Scenario.AddSuccessOrderList(tmpList, ZoneRecoveryDirection.Down);
                     }
                     else
                     {

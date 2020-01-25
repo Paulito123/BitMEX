@@ -33,13 +33,15 @@ namespace PStrategies.ZoneRecovery
 
         private long BatchNumber { get; }
         private int NrOfOrdersExpected { get; set; }
-        private ZoneRecoveryDirection ProfitDirection { get; set; }
+        public ZoneRecoveryDirection Direction { get; set; }
+        public static DateTime StartDateTime { get; set; }
+        public static DateTime StopDateTime { get; set; }
 
         #endregion Core variables
 
         #region Containers
 
-        public List<ZoneRecoveryOrder> OrdersList;
+        public List<ZoneRecoveryOrder> ZROrdersList;
         public ZoneRecoveryScenario Scenario;
 
         #endregion Containers
@@ -49,9 +51,10 @@ namespace PStrategies.ZoneRecovery
         public ZoneRecoveryOrderBatch(long batchNumber, ZoneRecoveryScenario scenario, ZoneRecoveryDirection direction = ZoneRecoveryDirection.Undefined)
         {
             BatchNumber = batchNumber;
-            OrdersList = new List<ZoneRecoveryOrder>();
+            ZROrdersList = new List<ZoneRecoveryOrder>();
             Scenario = scenario;
-            ProfitDirection = direction;
+            Direction = direction;
+            StartDateTime = DateTime.Now;
         }
 
         #endregion Constructors
@@ -64,59 +67,51 @@ namespace PStrategies.ZoneRecovery
         /// <param name="ordr"></param>
         public void SetFirstResponse(OrderDto ordr)
         {
-            OrdersList.Where(x => x.PostParams.ClOrdID == ordr.ClOrdId).Single().FirstServerResponse = ordr;
+            ZROrdersList.Where(x => x.PostParams.ClOrdID == ordr.ClOrdId).Single().FirstServerResponse = ordr;
             //TODO OrdersList.Where(x => x.PostParams.ClOrdID == ordr.ClOrdId).Single().CurrentStatus;
-        }
-
-        /// <summary>
-        /// Attach the last known order response.
-        /// </summary>
-        /// <param name="ordr"></param>
-        public void SetSingleLastResponse(Order ordr)
-        {
-            OrdersList.Where(x => x.PostParams.ClOrdID == ordr.ClOrdId).Single().LastServerResponse = ordr;
-        }
-
-        public void SetMultipleLastResponse(List<Order> lo)
-        {
-            if (lo != null)
-            {
-                foreach (Order o in lo)
-                {
-                    SetSingleLastResponse(o);
-                }
-            }
         }
 
         public List<string> GetClOrdIDList()
         {
-            return OrdersList.Select(x => x.PostParams.ClOrdID).ToList();
+            return ZROrdersList.Select(x => x.PostParams.ClOrdID).ToList();
         }
 
         public bool KillRestingOrders()
         {
             int errorCounter = 0;
             // Iterate all known orders
-            foreach (ZoneRecoveryOrder zro in OrdersList)
+            foreach (ZoneRecoveryOrder zro in ZROrdersList)
             {
                 try
                 {
                     // If order is New (resting), kill it.
                     if (zro.CurrentStatus == ZoneRecoveryOrderStatus.New)
                     {
+                        Log.Debug($"KillRestingOrders: before zro.KillMe() > {zro.CurrentStatus}");
+
                         zro.KillMe();
 
-                        if (zro.CurrentStatus != ZoneRecoveryOrderStatus.Canceled)
-                        {
-                            throw new Exception($"order {zro.DeleteServerResponse.ClOrdId} did not return a Canceled status after trying to kill it");
-                        }
+                        Log.Debug($"KillRestingOrders: after zro.KillMe() > {zro.CurrentStatus}");
+
+                        //if (zro.CurrentStatus != ZoneRecoveryOrderStatus.Canceled)
+                        //    throw new Exception($"order {zro.DeleteServerResponse.ClOrdId} did not return a Canceled status after trying to kill it");
+                        
+                                                    
                     }
+                    StopDateTime = DateTime.Now;
                 }
                 catch (Exception exc)
                 {
                     errorCounter++;
                     Log.Error($"KillRestingOrders: { exc.Message}");
                 }
+                //finally
+                //{
+                //    if (errorCounter == 0)
+                //    {
+
+                //    }
+                //}
             }
             return (errorCounter > 0) ? false : true;
         }
@@ -131,7 +126,7 @@ namespace PStrategies.ZoneRecovery
             else
             {
                 SetFirstResponse(task.Result.Result);
-                Log.Information($"ProcessPostOrderResult: order placed with Id [{task.Result.Result.OrderId}] and status [{task.Result.Result.OrdStatus}]");
+                Log.Information($"ProcessPostOrderResult: order placed with Id [{task.Result.Result.ClOrdId}] and status [{task.Result.Result.OrdStatus}]");
             }
         }
 
@@ -139,7 +134,7 @@ namespace PStrategies.ZoneRecovery
 
         #region Evaluators
 
-        public bool EvaluateAndInitiate()
+        public bool EvaluateAndInitiate(List<Order> allOrders)
         {
             // Iterate the scenarios
             foreach (int k in Scenario.Orders.Keys)
@@ -149,24 +144,18 @@ namespace PStrategies.ZoneRecovery
                 foreach (Order o in Scenario.Orders[k])
                 {
                     // Check if conditions are met
-                    if (OrdersList.Where(x => x.LastServerResponse.ClOrdId == o.ClOrdId).Single().LastServerResponse.OrdStatus == o.OrdStatus)
-                        successCounter++;
+                    if (allOrders.Where(x => x.ClOrdId == o.ClOrdId && x.OrdStatus == o.OrdStatus).Count() == 1)
+                        successCounter++;  
                     else
                         break;
-                }
-                if (OrdersList.Count() == successCounter)
-                {
-                    if (ProfitDirection == ZoneRecoveryDirection.Undefined)
-                        ProfitDirection = 
-                            (OrdersList
-                                .Where(x => 
-                                    x.LastServerResponse.OrdStatus == OrderStatus.Filled && 
-                                    (x.ZROrderType == ZoneRecoveryOrderType.FS || x.ZROrderType == ZoneRecoveryOrderType.TP))
-                                .Single()
-                                .ZRAccount == ZoneRecoveryAccount.A) ? ZoneRecoveryDirection.Up : ZoneRecoveryDirection.Down;
 
+                    Log.Debug($"Scenario[{k}]: ClOrdId={o.ClOrdId}, OrdStatus={o.OrdStatus.ToString()} has [{allOrders.Where(x => x.ClOrdId == o.ClOrdId && x.OrdStatus == o.OrdStatus).Count()}] hits bring total to [{successCounter}]");
+                }
+                if (allOrders.Count() == successCounter)
+                {
+                    Direction = Scenario.DirectionByScenario[k];
                     return KillRestingOrders();
-                } 
+                }
             }
             // TODO do not return anything but initiate the actions required
             return false;

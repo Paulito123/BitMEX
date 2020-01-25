@@ -25,6 +25,10 @@ namespace MoneyTron
             InitLogging();
 
             var mainForm = new MTMainForm();
+
+            TextWriter wrt = mainForm.GetWriter();
+            Console.SetOut(wrt);
+
             _presenter = new MTMainPresenter(mainForm);
 
             Application.Run(mainForm);
@@ -35,7 +39,7 @@ namespace MoneyTron
             var executingDir = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location);
             var logPath = Path.Combine(executingDir, "logs", "verbose.log");
             Log.Logger = new LoggerConfiguration()
-                .MinimumLevel.Debug()
+                .MinimumLevel.Verbose()
                 .WriteTo.File(logPath, rollingInterval: RollingInterval.Day)
                 //.WriteTo.Console(LogEventLevel.Information)
                 .WriteTo.Debug(LogEventLevel.Debug)

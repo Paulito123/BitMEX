@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Windows.Forms;
 using Bitmex.Client.Websocket.Responses.Orders;
 using Bitmex.Client.Websocket.Responses.Positions;
@@ -8,6 +9,7 @@ namespace MoneyTron
 {
     interface IMTMainForm
     {
+        //string ConsoleText { get; set; }
         bool isTest { get; set; }
         string AccountAID { get; set; }
         string AccountBID { get; set; }
@@ -44,6 +46,15 @@ namespace MoneyTron
         string PNLB { get; set; }
         string TotalCostA { get; set; }
         string TotalCostB { get; set; }
+        decimal Leverage { get; set; }
+        decimal MaxDepth { get; set; }
+        decimal ZoneSize { get; set; }
+        decimal MaxExposure { get; set; }
+        decimal MinProfit { get; set; }
+        string Direction { get; set; }
+        string UnitSize { get; set; }
+        string ZRStatus { get; set; }
+        string ZRIndex { get; set; }
 
         BindingSource bSRCOrdersA { get; set; }
         BindingSource bSRCOrdersB { get; set; }
