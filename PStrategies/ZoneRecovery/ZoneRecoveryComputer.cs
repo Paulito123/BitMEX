@@ -191,7 +191,9 @@ namespace PStrategies.ZoneRecovery
             }
             catch (Exception exc)
             {
-                Log.Error($"ZoneRecoveryComputer: {exc.Message}");
+                string message = $"ZoneRecoveryComputer: {exc.Message}";
+                Log.Error(message);
+                Console.WriteLine(message);
                 return false;
             }
             return true;
@@ -336,7 +338,9 @@ namespace PStrategies.ZoneRecovery
             }
             catch (Exception exc)
             {
-                Log.Error($"CalculateQtyForOrderType: {exc.Message}");
+                string message = $"CalculateQtyForOrderType: {exc.Message}";
+                Log.Error(message);
+                Console.WriteLine(message);
             }
             finally
             {
@@ -367,7 +371,9 @@ namespace PStrategies.ZoneRecovery
             }
             catch (Exception exc)
             {
-                Log.Error($"GetReversePrice: {exc.Message}");
+                string message = $"GetReversePrice: {exc.Message}";
+                Log.Error(message);
+                Console.WriteLine(message);
             }
             finally
             {
@@ -404,7 +410,9 @@ namespace PStrategies.ZoneRecovery
             }
             catch (Exception exc)
             {
-                Log.Error($"CalculateBreakEvenPrice: {exc.Message}");
+                string message = $"CalculateBreakEvenPrice: {exc.Message}";
+                Log.Error(message);
+                Console.WriteLine(message);
             }
             finally
             {
@@ -431,7 +439,9 @@ namespace PStrategies.ZoneRecovery
             }
             catch (Exception exc)
             {
-                Log.Error($"CalculateTotalOpenExposure: {exc.Message}");
+                string message = $"CalculateTotalOpenExposure: {exc.Message}";
+                Log.Error(message);
+                Console.WriteLine(message);
             }
             finally
             {
@@ -460,8 +470,9 @@ namespace PStrategies.ZoneRecovery
             }
             catch (Exception exc)
             {
-                Log.Error($"SetUnitSizeForPrice: {exc.Message}");
-                throw exc;
+                string message = $"SetUnitSizeForPrice: {exc.Message}";
+                Log.Error(message);
+                Console.WriteLine(message);
             }
         }
 
@@ -488,8 +499,9 @@ namespace PStrategies.ZoneRecovery
             }
             catch (Exception exc)
             {
-                Log.Error($"Reset: {exc.Message}");
-                throw exc;
+                string message = $"Reset: {exc.Message}";
+                Log.Error(message);
+                Console.WriteLine(message);
             }
         }
 
@@ -582,7 +594,9 @@ namespace PStrategies.ZoneRecovery
                 }
                 catch (Exception exc)
                 {
-                    Log.Error($"Evaluate: {exc.Message}");
+                    string message = $"Evaluate: {exc.Message}";
+                    Log.Error(message);
+                    Console.WriteLine(message);
                 }
                 finally
                 {
@@ -604,7 +618,9 @@ namespace PStrategies.ZoneRecovery
             }
             catch (Exception exc)
             {
-                Log.Error($"AccountsFlat: {exc.Message}");
+                string message = $"AccountsFlat: {exc.Message}";
+                Log.Error(message);
+                Console.WriteLine(message);
             }
             finally
             {
@@ -621,12 +637,37 @@ namespace PStrategies.ZoneRecovery
 
                 // Create a batchNr
                 RunningBatchNr = CreateBatchNr(DateTime.Now);
-                var zrob = new ZoneRecoveryOrderBatch(RunningBatchNr, new ZoneRecoveryScenario());
+                var zrob = new ZoneRecoveryOrderBatch(RunningBatchNr);
                 ZROrderLedger.Add(RunningBatchNr, zrob);
                 ZoneRecoveryOrder zro;
-                
-                // Create initial Orders
+
+                // Create unique ids
                 var idA = CreateNewClOrdID();
+                var idB = CreateNewClOrdID();
+
+                // Add the scenarios that need to be checked with every update
+                List<Order> tmpList;
+                tmpList = new List<Order>();
+                tmpList.Add(new Order() { ClOrdId = idA, OrdStatus = OrderStatus.Filled });
+                tmpList.Add(new Order() { ClOrdId = idB, OrdStatus = OrderStatus.New });
+                ZROrderLedger[RunningBatchNr].SuccessScenario.AddOrderList(tmpList, ZoneRecoveryDirection.Up);
+                tmpList = new List<Order>();
+                tmpList.Add(new Order() { ClOrdId = idA, OrdStatus = OrderStatus.New });
+                tmpList.Add(new Order() { ClOrdId = idB, OrdStatus = OrderStatus.Filled });
+                ZROrderLedger[RunningBatchNr].SuccessScenario.AddOrderList(tmpList, ZoneRecoveryDirection.Down);
+
+                tmpList = new List<Order>();
+                tmpList.Add(new Order() { ClOrdId = idA, OrdStatus = OrderStatus.Filled });
+                tmpList.Add(new Order() { ClOrdId = idB, OrdStatus = OrderStatus.Filled });
+                ZROrderLedger[RunningBatchNr].FailureScenario.AddOrderList(tmpList);
+                tmpList = new List<Order>();
+                tmpList.Add(new Order() { ClOrdId = idA, OrdStatus = OrderStatus.Canceled });
+                ZROrderLedger[RunningBatchNr].FailureScenario.AddOrderList(tmpList, ZoneRecoveryDirection.Undefined);
+                tmpList = new List<Order>();
+                tmpList.Add(new Order() { ClOrdId = idB, OrdStatus = OrderStatus.Canceled });
+                ZROrderLedger[RunningBatchNr].SuccessScenario.AddOrderList(tmpList, ZoneRecoveryDirection.Undefined);
+
+                // Create initial Orders
                 var OrderParamsA =
                     OrderPOSTRequestParams
                         .CreateSimpleLimit(Symbol, idA, UnitSize, (InitPrice - StandardPegDistance), OrderSide.Buy);
@@ -636,7 +677,6 @@ namespace PStrategies.ZoneRecovery
                     .Execute(BitmexApiUrls.Order.PostOrder, OrderParamsA)
                     .ContinueWith(ZROrderLedger[RunningBatchNr].ProcessPostOrderResult, TaskContinuationOptions.AttachedToParent);
 
-                var idB = CreateNewClOrdID();
                 var OrderParamsB =
                     OrderPOSTRequestParams
                         .CreateSimpleLimit(Symbol, idB, UnitSize, (InitPrice + StandardPegDistance), OrderSide.Sell);
@@ -645,19 +685,6 @@ namespace PStrategies.ZoneRecovery
                 bitmexApiServiceB
                     .Execute(BitmexApiUrls.Order.PostOrder, OrderParamsB)
                     .ContinueWith(ZROrderLedger[RunningBatchNr].ProcessPostOrderResult, TaskContinuationOptions.AttachedToParent);
-
-                // Add the scenarios that need to be checked with every update
-                List<Order> tmpList;
-                tmpList = new List<Order>();
-                tmpList.Add(new Order() { ClOrdId = idA, OrdStatus = OrderStatus.Filled });
-                tmpList.Add(new Order() { ClOrdId = idB, OrdStatus = OrderStatus.New });
-                ZROrderLedger[RunningBatchNr].Scenario.AddSuccessOrderList(tmpList, ZoneRecoveryDirection.Up);
-                tmpList = new List<Order>();
-                tmpList.Add(new Order() { ClOrdId = idA, OrdStatus = OrderStatus.New });
-                tmpList.Add(new Order() { ClOrdId = idB, OrdStatus = OrderStatus.Filled });
-                ZROrderLedger[RunningBatchNr].Scenario.AddSuccessOrderList(tmpList, ZoneRecoveryDirection.Down);
-
-                
             }
             else
             {
@@ -669,6 +696,8 @@ namespace PStrategies.ZoneRecovery
 
         private void RemoveFromOrderList(List<string> clOrdIdList)
         {
+            Console.WriteLine($"Removing {clOrdIdList.Count()} orders...");
+
             if (LiveOrders == null || !LiveOrders.ContainsKey(ZoneRecoveryAccount.A) || !LiveOrders.ContainsKey(ZoneRecoveryAccount.B))
                 throw new Exception("RemoveFromOrderList: LiveOrders == null");
 
@@ -693,24 +722,22 @@ namespace PStrategies.ZoneRecovery
 
         private void EvaluateNormal(List<Order> orders)
         {
-            Log.Debug($"EvaluateNormal started and the RunningBatchNr=[{RunningBatchNr}]");
-
             if (ZROrderLedger == null || !ZROrderLedger.ContainsKey(RunningBatchNr))
                 return;
-            
-            Log.Debug("EvaluateAndInitiate going to start");
 
             // TODO: Retrun a specific status instead of a bool
             // Check if action needs to be taken 
             bool isBatchClosed = ZROrderLedger[RunningBatchNr].EvaluateAndInitiate(orders);
 
-            Log.Debug($"EvaluateNormal: {isBatchClosed}");
+            Console.WriteLine($"EvaluateNormal: {isBatchClosed}");
             
             if (isBatchClosed)
             {
+                Console.WriteLine($"Removing orders...");
                 RemoveFromOrderList(ZROrderLedger[RunningBatchNr].GetClOrdIDList());
 
                 // Turn the wheel...
+                Console.WriteLine($"Turning the wheel...");
                 TakeStepForward(ZROrderLedger[RunningBatchNr].Direction);
 
                 // Create the condition that allows TL orders to be created or not.
@@ -725,15 +752,34 @@ namespace PStrategies.ZoneRecovery
                     {
                         // Create a batchNr
                         RunningBatchNr = CreateBatchNr(DateTime.Now);
-                        var zrob = new ZoneRecoveryOrderBatch(RunningBatchNr, new ZoneRecoveryScenario());
+                        var zrob = new ZoneRecoveryOrderBatch(RunningBatchNr);
                         ZROrderLedger.Add(RunningBatchNr, zrob);
                         ZoneRecoveryOrder zro;
 
+                        // Create unique ids
+                        var idTP = CreateNewClOrdID();
+                        var idREV = CreateNewClOrdID();
+                        var idTL = CreateNewClOrdID();
+
                         // A => TP
                         // B => REV,TL
+                        // Add the scenarios that need to be checked with every update
+                        List<Order> tmpList;
+                        tmpList = new List<Order>();
+                        tmpList.Add(new Order() { ClOrdId = idTP, OrdStatus = OrderStatus.Filled });
+                        tmpList.Add(new Order() { ClOrdId = idREV, OrdStatus = OrderStatus.New });
+                        if (tlCondition)
+                            tmpList.Add(new Order() { ClOrdId = idTL, OrdStatus = OrderStatus.Filled });
+                        ZROrderLedger[RunningBatchNr].SuccessScenario.AddOrderList(tmpList, ZoneRecoveryDirection.Up);
+
+                        tmpList = new List<Order>();
+                        tmpList.Add(new Order() { ClOrdId = idTP, OrdStatus = OrderStatus.New });
+                        tmpList.Add(new Order() { ClOrdId = idREV, OrdStatus = OrderStatus.Filled });
+                        if (tlCondition)
+                            tmpList.Add(new Order() { ClOrdId = idTL, OrdStatus = OrderStatus.New });
+                        ZROrderLedger[RunningBatchNr].SuccessScenario.AddOrderList(tmpList, ZoneRecoveryDirection.Down);
 
                         // Create TP
-                        var idTP = CreateNewClOrdID();
                         var OrderParamsTP =
                             OrderPOSTRequestParams
                                 .CreateSimpleLimit(Symbol, idTP, CalculateQtyForOrderType(ZoneRecoveryOrderType.TP), CalculatePriceForOrderType(ZoneRecoveryOrderType.TP), OrderSide.Buy);
@@ -744,7 +790,6 @@ namespace PStrategies.ZoneRecovery
                             .ContinueWith(ZROrderLedger[RunningBatchNr].ProcessPostOrderResult, TaskContinuationOptions.AttachedToParent);
 
                         // Create REV
-                        var idREV = CreateNewClOrdID();
                         var OrderParamsREV =
                             OrderPOSTRequestParams
                                 .CreateMarketStopOrder(Symbol, idREV, CalculateQtyForOrderType(ZoneRecoveryOrderType.REV), CalculatePriceForOrderType(ZoneRecoveryOrderType.REV), OrderSide.Sell);
@@ -755,7 +800,6 @@ namespace PStrategies.ZoneRecovery
                             .ContinueWith(ZROrderLedger[RunningBatchNr].ProcessPostOrderResult, TaskContinuationOptions.AttachedToParent);
 
                         // Check if the condition to add a TL is met
-                        var idTL = CreateNewClOrdID();
                         if (tlCondition)
                         {
                             var OrderParamsTL =
@@ -768,35 +812,38 @@ namespace PStrategies.ZoneRecovery
                                 .ContinueWith(ZROrderLedger[RunningBatchNr].ProcessPostOrderResult, TaskContinuationOptions.AttachedToParent);
                         }
 
-                        // Add the scenarios that need to be checked with every update
-                        List<Order> tmpList;
-                        tmpList = new List<Order>();
-                        tmpList.Add(new Order() { ClOrdId = idTP, OrdStatus = OrderStatus.Filled });
-                        tmpList.Add(new Order() { ClOrdId = idREV, OrdStatus = OrderStatus.New });
-                        if (tlCondition)
-                            tmpList.Add(new Order() { ClOrdId = idTL, OrdStatus = OrderStatus.Filled });
-                        ZROrderLedger[RunningBatchNr].Scenario.AddSuccessOrderList(tmpList, ZoneRecoveryDirection.Up);
-
-                        tmpList = new List<Order>();
-                        tmpList.Add(new Order() { ClOrdId = idTP, OrdStatus = OrderStatus.New });
-                        tmpList.Add(new Order() { ClOrdId = idREV, OrdStatus = OrderStatus.Filled });
-                        if (tlCondition)
-                            tmpList.Add(new Order() { ClOrdId = idTL, OrdStatus = OrderStatus.New });
-                        ZROrderLedger[RunningBatchNr].Scenario.AddSuccessOrderList(tmpList, ZoneRecoveryDirection.Down);
                     }
                     else if (CurrentDirection == ZoneRecoveryDirection.Down)
                     {
                         // Create a new batch
                         RunningBatchNr = CreateBatchNr(DateTime.Now);
-                        var zrob = new ZoneRecoveryOrderBatch(RunningBatchNr, new ZoneRecoveryScenario());
+                        var zrob = new ZoneRecoveryOrderBatch(RunningBatchNr);
                         ZROrderLedger.Add(RunningBatchNr, zrob);
                         ZoneRecoveryOrder zro;
 
+                        // Create unique ids
+                        var idTP = CreateNewClOrdID();
+                        var idREV = CreateNewClOrdID();
+                        var idTL = CreateNewClOrdID();
+
                         // B => TP
                         // A => REV,TL
+                        // Add the scenarios that need to be checked with every update
+                        List<Order> tmpList;
+                        tmpList = new List<Order>();
+                        tmpList.Add(new Order() { ClOrdId = idREV, OrdStatus = OrderStatus.Filled });
+                        tmpList.Add(new Order() { ClOrdId = idTP, OrdStatus = OrderStatus.New });
+                        if (tlCondition)
+                            tmpList.Add(new Order() { ClOrdId = idTL, OrdStatus = OrderStatus.New });
+                        ZROrderLedger[RunningBatchNr].SuccessScenario.AddOrderList(tmpList, ZoneRecoveryDirection.Up);
+                        tmpList = new List<Order>();
+                        tmpList.Add(new Order() { ClOrdId = idREV, OrdStatus = OrderStatus.New });
+                        tmpList.Add(new Order() { ClOrdId = idTP, OrdStatus = OrderStatus.Filled });
+                        if (tlCondition)
+                            tmpList.Add(new Order() { ClOrdId = idTL, OrdStatus = OrderStatus.Filled });
+                        ZROrderLedger[RunningBatchNr].SuccessScenario.AddOrderList(tmpList, ZoneRecoveryDirection.Down);
 
                         // Create TP
-                        var idTP = CreateNewClOrdID();
                         var OrderParamsTP =
                             OrderPOSTRequestParams
                                 .CreateSimpleLimit(Symbol, idTP, CalculateQtyForOrderType(ZoneRecoveryOrderType.TP), CalculatePriceForOrderType(ZoneRecoveryOrderType.TP), OrderSide.Sell);
@@ -807,7 +854,6 @@ namespace PStrategies.ZoneRecovery
                             .ContinueWith(ZROrderLedger[RunningBatchNr].ProcessPostOrderResult, TaskContinuationOptions.AttachedToParent);
 
                         // Create REV
-                        var idREV = CreateNewClOrdID();
                         var OrderParamsREV =
                             OrderPOSTRequestParams
                                 .CreateMarketStopOrder(Symbol, idREV, CalculateQtyForOrderType(ZoneRecoveryOrderType.REV), CalculatePriceForOrderType(ZoneRecoveryOrderType.REV), OrderSide.Buy);
@@ -818,7 +864,6 @@ namespace PStrategies.ZoneRecovery
                             .ContinueWith(ZROrderLedger[RunningBatchNr].ProcessPostOrderResult, TaskContinuationOptions.AttachedToParent);
 
                         // Check if the condition to add a TL is met
-                        var idTL = CreateNewClOrdID();
                         if (tlCondition)
                         {
                             var OrderParamsTL =
@@ -831,20 +876,6 @@ namespace PStrategies.ZoneRecovery
                                 .ContinueWith(ZROrderLedger[RunningBatchNr].ProcessPostOrderResult, TaskContinuationOptions.AttachedToParent);
                         }
 
-                        // Add the scenarios that need to be checked with every update
-                        List<Order> tmpList;
-                        tmpList = new List<Order>();
-                        tmpList.Add(new Order() { ClOrdId = idREV, OrdStatus = OrderStatus.Filled });
-                        tmpList.Add(new Order() { ClOrdId = idTP, OrdStatus = OrderStatus.New });
-                        if (tlCondition)
-                            tmpList.Add(new Order() { ClOrdId = idTL, OrdStatus = OrderStatus.New });
-                        ZROrderLedger[RunningBatchNr].Scenario.AddSuccessOrderList(tmpList, ZoneRecoveryDirection.Up);
-                        tmpList = new List<Order>();
-                        tmpList.Add(new Order() { ClOrdId = idREV, OrdStatus = OrderStatus.New });
-                        tmpList.Add(new Order() { ClOrdId = idTP, OrdStatus = OrderStatus.Filled });
-                        if (tlCondition)
-                            tmpList.Add(new Order() { ClOrdId = idTL, OrdStatus = OrderStatus.Filled });
-                        ZROrderLedger[RunningBatchNr].Scenario.AddSuccessOrderList(tmpList, ZoneRecoveryDirection.Down);
                     }
                     else
                     {
@@ -858,15 +889,33 @@ namespace PStrategies.ZoneRecovery
                     {
                         // Create a batchNr
                         RunningBatchNr = CreateBatchNr(DateTime.Now);
-                        var zrob = new ZoneRecoveryOrderBatch(RunningBatchNr, new ZoneRecoveryScenario());
+                        var zrob = new ZoneRecoveryOrderBatch(RunningBatchNr);
                         ZROrderLedger.Add(RunningBatchNr, zrob);
                         ZoneRecoveryOrder zro;
 
+                        // Create unique ids
+                        var idTP = CreateNewClOrdID();
+                        var idREV = CreateNewClOrdID();
+                        var idTL = CreateNewClOrdID();
+
                         // A => TP
                         // B => REV,TL
+                        // Add the scenarios that need to be checked with every update
+                        List<Order> tmpList;
+                        tmpList = new List<Order>();
+                        tmpList.Add(new Order() { ClOrdId = idTP, OrdStatus = OrderStatus.Filled });
+                        tmpList.Add(new Order() { ClOrdId = idREV, OrdStatus = OrderStatus.New });
+                        if (tlCondition)
+                            tmpList.Add(new Order() { ClOrdId = idTL, OrdStatus = OrderStatus.Filled });
+                        ZROrderLedger[RunningBatchNr].SuccessScenario.AddOrderList(tmpList, ZoneRecoveryDirection.Up);
+                        tmpList = new List<Order>();
+                        tmpList.Add(new Order() { ClOrdId = idTP, OrdStatus = OrderStatus.New });
+                        tmpList.Add(new Order() { ClOrdId = idREV, OrdStatus = OrderStatus.Filled });
+                        if (tlCondition)
+                            tmpList.Add(new Order() { ClOrdId = idTL, OrdStatus = OrderStatus.New });
+                        ZROrderLedger[RunningBatchNr].SuccessScenario.AddOrderList(tmpList, ZoneRecoveryDirection.Down);
 
                         // Create TP
-                        var idTP = CreateNewClOrdID();
                         var OrderParamsTP =
                             OrderPOSTRequestParams
                                 .CreateSimpleLimit(Symbol, idTP, CalculateQtyForOrderType(ZoneRecoveryOrderType.TP), CalculatePriceForOrderType(ZoneRecoveryOrderType.TP), OrderSide.Buy);
@@ -877,7 +926,6 @@ namespace PStrategies.ZoneRecovery
                             .ContinueWith(ZROrderLedger[RunningBatchNr].ProcessPostOrderResult, TaskContinuationOptions.AttachedToParent);
 
                         // Create REV
-                        var idREV = CreateNewClOrdID();
                         var OrderParamsREV =
                             OrderPOSTRequestParams
                                 .CreateMarketStopOrder(Symbol, idREV, CalculateQtyForOrderType(ZoneRecoveryOrderType.REV), CalculatePriceForOrderType(ZoneRecoveryOrderType.REV), OrderSide.Sell);
@@ -888,7 +936,6 @@ namespace PStrategies.ZoneRecovery
                             .ContinueWith(ZROrderLedger[RunningBatchNr].ProcessPostOrderResult, TaskContinuationOptions.AttachedToParent);
 
                         // Check if the condition to add a TL is met
-                        var idTL = CreateNewClOrdID();
                         if (tlCondition)
                         {
                             var OrderParamsTL =
@@ -901,34 +948,38 @@ namespace PStrategies.ZoneRecovery
                                 .ContinueWith(ZROrderLedger[RunningBatchNr].ProcessPostOrderResult, TaskContinuationOptions.AttachedToParent);
                         }
 
-                        // Add the scenarios that need to be checked with every update
-                        List<Order> tmpList;
-                        tmpList = new List<Order>();
-                        tmpList.Add(new Order() { ClOrdId = idTP, OrdStatus = OrderStatus.Filled });
-                        tmpList.Add(new Order() { ClOrdId = idREV, OrdStatus = OrderStatus.New });
-                        if (tlCondition)
-                            tmpList.Add(new Order() { ClOrdId = idTL, OrdStatus = OrderStatus.Filled });
-                        ZROrderLedger[RunningBatchNr].Scenario.AddSuccessOrderList(tmpList, ZoneRecoveryDirection.Up);
-                        tmpList = new List<Order>();
-                        tmpList.Add(new Order() { ClOrdId = idTP, OrdStatus = OrderStatus.New });
-                        tmpList.Add(new Order() { ClOrdId = idREV, OrdStatus = OrderStatus.Filled });
-                        if (tlCondition)
-                            tmpList.Add(new Order() { ClOrdId = idTL, OrdStatus = OrderStatus.New });
-                        ZROrderLedger[RunningBatchNr].Scenario.AddSuccessOrderList(tmpList, ZoneRecoveryDirection.Down);
                     }
                     else if (CurrentDirection == ZoneRecoveryDirection.Down)
                     {
                         // Create a new batch
                         RunningBatchNr = CreateBatchNr(DateTime.Now);
-                        var zrob = new ZoneRecoveryOrderBatch(RunningBatchNr, new ZoneRecoveryScenario());
+                        var zrob = new ZoneRecoveryOrderBatch(RunningBatchNr);
                         ZROrderLedger.Add(RunningBatchNr, zrob);
                         ZoneRecoveryOrder zro;
 
+                        // Create unique ids
+                        var idTP = CreateNewClOrdID();
+                        var idREV = CreateNewClOrdID();
+                        var idTL = CreateNewClOrdID();
+
                         // B => TP
                         // A => REV,TL
+                        // Add the scenarios that need to be checked with every update
+                        List<Order> tmpList;
+                        tmpList = new List<Order>();
+                        tmpList.Add(new Order() { ClOrdId = idREV, OrdStatus = OrderStatus.Filled });
+                        tmpList.Add(new Order() { ClOrdId = idTP, OrdStatus = OrderStatus.New });
+                        if (tlCondition)
+                            tmpList.Add(new Order() { ClOrdId = idTL, OrdStatus = OrderStatus.New });
+                        ZROrderLedger[RunningBatchNr].SuccessScenario.AddOrderList(tmpList, ZoneRecoveryDirection.Up);
+                        tmpList = new List<Order>();
+                        tmpList.Add(new Order() { ClOrdId = idREV, OrdStatus = OrderStatus.New });
+                        tmpList.Add(new Order() { ClOrdId = idTP, OrdStatus = OrderStatus.Filled });
+                        if (tlCondition)
+                            tmpList.Add(new Order() { ClOrdId = idTL, OrdStatus = OrderStatus.Filled });
+                        ZROrderLedger[RunningBatchNr].SuccessScenario.AddOrderList(tmpList, ZoneRecoveryDirection.Down);
 
                         // Create TP
-                        var idTP = CreateNewClOrdID();
                         var OrderParamsTP =
                             OrderPOSTRequestParams
                                 .CreateSimpleLimit(Symbol, idTP, CalculateQtyForOrderType(ZoneRecoveryOrderType.TP), CalculatePriceForOrderType(ZoneRecoveryOrderType.TP), OrderSide.Sell);
@@ -939,7 +990,6 @@ namespace PStrategies.ZoneRecovery
                             .ContinueWith(ZROrderLedger[RunningBatchNr].ProcessPostOrderResult, TaskContinuationOptions.AttachedToParent);
 
                         // Create REV
-                        var idREV = CreateNewClOrdID();
                         var OrderParamsREV =
                             OrderPOSTRequestParams
                                 .CreateMarketStopOrder(Symbol, idREV, CalculateQtyForOrderType(ZoneRecoveryOrderType.REV), CalculatePriceForOrderType(ZoneRecoveryOrderType.REV), OrderSide.Buy);
@@ -950,7 +1000,6 @@ namespace PStrategies.ZoneRecovery
                             .ContinueWith(ZROrderLedger[RunningBatchNr].ProcessPostOrderResult, TaskContinuationOptions.AttachedToParent);
 
                         // Check if the condition to add a TL is met
-                        var idTL = CreateNewClOrdID();
                         if (tlCondition)
                         {
                             var OrderParamsTL =
@@ -963,20 +1012,6 @@ namespace PStrategies.ZoneRecovery
                                 .ContinueWith(ZROrderLedger[RunningBatchNr].ProcessPostOrderResult, TaskContinuationOptions.AttachedToParent);
                         }
 
-                        // Add the scenarios that need to be checked with every update
-                        List<Order> tmpList;
-                        tmpList = new List<Order>();
-                        tmpList.Add(new Order() { ClOrdId = idREV, OrdStatus = OrderStatus.Filled });
-                        tmpList.Add(new Order() { ClOrdId = idTP, OrdStatus = OrderStatus.New });
-                        if (tlCondition)
-                            tmpList.Add(new Order() { ClOrdId = idTL, OrdStatus = OrderStatus.New });
-                        ZROrderLedger[RunningBatchNr].Scenario.AddSuccessOrderList(tmpList, ZoneRecoveryDirection.Up);
-                        tmpList = new List<Order>();
-                        tmpList.Add(new Order() { ClOrdId = idREV, OrdStatus = OrderStatus.New });
-                        tmpList.Add(new Order() { ClOrdId = idTP, OrdStatus = OrderStatus.Filled });
-                        if (tlCondition)
-                            tmpList.Add(new Order() { ClOrdId = idTL, OrdStatus = OrderStatus.Filled });
-                        ZROrderLedger[RunningBatchNr].Scenario.AddSuccessOrderList(tmpList, ZoneRecoveryDirection.Down);
                     }
                     else
                     {

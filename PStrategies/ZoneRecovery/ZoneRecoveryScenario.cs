@@ -22,7 +22,7 @@ namespace PStrategies.ZoneRecovery
             DirectionByScenario = new Dictionary<int, ZoneRecoveryDirection>();
         }
         
-        public void AddSuccessOrder(Order o, bool isNew = false)
+        public void AddOrder(Order o, bool isNew = false)
         {
             if (isNew)
             {
@@ -33,7 +33,7 @@ namespace PStrategies.ZoneRecovery
             Orders[CurrentID].Add(o);
         }
 
-        public void AddSuccessOrderList(List<Order> ol, ZoneRecoveryDirection dir)
+        public void AddOrderList(List<Order> ol, ZoneRecoveryDirection dir = ZoneRecoveryDirection.Undefined)
         {
             CurrentID++;
             Orders.Add(CurrentID, ol);

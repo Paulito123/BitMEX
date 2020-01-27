@@ -216,7 +216,9 @@ namespace MoneyTron.Presenter
             }
             else
             {
-                Log.Error($"OnStartZoneRecovery: Communicators are null");
+                string message = $"OnStartZoneRecovery: Communicators are null";
+                Log.Error(message);
+                Console.WriteLine(message);
                 return;
             }
         }
@@ -591,7 +593,9 @@ namespace MoneyTron.Presenter
             }
             catch(Exception exc)
             {
-                Log.Error("[HandleOrderResponse]:" + exc.Message);
+                string message = $"[HandleOrderResponse]: {exc.Message}";
+                Log.Error(message);
+                Console.WriteLine(message);
             }
             finally
             {
@@ -647,7 +651,9 @@ namespace MoneyTron.Presenter
             }
             catch (Exception exc)
             {
-                Log.Error("[HandlePositionResponse]:" + exc.Message);
+                string message = $"[HandlePositionResponse]: {exc.Message}";
+                Log.Error(message);
+                Console.WriteLine(message);
             }
             finally
             {
@@ -703,7 +709,9 @@ namespace MoneyTron.Presenter
             }
             catch (Exception exc)
             {
-                Log.Error("[HandleMargin]:" + exc.Message);
+                string message = $"[HandleMargin]: {exc.Message}";
+                Log.Error(message);
+                Console.WriteLine(message);
             }
             finally
             {
@@ -872,10 +880,10 @@ namespace MoneyTron.Presenter
             _view.ZRIndex = string.Empty;
 
             _view.Leverage = 1;
-            _view.MaxDepth = 2;
-            _view.ZoneSize = 25;
-            _view.MaxExposure = (decimal)0.01;
-            _view.MinProfit = (decimal)0.01;
+            _view.MaxDepth = 3;
+            _view.ZoneSize = 20;
+            _view.MaxExposure = (decimal)0.05;
+            _view.MinProfit = (decimal)0.05;
 
             if (acc == ZoneRecoveryAccount.A)
             {

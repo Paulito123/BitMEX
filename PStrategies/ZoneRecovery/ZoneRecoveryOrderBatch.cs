@@ -42,17 +42,19 @@ namespace PStrategies.ZoneRecovery
         #region Containers
 
         public List<ZoneRecoveryOrder> ZROrdersList;
-        public ZoneRecoveryScenario Scenario;
+        public ZoneRecoveryScenario SuccessScenario;
+        public ZoneRecoveryScenario FailureScenario;
 
         #endregion Containers
 
         #region Constructors
 
-        public ZoneRecoveryOrderBatch(long batchNumber, ZoneRecoveryScenario scenario, ZoneRecoveryDirection direction = ZoneRecoveryDirection.Undefined)
+        public ZoneRecoveryOrderBatch(long batchNumber, ZoneRecoveryDirection direction = ZoneRecoveryDirection.Undefined)
         {
             BatchNumber = batchNumber;
             ZROrdersList = new List<ZoneRecoveryOrder>();
-            Scenario = scenario;
+            SuccessScenario = new ZoneRecoveryScenario();
+            FailureScenario = new ZoneRecoveryScenario();
             Direction = direction;
             StartDateTime = DateTime.Now;
         }
@@ -118,16 +120,20 @@ namespace PStrategies.ZoneRecovery
 
         public void ProcessPostOrderResult(Task<BitmexApiResult<OrderDto>> task)
         {
+            string message = "";
             // TODO Handle Exception !!!
             if (task.Exception != null)
             {
-                Log.Error($"ProcessPostOrderResult: {(task.Exception.InnerException ?? task.Exception).Message}");
+                message = $"ProcessPostOrderResult: {(task.Exception.InnerException ?? task.Exception).Message}";
+                Log.Error(message);
             }
             else
             {
                 SetFirstResponse(task.Result.Result);
-                Log.Information($"ProcessPostOrderResult: order placed with Id [{task.Result.Result.ClOrdId}] and status [{task.Result.Result.OrdStatus}]");
+                message = $"ProcessPostOrderResult: order placed with Id [{task.Result.Result.ClOrdId}] and status [{task.Result.Result.OrdStatus}]";
+                Log.Information(message);
             }
+            Console.WriteLine(message);
         }
 
         #endregion Setters, Getters, Adders, Updaters and Deleters
@@ -136,12 +142,36 @@ namespace PStrategies.ZoneRecovery
 
         public bool EvaluateAndInitiate(List<Order> allOrders)
         {
+            // Iterate the failure scenarios
+            foreach (int k in FailureScenario.Orders.Keys)
+            {
+                // Iterate the orders
+                int failureCounter = 0;
+                foreach (Order o in FailureScenario.Orders[k])
+                {
+                    // Check if conditions are met
+                    if (allOrders.Where(x => x.ClOrdId == o.ClOrdId && x.OrdStatus == o.OrdStatus).Count() == 1)
+                        failureCounter++;
+                    else
+                        break;
+
+                    Console.WriteLine($"FailureScenario[{k}]: ClOrdId={o.ClOrdId}, OrdStatus={o.OrdStatus.ToString()} has [{allOrders.Where(x => x.ClOrdId == o.ClOrdId && x.OrdStatus == o.OrdStatus).Count()}] hits bring total to [{failureCounter}]");
+                    //Log.Debug($"FailureScenario[{k}]: ClOrdId={o.ClOrdId}, OrdStatus={o.OrdStatus.ToString()} has [{allOrders.Where(x => x.ClOrdId == o.ClOrdId && x.OrdStatus == o.OrdStatus).Count()}] hits bring total to [{failureCounter}]");
+                }
+                if (allOrders.Count() == failureCounter)
+                {
+                    // TODO: flatten positions
+                    Direction = SuccessScenario.DirectionByScenario[k];
+                    return KillRestingOrders();
+                }
+            }
+
             // Iterate the scenarios
-            foreach (int k in Scenario.Orders.Keys)
+            foreach (int k in SuccessScenario.Orders.Keys)
             {
                 // Iterate the orders
                 int successCounter = 0;
-                foreach (Order o in Scenario.Orders[k])
+                foreach (Order o in SuccessScenario.Orders[k])
                 {
                     // Check if conditions are met
                     if (allOrders.Where(x => x.ClOrdId == o.ClOrdId && x.OrdStatus == o.OrdStatus).Count() == 1)
@@ -149,11 +179,12 @@ namespace PStrategies.ZoneRecovery
                     else
                         break;
 
-                    Log.Debug($"Scenario[{k}]: ClOrdId={o.ClOrdId}, OrdStatus={o.OrdStatus.ToString()} has [{allOrders.Where(x => x.ClOrdId == o.ClOrdId && x.OrdStatus == o.OrdStatus).Count()}] hits bring total to [{successCounter}]");
+                    Console.WriteLine($"SuccessScenario[{k}]: ClOrdId={o.ClOrdId}, OrdStatus={o.OrdStatus.ToString()} has [{allOrders.Where(x => x.ClOrdId == o.ClOrdId && x.OrdStatus == o.OrdStatus).Count()}] hits bring total to [{successCounter}]");
+                    //Log.Debug($"Scenario[{k}]: ClOrdId={o.ClOrdId}, OrdStatus={o.OrdStatus.ToString()} has [{allOrders.Where(x => x.ClOrdId == o.ClOrdId && x.OrdStatus == o.OrdStatus).Count()}] hits bring total to [{successCounter}]");
                 }
                 if (allOrders.Count() == successCounter)
                 {
-                    Direction = Scenario.DirectionByScenario[k];
+                    Direction = SuccessScenario.DirectionByScenario[k];
                     return KillRestingOrders();
                 }
             }
