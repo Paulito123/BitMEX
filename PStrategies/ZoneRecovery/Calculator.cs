@@ -23,47 +23,203 @@ namespace PStrategies.ZoneRecovery
     {
         #region Core variables
 
-        private static int[] FactorArray = new int[] { 1, 2, 3, 6, 12, 24, 48, 96 };
-        private string Symbol;
-        private int MaxDepthIndex;
-        private decimal ZoneSize;
-        private decimal MaxExposurePerc;
-        private decimal Leverage;
-        private decimal MinimumProfitPercentage;
+        internal static readonly int[] FactorArray = new int[] { 1, 2, 3, 6, 12, 24, 48, 96 };
 
-        private long RunningBatchNr;
-        private ZoneRecoveryState State;
+        internal string Symbol
+        {
+            get => Symbol;
+            set => Symbol = value;
+        }
+        internal int MaxDepthIndex
+        {
+            get => MaxDepthIndex;
+            set => MaxDepthIndex = value;
+        }
+        internal decimal ZoneSize
+        {
+            get => ZoneSize;
+            set => ZoneSize = value;
+        }
+        internal decimal MaxExposurePerc
+        {
+            get => MaxExposurePerc;
+            set => MaxExposurePerc = value;
+        }
+        internal decimal Leverage
+        {
+            get => Leverage;
+            set => Leverage = value;
+        }
+        internal decimal MinimumProfitPercentage
+        {
+            get => MinimumProfitPercentage;
+            set => MinimumProfitPercentage = value;
+        }
+        internal long RunningBatchNr
+        {
+            get => RunningBatchNr;
+            set => RunningBatchNr = value;
+        }
+        internal long UnitSize { get; set; }
+        internal decimal WalletBalance { get; set; }
+        internal decimal Ask { get; set; }
+        internal decimal Bid { get; set; }
+
+        internal ZoneRecoveryState State;
 
         private IBitmexApiService bitmexApiServiceA { get; set; }
         private IBitmexApiService bitmexApiServiceB { get; set; }
         
-        private readonly SortedDictionary<long, ZoneRecoveryOrderBatch> ZROrderLedger;
-        private Dictionary<ZoneRecoveryAccount, List<Order>> Orders;
-        private Dictionary<ZoneRecoveryAccount, List<Position>> Positions;
+        internal static Mutex PositionMutex;
+
+        internal readonly SortedDictionary<long, ZoneRecoveryBatch> ZRBatchLedger;
+        internal Dictionary<ZoneRecoveryAccount, List<Order>> Orders;
+        internal Dictionary<ZoneRecoveryAccount, List<Position>> Positions;
 
         #endregion Core variables
 
-        public Calculator(IBitmexApiService apiSA, IBitmexApiService apiSB)
+        public Calculator()
         {
-            ZROrderLedger = new SortedDictionary<long, ZoneRecoveryOrderBatch>();
-
-            if (apiSA == null || apiSB == null)
-                throw new Exception("bitmexApiService cannot be null");
-
-            bitmexApiServiceA = apiSA;
-            bitmexApiServiceB = apiSB;
+            ZRBatchLedger = new SortedDictionary<long, ZoneRecoveryBatch>();
+            State = new ZRSInitiating(this);
         }
 
-        public void Initialize(
-            string symbol = "XBTUSD", int maxDepthIndex = 1, decimal zoneSize = 20, decimal maxExposurePerc = (decimal)0.01, decimal leverage = 1, 
-            decimal minPrftPerc = (decimal)0.01)
+        public void UpdatePrices(Dictionary<string, decimal> dict)
         {
-            Symbol = symbol;
-            MaxDepthIndex = maxDepthIndex;
-            ZoneSize = zoneSize;
-            MaxExposurePerc = maxExposurePerc;
-            Leverage = leverage;
-            MinimumProfitPercentage  = minPrftPerc;
+            if (dict.ContainsKey("Ask") && dict["Ask"] > 0)
+                Ask = dict["Ask"];
+            if (dict.ContainsKey("Bid") && dict["Bid"] > 0)
+                Ask = dict["Bid"];
+        }
+
+        public void Initialize(IBitmexApiService apiSA, IBitmexApiService apiSB,
+            decimal walletBalance,
+            Dictionary<ZoneRecoveryAccount, List<Order>> ordersContainer,
+            Dictionary<ZoneRecoveryAccount, List<Position>> positionContainer, Mutex positionMutex,
+            string symbol = "XBTUSD", 
+            int maxDepthIndex = 1, decimal zoneSize = 20, decimal maxExposurePerc = (decimal)0.01, decimal leverage = 1, decimal minPrftPerc = (decimal)0.01)
+        {
+            // RunningBatchNr should never be reset during the lifetime of this ZoneRecoveryComputer instance...
+            RunningBatchNr = 0;
+
+            try
+            {
+                if (apiSA == null || apiSB == null)
+                    throw new Exception("bitmexApiService cannot be null");
+
+                bitmexApiServiceA = apiSA;
+                bitmexApiServiceB = apiSB;
+
+                if (ordersContainer != null)
+                    Orders = ordersContainer;
+                else
+                    throw new Exception("No order container defined in parent");
+
+                if (positionContainer != null)
+                    Positions = positionContainer;
+                else
+                    throw new Exception("No position container defined in parent");
+
+                if (positionMutex != null)
+                    PositionMutex = positionMutex;
+                else
+                    throw new Exception("Empty reference to PositionMutex");
+
+                if (symbol == "XBTUSD")
+                    Symbol = symbol;
+                else
+                    throw new Exception("Symbol has a value that is not permitted");
+
+                if (maxExposurePerc > 0 && maxExposurePerc <= 1)
+                    MaxExposurePerc = maxExposurePerc;
+                else
+                    throw new Exception("MaxExposurePerc not within permitted bounds");
+
+                if (leverage > 0 && leverage <= 100)
+                    Leverage = leverage;
+                else
+                    throw new Exception("Leverage not within permitted bounds");
+
+                if (maxDepthIndex > 0 && maxDepthIndex <= FactorArray.Count())
+                    MaxDepthIndex = maxDepthIndex;
+                else
+                    throw new Exception("MaxDepthIndex not within permitted bounds");
+
+                if (zoneSize >= 2 && zoneSize < 1000)
+                    ZoneSize = zoneSize;
+                else
+                    throw new Exception("ZoneSize not within permitted bounds");
+
+                if (minPrftPerc > 0 && minPrftPerc <= 1)
+                    MinimumProfitPercentage = minPrftPerc;
+                else
+                    throw new Exception("MinimumProfitPercentage not within permitted bounds");
+
+                if (walletBalance > 0)
+                    WalletBalance = walletBalance;
+                else
+                    throw new Exception("WalletBalance does not have a permitted value");
+
+            }
+            catch (Exception exc)
+            {
+                string message = $"Initialize: {exc.Message}";
+                Log.Error(message);
+                Console.WriteLine(message);
+            }
+        }
+
+        public void Evaluate()
+        {
+            State.Evaluate();
+        }
+
+        internal void CheckWorkedOrders()
+        {
+
+        }
+
+        internal bool StartNewZRSession()
+        {
+            if (ZRBatchLedger[RunningBatchNr].BatchStatus == ZoneRecoveryBatchStatus.Closed)
+            {
+                // Create a new batch
+                var zrob = new ZoneRecoveryBatch(ZoneRecoveryBatchType.WindingFirst, ZoneRecoveryBatchStatus.Working);
+                ZRBatchLedger.Add(zrob.BatchNumber, zrob);
+                ZoneRecoveryBatchOrder zro;
+
+                // Create unique ids
+                var idA = CreateNewClOrdID();
+                var idB = CreateNewClOrdID();
+                
+                // Create initial Orders
+                var OrderParamsA = OrderPOSTRequestParams.CreateSimpleLimit(Symbol, idA, UnitSize, (Bid - 1), OrderSide.Buy);
+                zro = new ZoneRecoveryBatchOrder(ZoneRecoveryAccount.A, OrderParamsA);
+                ZRBatchLedger[RunningBatchNr].AddOrder(zro);
+                bitmexApiServiceA
+                    .Execute(BitmexApiUrls.Order.PostOrder, OrderParamsA)
+                    .ContinueWith(ZRBatchLedger[RunningBatchNr].HandleOrderResponse, TaskContinuationOptions.AttachedToParent);
+
+                var OrderParamsB = OrderPOSTRequestParams.CreateSimpleLimit(Symbol, idB, UnitSize, (Ask + 1), OrderSide.Sell);
+                zro = new ZoneRecoveryBatchOrder(ZoneRecoveryAccount.B, OrderParamsB);
+                ZRBatchLedger[RunningBatchNr].AddOrder(zro);
+                bitmexApiServiceB
+                    .Execute(BitmexApiUrls.Order.PostOrder, OrderParamsB)
+                    .ContinueWith(ZRBatchLedger[RunningBatchNr].HandleOrderResponse, TaskContinuationOptions.AttachedToParent);
+
+                return true;
+            }
+
+            return false;
+        }
+
+        internal void CreateOrders()
+        {
+
+        }
+
+        internal void CreateOrder(ZoneRecoveryAccount acc, ZoneRecoveryOrderType typ, decimal price, decimal qty)
+        {
 
         }
 
@@ -72,9 +228,36 @@ namespace PStrategies.ZoneRecovery
             return Guid.NewGuid().ToString("N");
         }
 
-        private static long CreateBatchNr(DateTime dt)
+        private decimal CalculateMaximumDepth()
         {
-            return dt.Ticks;
+            decimal sum = 0;
+
+            for (int i = 0; i < MaxDepthIndex; i++)
+            {
+                sum = sum + FactorArray[i];
+            }
+            return sum;
+        }
+
+        private void CalculateUnitSize(decimal refPrice)
+        {
+            try
+            {
+                decimal totalDepthMaxExposure = CalculateMaximumDepth();
+
+                if (refPrice > 0 && totalDepthMaxExposure > 0 && totalDepthMaxExposure < FactorArray.Sum())
+                {
+                    UnitSize = (long)Math.Round(refPrice * Leverage * WalletBalance * MaxExposurePerc / totalDepthMaxExposure, MidpointRounding.ToEven);
+                }
+                else
+                    throw new Exception("Cannot determine UnitSize");
+            }
+            catch (Exception exc)
+            {
+                string message = $"SetUnitSizeForPrice: {exc.Message}";
+                Log.Error(message);
+                Console.WriteLine(message);
+            }
         }
     }
 }

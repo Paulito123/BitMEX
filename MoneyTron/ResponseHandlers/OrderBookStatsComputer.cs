@@ -39,6 +39,14 @@ namespace MoneyTron.ResponseHandlers
             }
         }
 
+        public Dictionary<string, decimal> GetBidAsk()
+        {
+            Dictionary<string, decimal> dict = new Dictionary<string, decimal>();
+            dict.Add("Ask", (decimal)GetStats().Ask);
+            dict.Add("Bid", (decimal)GetStats().Bid);
+            return dict;
+        }
+
         public OrderBookStats GetStats()
         {
             var bids = _bids.OrderByDescending(x => x.Value.Price).ToArray();

@@ -447,15 +447,15 @@ namespace MoneyTron.Presenter
                 .Concat()
                 .Subscribe();
 
-            client
-                .Streams
-                .PositionStream
-                .Select(pos => Observable.FromAsync(async () => {
-                    HandlePositionResponse(pos);
-                }))
-                .Concat()
-                .Subscribe();
-            
+            //client
+            //    .Streams
+            //    .PositionStream
+            //    .Select(pos => Observable.FromAsync(async () => {
+            //        HandlePositionResponse(pos);
+            //    }))
+            //    .Concat()
+            //    .Subscribe();
+
             //client.Streams.ErrorStream.ObserveOn(TaskPoolScheduler.Default).Subscribe(HandleErrorResponse);
 
             if (acc == MTAccount.A)
@@ -463,6 +463,7 @@ namespace MoneyTron.Presenter
                 client.Streams.TradesStream.ObserveOn(TaskPoolScheduler.Default).Subscribe(HandleTrades);
                 client.Streams.BookStream.ObserveOn(TaskPoolScheduler.Default).Subscribe(HandleOrderBook);
                 client.Streams.PongStream.ObserveOn(TaskPoolScheduler.Default).Subscribe(HandlePongA);
+                client.Streams.PositionStream.ObserveOn(TaskPoolScheduler.Default).Subscribe(HandlePositionResponse);
             }
             else
             {
@@ -538,8 +539,6 @@ namespace MoneyTron.Presenter
 
             try
             {
-                OrderStatsMutex.WaitOne();
-
                 var acc = (response.Data.First().Account == Accounts[MTAccount.A]) ? ZoneRecoveryAccount.A : ZoneRecoveryAccount.B;
 
                 if (response.Action == BitmexAction.Insert || response.Action == BitmexAction.Partial)
@@ -575,8 +574,13 @@ namespace MoneyTron.Presenter
 
                 var bs = _orderStatsHandler.GetBindingSource(acc);
 
-                if (ZRComputer.Live())
-                    ZRComputer.Evaluate();
+                //if (response.Data.)
+                // TODO: Update bid and ask in the Calculator
+                // Dictionary<> dict = _orderBookStatsComputer.GetBidAsk();
+                // Calculator.UpdatePrices(dict)
+                //
+                //if (ZRComputer.Live())
+                //    ZRComputer.Evaluate();
 
                 if (acc == ZoneRecoveryAccount.A)
                 {
@@ -596,10 +600,6 @@ namespace MoneyTron.Presenter
                 string message = $"[HandleOrderResponse]: {exc.Message}";
                 Log.Error(message);
                 Console.WriteLine(message);
-            }
-            finally
-            {
-                OrderStatsMutex.ReleaseMutex();
             }
         }
 

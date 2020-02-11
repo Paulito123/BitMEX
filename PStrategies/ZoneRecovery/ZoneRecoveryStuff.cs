@@ -41,6 +41,24 @@ namespace PStrategies.ZoneRecovery
         Undefined
     }
 
+    public enum ZoneRecoveryBatchType
+    {
+        WindingFirst,
+        WindingUp,
+        WindingDown,
+        UnwindingUp,
+        UnwindingDown,
+        UnwindingLast
+    }
+
+    public enum ZoneRecoveryBatchStatus
+    {
+        Undefined,
+        Working,
+        Waiting,
+        Closed
+    }
+
     /// <summary>
     /// The direction in which profits (or lesser loss) can be made for the current positions.
     /// </summary>
