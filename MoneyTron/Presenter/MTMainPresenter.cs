@@ -43,6 +43,8 @@ namespace MoneyTron.Presenter
         private readonly IMTMainForm _view;
         
         private ZoneRecoveryComputer ZRComputer;
+        private Calculator ZRCalculator;
+        private bool calculatorEnabled = false;
 
         private IBitmexApiService bitmexApiServiceA;
         private IBitmexApiService bitmexApiServiceB;
@@ -159,7 +161,7 @@ namespace MoneyTron.Presenter
             _view.OnStartB = async () => await OnStartB();
             _view.OnStartZoneRecovery = OnStartZoneRecovery;
             _view.OnStopZoneRecovery = OnStopZoneRecovery;
-            _view.ZRComputer = ZRComputer;
+            //_view.ZRComputer = ZRComputer;
         }
 
         #endregion Configuration
@@ -186,6 +188,8 @@ namespace MoneyTron.Presenter
 
         private void OnStartZoneRecovery()
         {
+            //if (ZRComputer == null)
+            //    return;
             if (ZRComputer == null)
                 return;
 
@@ -194,25 +198,25 @@ namespace MoneyTron.Presenter
                 var WalletBalance = GetTotalBalance();
                 var stats = _orderBookStatsComputer.GetStats();
 
-                if (ZRComputer.Initialise(
-                    bitmexApiServiceA, 
-                    bitmexApiServiceB, 
-                    (decimal)stats.Bid,
-                    (decimal)stats.Ask,
-                    WalletBalance,
-                    _orderStatsHandler.GetOrderDictionary(),
-                    OrderStatsMutex,
-                    _posStatsHandler.GetPositionDictionary(),
-                    PositionStatsMutex,
-                    _defaultPair,
-                    (int)_view.MaxDepth, 
-                    _view.ZoneSize, 
-                    _view.MaxExposure, 
-                    _view.Leverage, 
-                    _view.MinProfit))
-                    ZRComputer.Evaluate();
-                else
-                    Log.Error($"OnStartZoneRecovery: error while initializing ZRComputer");
+                //if (ZRComputer.Initialise(
+                //    bitmexApiServiceA, 
+                //    bitmexApiServiceB, 
+                //    (decimal)stats.Bid,
+                //    (decimal)stats.Ask,
+                //    WalletBalance,
+                //    _orderStatsHandler.GetOrderDictionary(),
+                //    OrderStatsMutex,
+                //    _posStatsHandler.GetPositionDictionary(),
+                //    PositionStatsMutex,
+                //    _defaultPair,
+                //    (int)_view.MaxDepth, 
+                //    _view.ZoneSize, 
+                //    _view.MaxExposure, 
+                //    _view.Leverage, 
+                //    _view.MinProfit))
+                //    ZRComputer.Evaluate();
+                //else
+                //    Log.Error($"OnStartZoneRecovery: error while initializing ZRComputer");
             }
             else
             {
@@ -540,19 +544,23 @@ namespace MoneyTron.Presenter
             try
             {
                 var acc = (response.Data.First().Account == Accounts[MTAccount.A]) ? ZoneRecoveryAccount.A : ZoneRecoveryAccount.B;
+                List<string> ClOrdIdList = new List<string>();
 
                 if (response.Action == BitmexAction.Insert || response.Action == BitmexAction.Partial)
                 {
                     foreach (Order o in response.Data)
                     {
                         _orderStatsHandler.HandleNewOrder(o, acc);
+                        ClOrdIdList.Add(o.ClOrdId);
                     }
                 }
                 else if (response.Action == BitmexAction.Update)
                 {
                     foreach (Order o in response.Data)
                     {
-                        _orderStatsHandler.HandleUpdateOrder(o, acc);
+                        var statusChanged = _orderStatsHandler.HandleUpdateOrder(o, acc);
+                        if(statusChanged)
+                            ClOrdIdList.Add(o.ClOrdId);
                     }
                 }
                 else if (response.Action == BitmexAction.Delete)
@@ -572,15 +580,17 @@ namespace MoneyTron.Presenter
                     }
                 }
 
-                var bs = _orderStatsHandler.GetBindingSource(acc);
+                if (calculatorEnabled)
+                {
+                    Dictionary<string, decimal> dict = _orderBookStatsComputer.GetBidAsk();
+                    if (dict != null)
+                        ZRCalculator.UpdatePrices(dict);
 
-                //if (response.Data.)
-                // TODO: Update bid and ask in the Calculator
-                // Dictionary<> dict = _orderBookStatsComputer.GetBidAsk();
-                // Calculator.UpdatePrices(dict)
-                //
-                //if (ZRComputer.Live())
-                //    ZRComputer.Evaluate();
+                    ZRCalculator.Evaluate(acc, ClOrdIdList);
+                }
+                
+                // Update the UI
+                var bs = _orderStatsHandler.GetBindingSource(acc);
 
                 if (acc == ZoneRecoveryAccount.A)
                 {

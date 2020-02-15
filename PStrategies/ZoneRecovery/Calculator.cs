@@ -168,15 +168,17 @@ namespace PStrategies.ZoneRecovery
                 Console.WriteLine(message);
             }
         }
-
-        public void Evaluate()
+        
+        public void Evaluate(ZoneRecoveryAccount acc, List<string> clOrdIdList)
         {
+            //Console.WriteLine($"Calculator.Evaluate for Account {acc}");
+
+            // Push the latest updates to the Batch
+            var orderList = Orders[acc].Where(o => clOrdIdList.Any(s => s == o.OrderId)).ToList();
+            ZRBatchLedger[RunningBatchNr].CheckStatusses(acc, orderList);
+
+            // Evaluate the new state
             State.Evaluate();
-        }
-
-        internal void CheckWorkedOrders()
-        {
-
         }
 
         internal bool StartNewZRSession()
@@ -184,7 +186,7 @@ namespace PStrategies.ZoneRecovery
             if (ZRBatchLedger[RunningBatchNr].BatchStatus == ZoneRecoveryBatchStatus.Closed)
             {
                 // Create a new batch
-                var zrob = new ZoneRecoveryBatch(ZoneRecoveryBatchType.WindingFirst, ZoneRecoveryBatchStatus.Working);
+                var zrob = new ZoneRecoveryBatch(ZoneRecoveryBatchType.PeggedStart, ZoneRecoveryBatchStatus.Working);
                 ZRBatchLedger.Add(zrob.BatchNumber, zrob);
                 ZoneRecoveryBatchOrder zro;
 

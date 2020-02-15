@@ -11,7 +11,7 @@ namespace MoneyTron.ResponseHandlers
 {
     class OrdersStatsHandler
     {
-        private readonly Dictionary<ZoneRecoveryAccount, List<Order>> _orderList = new Dictionary<ZoneRecoveryAccount, List<Order>>();
+        internal readonly Dictionary<ZoneRecoveryAccount, List<Order>> _orderList = new Dictionary<ZoneRecoveryAccount, List<Order>>();
 
         public OrdersStatsHandler ()
         {
@@ -19,7 +19,7 @@ namespace MoneyTron.ResponseHandlers
             _orderList.Add(ZoneRecoveryAccount.B, new List<Order>());
         }
 
-        public void HandleNewOrder(Order newOrder, ZoneRecoveryAccount acc)
+        internal void HandleNewOrder(Order newOrder, ZoneRecoveryAccount acc)
         {
             List<string> removeList = new List<string>() { newOrder.OrderId };
             
@@ -31,13 +31,16 @@ namespace MoneyTron.ResponseHandlers
             _orderList[acc].Add(newOrder);
         }
 
-        public void HandleUpdateOrder(Order newOrder, ZoneRecoveryAccount acc)
+        internal bool HandleUpdateOrder(Order newOrder, ZoneRecoveryAccount acc)
         {
+            bool statusChanged = false;
             List<string> removeList = new List<string>() { newOrder.OrderId };
 
             if (!_orderList.ContainsKey(acc) || _orderList[acc] == null || _orderList[acc].Where(p => p.OrderId == newOrder.OrderId).Count() == 0)
+            { 
                 HandleNewOrder(newOrder, acc);
-
+                statusChanged = true;
+            }
             else
             {
                 Order oldOrd = _orderList[acc].Where(p => p.OrderId == newOrder.OrderId).First();
@@ -60,6 +63,7 @@ namespace MoneyTron.ResponseHandlers
                             {
                                 if (value is OrderStatus && (OrderStatus)value != OrderStatus.Undefined)
                                 {
+                                    statusChanged = true;
                                     property.SetValue(oldOrd, value, null);
                                 }
                             }
@@ -72,22 +76,23 @@ namespace MoneyTron.ResponseHandlers
                 }
                 
             }
+            return statusChanged;
         }
-        
-        public void HandleDeleteOrder(Order newOrder, ZoneRecoveryAccount acc)
+
+        internal void HandleDeleteOrder(Order newOrder, ZoneRecoveryAccount acc)
         {
             List<string> removeList = new List<string>() { newOrder.OrderId };
             _orderList[acc].RemoveAll(r => removeList.Any(a => a == r.OrderId));
         }
 
-        public BindingSource GetBindingSource(ZoneRecoveryAccount acc)
+        internal BindingSource GetBindingSource(ZoneRecoveryAccount acc)
         {
             BindingSource bs = new BindingSource();
             bs.DataSource = _orderList[acc];
             return bs;
         }
 
-        public Dictionary<ZoneRecoveryAccount, List<Order>> GetOrderDictionary()
+        internal Dictionary<ZoneRecoveryAccount, List<Order>> GetOrderDictionary()
         {
             return _orderList;
         }

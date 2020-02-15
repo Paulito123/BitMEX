@@ -22,11 +22,11 @@ namespace MoneyTron.ResponseHandlers
             DontKeepEmptyPositions = true;
         }
 
-        public void HandleNewPosition(Position newPos, ZoneRecoveryAccount acc)
+        internal void HandleNewPosition(Position newPos, ZoneRecoveryAccount acc)
         {
             List<string> removeList = new List<string>() { newPos.Symbol };
 
-            // If the there is already an entry in the list for the given symbol and account, remove the entry.
+            // If there is already an entry in the list for the given symbol and account, remove the entry.
             if (_posList[acc].Where(o => o.Symbol == newPos.Symbol).Count() > 0 || (DontKeepEmptyPositions && newPos.CurrentQty == 0))
                 _posList[acc].RemoveAll(r => removeList.Any(a => a == r.Symbol));
 
@@ -35,7 +35,7 @@ namespace MoneyTron.ResponseHandlers
             _posList[acc].Add(newPos);
         }
 
-        public void HandleUpdatePosition(Position newPos, ZoneRecoveryAccount acc)
+        internal void HandleUpdatePosition(Position newPos, ZoneRecoveryAccount acc)
         {
             List<string> removeList = new List<string>() { newPos.Symbol };
 
@@ -64,20 +64,20 @@ namespace MoneyTron.ResponseHandlers
             }
         }
 
-        public void HandleDeletePosition(Position newPos, ZoneRecoveryAccount acc)
+        internal void HandleDeletePosition(Position newPos, ZoneRecoveryAccount acc)
         {
             List<string> removeList = new List<string>() { newPos.Symbol };
             _posList[acc].RemoveAll(r => removeList.Any(a => a == r.Symbol));
         }
-        
-        public BindingSource GetBindingSource(ZoneRecoveryAccount acc)
+
+        internal BindingSource GetBindingSource(ZoneRecoveryAccount acc)
         {
             BindingSource bs = new BindingSource();
             bs.DataSource = _posList[acc];
             return bs;
         }
 
-        public Dictionary<ZoneRecoveryAccount, List<Position>> GetPositionDictionary()
+        internal Dictionary<ZoneRecoveryAccount, List<Position>> GetPositionDictionary()
         {
             return _posList;
         }

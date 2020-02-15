@@ -697,6 +697,7 @@ namespace MoneyTron
 
         private void btnTest_Click(object sender, EventArgs e)
         {
+            MessageBox.Show((DateTime.Now - new DateTimeOffset(DateTime.Now.AddDays(-100.0))).ToString());
             //List<Order> lijst1 = new List<Order>();
             //lijst1.Add(new Order { Account = 1 });
             //List<Order> lijst2 = new List<Order>();

@@ -43,6 +43,7 @@ namespace PStrategies.ZoneRecovery
 
     public enum ZoneRecoveryBatchType
     {
+        PeggedStart,
         WindingFirst,
         WindingUp,
         WindingDown,
@@ -53,9 +54,10 @@ namespace PStrategies.ZoneRecovery
 
     public enum ZoneRecoveryBatchStatus
     {
-        Undefined,
+        Error,
         Working,
         Waiting,
+        ReadyForNext,
         Closed
     }
 

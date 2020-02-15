@@ -21,7 +21,6 @@ using Serilog;
  * Anomalien oplossen
  * Bij het creeeren van een nieuwe state wordt de oude state doorgegeven
  * 
- * TODO: make state machine driven by position updates.
  * 
  */
 
@@ -185,26 +184,24 @@ namespace PStrategies.ZoneRecovery.State
             // Check if there is a batch open
             if (Calculator.ZRBatchLedger.Count > 0)
             {
-                // TODO: Make sure all of this is correct...
+                // Check if there is a batch open
                 if (Calculator.ZRBatchLedger[Calculator.RunningBatchNr].BatchStatus == ZoneRecoveryBatchStatus.Closed)
                 {
+                    // Check if the positions are flat and no orders are resting
                     if (aPosition == 0 && bPosition == 0 && mergedList.Count == 0)
                     {
                         InitiateState(GetType().Name + "." + MethodBase.GetCurrentMethod().Name);
-                        Calculator.State = new ZRSOrdering(this, ZoneRecoveryBatchType.WindingFirst);
-                        Calculator.State.Evaluate();
+                        Calculator.State = new ZRSOrdering(this, ZoneRecoveryBatchType.PeggedStart);
                     }
                     else if (aPosition == 0 && bPosition == 0)
                     {
                         InitiateState(GetType().Name + "." + MethodBase.GetCurrentMethod().Name);
                         Calculator.State = new ZRSCanceling(this);
-                        Calculator.State.Evaluate();
                     }
                     else
                     {
                         Console.WriteLine(WhereAmI(GetType().Name + "." + MethodBase.GetCurrentMethod().Name));
                         Calculator.State = new ZRSRepairing(this);
-                        Calculator.State.Evaluate();
                     }
                 }
                 else
@@ -212,7 +209,6 @@ namespace PStrategies.ZoneRecovery.State
                     // Open batch found, try to assess the situation
                     Console.WriteLine(WhereAmI(GetType().Name + "." + MethodBase.GetCurrentMethod().Name));
                     Calculator.State = new ZRSRepairing(this);
-                    Calculator.State.Evaluate();
                 }
             }
             else // No batch open...
@@ -221,11 +217,9 @@ namespace PStrategies.ZoneRecovery.State
 
                 if (aPosition == 0 && bPosition == 0)
                 {
-                    // TODO: 
-                    // Create new batch of type ZoneRecoveryBatchType.WindingFirst
-                    // Implement check procedures in the batch that can assess whether all orders within a setup have been filled (static by Batch type)
+                    
 
-                    Calculator.State = new ZRSOrdering(this, ZoneRecoveryBatchType.WindingFirst);
+                    Calculator.State = new ZRSOrdering(this, ZoneRecoveryBatchType.PeggedStart);
                 }
                 else
                 {
@@ -263,7 +257,10 @@ namespace PStrategies.ZoneRecovery.State
         {
             if (Step == -1)
             {
+                // Create the orders
                 var b = Calculator.StartNewZRSession();
+
+                // Change state
                 if (b)
                     Calculator.State = new ZRSWorking(this);
                 else
@@ -308,6 +305,15 @@ namespace PStrategies.ZoneRecovery.State
             // if (1) > Change BatchStatus AND Calculator.State = new ZRSWaiting(this);
             // if (2) > Check last price and reorder the failed orders if possible with adjusted parameters.
             // if (3) > 
+            if (Calculator.ZRBatchLedger[Calculator.RunningBatchNr].BatchStatus == ZoneRecoveryBatchStatus.ReadyForNext)
+            {
+                
+            }
+            else if (Calculator.ZRBatchLedger[Calculator.RunningBatchNr].BatchStatus == ZoneRecoveryBatchStatus.Error)
+            {
+
+            }
+            
         }
     }
 
@@ -327,6 +333,7 @@ namespace PStrategies.ZoneRecovery.State
 
         public override void Evaluate()
         {
+            
             // Check if the orders are filled as expected
             // [0] Desired setup, either TP with TL have been filled or REV has been filled.
             // [1] Only TP|TL is filled but TL|TP is still expected

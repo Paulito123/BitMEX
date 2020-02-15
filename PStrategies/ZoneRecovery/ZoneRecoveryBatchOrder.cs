@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Bitmex.Client.Websocket.Responses.Orders;
 using BitMEXRest.Model;
@@ -14,13 +15,9 @@ namespace PStrategies.ZoneRecovery
         #region Core variables and containers
         
         internal ZoneRecoveryAccount Account { get; }
-        internal OrderPOSTRequestParams PostParams { get; }
-        //internal OrderDto ServerResponse
-        //{
-        //    get => ServerResponse;
-        //    set => SetServerResponse(value);
-        //}
+        internal OrderPOSTRequestParams PostParams { get; set; }
         internal ZoneRecoveryOrderStatus CurrentStatus { get; set; }
+        internal DateTimeOffset? LastUpdateReceived { get; set; }
 
         #endregion Core variables and containers
 
@@ -36,13 +33,25 @@ namespace PStrategies.ZoneRecovery
         #endregion Constructors
 
         #region Handle statusses
-        
-        internal OrderDto SetLastStatus(OrderDto o)
+
+        internal void UpdatePostParams (OrderPOSTRequestParams pp)
         {
-            CurrentStatus = GetOrderStatus(o);
-            return o;
+            PostParams = pp;
+            LastUpdateReceived = null;
         }
-        
+
+        internal void SetLastStatus(OrderDto o)
+        {
+            LastUpdateReceived = o.Timestamp;
+            CurrentStatus = GetOrderStatus(o);
+        }
+
+        internal void SetLastStatus(Order o)
+        {
+            LastUpdateReceived = o.Timestamp;
+            CurrentStatus = GetOrderStatus(o);
+        }
+
         private ZoneRecoveryOrderStatus GetOrderStatus(object o)
         {
             if (o != null && o is Order)
