@@ -1,9 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+using System.IO;
+using System.Reflection;
 using System.Windows.Forms;
-using System.Configuration;
+using Serilog;
+using Serilog.Events;
 
 namespace BitMEX.TestForm
 {
@@ -17,7 +17,22 @@ namespace BitMEX.TestForm
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
+
+            InitLogging();
+
             Application.Run(new Form1());
+        }
+
+        private static void InitLogging()
+        {
+            var executingDir = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location);
+            var logPath = Path.Combine(executingDir, "logs", "verbose.log");
+            Log.Logger = new LoggerConfiguration()
+                .MinimumLevel.Verbose()
+                .WriteTo.File(logPath, rollingInterval: RollingInterval.Day)
+                //.WriteTo.Console(LogEventLevel.Information)
+                .WriteTo.Debug(LogEventLevel.Debug)
+                .CreateLogger();
         }
     }
 }

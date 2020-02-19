@@ -25,45 +25,17 @@ namespace PStrategies.ZoneRecovery
 
         internal static readonly int[] FactorArray = new int[] { 1, 2, 3, 6, 12, 24, 48, 96 };
 
-        internal string Symbol
-        {
-            get => Symbol;
-            set => Symbol = value;
-        }
-        internal int MaxDepthIndex
-        {
-            get => MaxDepthIndex;
-            set => MaxDepthIndex = value;
-        }
-        internal decimal ZoneSize
-        {
-            get => ZoneSize;
-            set => ZoneSize = value;
-        }
-        internal decimal MaxExposurePerc
-        {
-            get => MaxExposurePerc;
-            set => MaxExposurePerc = value;
-        }
-        internal decimal Leverage
-        {
-            get => Leverage;
-            set => Leverage = value;
-        }
-        internal decimal MinimumProfitPercentage
-        {
-            get => MinimumProfitPercentage;
-            set => MinimumProfitPercentage = value;
-        }
-        internal long RunningBatchNr
-        {
-            get => RunningBatchNr;
-            set => RunningBatchNr = value;
-        }
-        internal long UnitSize { get; set; }
-        internal decimal WalletBalance { get; set; }
-        internal decimal Ask { get; set; }
-        internal decimal Bid { get; set; }
+        internal string Symbol;
+        internal int MaxDepthIndex;
+        internal decimal ZoneSize;
+        internal decimal MaxExposurePerc;
+        internal decimal Leverage;
+        internal decimal MinimumProfitPercentage;
+        internal long RunningBatchNr;
+        internal long UnitSize;
+        internal decimal WalletBalance;
+        internal decimal Ask;
+        internal decimal Bid;
 
         internal ZoneRecoveryState State;
 
@@ -75,13 +47,27 @@ namespace PStrategies.ZoneRecovery
         internal readonly SortedDictionary<long, ZoneRecoveryBatch> ZRBatchLedger;
         internal Dictionary<ZoneRecoveryAccount, List<Order>> Orders;
         internal Dictionary<ZoneRecoveryAccount, List<Position>> Positions;
+        internal Dictionary<ZoneRecoveryAccount, int> RateLimitsRemaining;
+        internal int RateLimitTimeOutInMSec = 2000;
 
         #endregion Core variables
 
         public Calculator()
         {
             ZRBatchLedger = new SortedDictionary<long, ZoneRecoveryBatch>();
+            RateLimitsRemaining = new Dictionary<ZoneRecoveryAccount, int>();
             State = new ZRSInitiating(this);
+        }
+
+        public CalculatorStats GetStats()
+        {
+            CalculatorStats c = new CalculatorStats();
+            c.Direction = ZRBatchLedger[RunningBatchNr].Direction;
+            c.Leverage = Leverage;
+            c.State = State;
+            c.UnitSize = UnitSize;
+
+            return c;
         }
 
         public void UpdatePrices(Dictionary<string, decimal> dict)
@@ -181,7 +167,7 @@ namespace PStrategies.ZoneRecovery
             State.Evaluate();
         }
 
-        internal bool StartNewZRSession()
+        internal async void StartNewZRSession()
         {
             if (ZRBatchLedger[RunningBatchNr].BatchStatus == ZoneRecoveryBatchStatus.Closed)
             {
@@ -198,36 +184,79 @@ namespace PStrategies.ZoneRecovery
                 var OrderParamsA = OrderPOSTRequestParams.CreateSimpleLimit(Symbol, idA, UnitSize, (Bid - 1), OrderSide.Buy);
                 zro = new ZoneRecoveryBatchOrder(ZoneRecoveryAccount.A, OrderParamsA);
                 ZRBatchLedger[RunningBatchNr].AddOrder(zro);
-                bitmexApiServiceA
-                    .Execute(BitmexApiUrls.Order.PostOrder, OrderParamsA)
-                    .ContinueWith(ZRBatchLedger[RunningBatchNr].HandleOrderResponse, TaskContinuationOptions.AttachedToParent);
+                //bitmexApiServiceA
+                //    .Execute(BitmexApiUrls.Order.PostOrder, OrderParamsA)
+                //    .ContinueWith(HandleOrderResponse, TaskContinuationOptions.AttachedToParent);
+                await PlaceOrder(bitmexApiServiceA, ZoneRecoveryAccount.A, OrderParamsA);
 
                 var OrderParamsB = OrderPOSTRequestParams.CreateSimpleLimit(Symbol, idB, UnitSize, (Ask + 1), OrderSide.Sell);
                 zro = new ZoneRecoveryBatchOrder(ZoneRecoveryAccount.B, OrderParamsB);
                 ZRBatchLedger[RunningBatchNr].AddOrder(zro);
-                bitmexApiServiceB
-                    .Execute(BitmexApiUrls.Order.PostOrder, OrderParamsB)
-                    .ContinueWith(ZRBatchLedger[RunningBatchNr].HandleOrderResponse, TaskContinuationOptions.AttachedToParent);
-
-                return true;
+                //bitmexApiServiceB
+                //    .Execute(BitmexApiUrls.Order.PostOrder, OrderParamsB)
+                //    .ContinueWith(HandleOrderResponse, TaskContinuationOptions.AttachedToParent);
+                await PlaceOrder(bitmexApiServiceB, ZoneRecoveryAccount.B, OrderParamsB);
+                
             }
-
-            return false;
         }
 
-        internal void CreateOrders()
+        private async Task PlaceOrder(IBitmexApiService api, ZoneRecoveryAccount acc, OrderPOSTRequestParams paramz, bool bypass = false)
         {
-
+            if (!bypass && RateLimitsRemaining[acc] <= 5)
+            {
+                Thread.Sleep(2000);
+                await PlaceOrder(api, acc, paramz, true);
+            }
+            else
+                await api.Execute(BitmexApiUrls.Order.PostOrder, paramz).ContinueWith(HandleOrderResponse, TaskContinuationOptions.AttachedToParent);
         }
 
-        internal void CreateOrder(ZoneRecoveryAccount acc, ZoneRecoveryOrderType typ, decimal price, decimal qty)
+        private void HandleOrderResponse(Task<BitmexApiResult<OrderDto>> task)
         {
+            // Update RateLimitsRemaining
+            var acc = ZRBatchLedger[RunningBatchNr].ZROrdersList.Where(x => x.PostParams.ClOrdID == task.Result.Result.ClOrdId).Select(y => y.Account).Single();
+            UpdateRateLimitsRemaining(acc, task.Result.RateLimitRemaining);
 
+            // Increase ResponsesReceived
+            ZRBatchLedger[RunningBatchNr].ResponsesReceived++;
+
+            string message = "";
+
+            if (task.Exception != null)
+            {
+                message = $"HandleOrderResponse: {(task.Exception.InnerException ?? task.Exception).Message}";
+                Log.Error(message);
+            }
+            else
+            {
+                if (ZRBatchLedger[RunningBatchNr].ZROrdersList.Where(x => x.PostParams.ClOrdID == task.Result.Result.ClOrdId).Count() == 1)
+                {
+                    ZRBatchLedger[RunningBatchNr].ZROrdersList.Where(x => x.PostParams.ClOrdID == task.Result.Result.ClOrdId).Single().SetLastStatus(task.Result.Result);
+                    message = $"HandleOrderResponse: order [{task.Result.Result.ClOrdId}] returned status [{task.Result.Result.OrdStatus}]";
+                    Log.Information(message);
+                }
+                else
+                {
+                    message = $"HandleOrderResponse(impossible): order [{task.Result.Result.ClOrdId}] could not be found in the list, or has multiple instances";
+                    Log.Error(message);
+                }
+            }
+            Console.WriteLine(message);
+
+            ZRBatchLedger[RunningBatchNr].CheckBatchStatus();
         }
 
         private string CreateNewClOrdID()
         {
             return Guid.NewGuid().ToString("N");
+        }
+
+        private void UpdateRateLimitsRemaining(ZoneRecoveryAccount acc, int rateLimitRemaining)
+        {
+            if (RateLimitsRemaining.ContainsKey(acc))
+                RateLimitsRemaining[acc] = rateLimitRemaining;
+            else
+                RateLimitsRemaining.Add(acc, rateLimitRemaining);
         }
 
         private decimal CalculateMaximumDepth()

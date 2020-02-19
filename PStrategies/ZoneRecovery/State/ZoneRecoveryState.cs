@@ -217,8 +217,6 @@ namespace PStrategies.ZoneRecovery.State
 
                 if (aPosition == 0 && bPosition == 0)
                 {
-                    
-
                     Calculator.State = new ZRSOrdering(this, ZoneRecoveryBatchType.PeggedStart);
                 }
                 else
@@ -258,13 +256,10 @@ namespace PStrategies.ZoneRecovery.State
             if (Step == -1)
             {
                 // Create the orders
-                var b = Calculator.StartNewZRSession();
+                Calculator.StartNewZRSession();
 
                 // Change state
-                if (b)
-                    Calculator.State = new ZRSWorking(this);
-                else
-                    Calculator.State = new ZRSRepairing(this);
+                Calculator.State = new ZRSWorking(this);
             }
             else if (Step == 0)
             {

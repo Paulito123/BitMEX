@@ -23,8 +23,8 @@ namespace PStrategies.ZoneRecovery
         internal ZoneRecoveryBatchType BatchType;
         internal ZoneRecoveryBatchStatus BatchStatus;
         internal ZoneRecoveryDirection Direction;
-        private readonly List<ZoneRecoveryBatchOrder> ZROrdersList;
-        private int ResponsesReceived;
+        internal readonly List<ZoneRecoveryBatchOrder> ZROrdersList;
+        internal int ResponsesReceived;
         private static int MaxWorkingDelayAllowedInSec = 10;
 
         #endregion Core variables
@@ -45,7 +45,7 @@ namespace PStrategies.ZoneRecovery
 
         #region Vanalles
         
-        internal void CheckStatusses(ZoneRecoveryAccount acc, List<Order> orderList)
+        public void CheckStatusses(ZoneRecoveryAccount acc, List<Order> orderList)
         {
             foreach(Order o in orderList)
             {
@@ -54,35 +54,7 @@ namespace PStrategies.ZoneRecovery
             CheckBatchStatus();
         }
 
-        internal void HandleOrderResponse(Task<BitmexApiResult<OrderDto>> task)
-        {
-            ResponsesReceived++; 
-            string message = "";
-            
-            if (task.Exception != null)
-            {
-                message = $"HandleOrderResponse: {(task.Exception.InnerException ?? task.Exception).Message}";
-                Log.Error(message);
-            }
-            else
-            {
-                if (ZROrdersList.Where(x => x.PostParams.ClOrdID == task.Result.Result.ClOrdId).Count() == 1)
-                {
-                    ZROrdersList.Where(x => x.PostParams.ClOrdID == task.Result.Result.ClOrdId).Single().SetLastStatus(task.Result.Result);
-                    message = $"HandleOrderResponse: order [{task.Result.Result.ClOrdId}] returned status [{task.Result.Result.OrdStatus}]";
-                    Log.Information(message);
-                }
-                else
-                {
-                    message = $"HandleOrderResponse(impossible): order [{task.Result.Result.ClOrdId}] could not be found in the list, or has multiple instances";
-                    Log.Error(message);
-                }
-            }
-            Console.WriteLine(message);
-            CheckBatchStatus();
-        }
-
-        private void CheckBatchStatus()
+        public void CheckBatchStatus()
         {
             switch (BatchType)
             {
@@ -172,7 +144,7 @@ namespace PStrategies.ZoneRecovery
             Log.Verbose(message);
         }
 
-        internal void AddOrder(ZoneRecoveryBatchOrder zrbo)
+        public void AddOrder(ZoneRecoveryBatchOrder zrbo)
         {
             if (zrbo != null)
                 ZROrdersList.Add(zrbo);

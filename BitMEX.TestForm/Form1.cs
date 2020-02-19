@@ -15,6 +15,7 @@ using System.Threading;
 //using IO.Swagger.Api;
 //using IO.Swagger.Client;
 //using IO.Swagger.Model;
+using Serilog;
 
 using BitMEXRest.Authorization;
 using BitMEXRest.Client;
@@ -127,9 +128,7 @@ namespace BitMEX.TestForm
             test = new TestThreadSafePassedList(lijst);
             TimerTest.Interval = 1000;
             TimerTest.Enabled = true;
-
-            MessageBox.Show(test.ToString());
-
+            
             //btn1.Text = "Start/Stops";
             //btn8.Text = "calc.Evaluate()";
 
@@ -429,7 +428,28 @@ namespace BitMEX.TestForm
         // Market Order
         private void btn3_Click(object sender, EventArgs e)
         {
+            //Log.Debug("Testing Button clicked 123");
+
+
+            //var bitmexApiServiceA = BitmexApiService.CreateDefaultApi(new BitmexAuthorization
+            //{
+            //    BitmexEnvironment = BitmexEnvironment.Test,
+            //    Key = "vUVW4tbj-wZG5UQgRkqHL4_z",
+            //    Secret = "8HaCUEbx0qgJfQSo4EiX6RUGzDsjiY-uOsEsCBstIpYu-J7Q"
+            //});
+            var bitmexApiServiceA = BitmexApiService_Test_POS_Outcome.CreateDefaultApi();
+            var OrderParamsA = OrderPOSTRequestParams.CreateSimpleLimit("XBTUSD", "1234HoedjeVanPapier-1234", 150, (decimal)10150.0, OrderSide.Buy);
+            bitmexApiServiceA.Execute(BitmexApiUrls.Order.PostOrder, OrderParamsA).ContinueWith(HandleOrderResponse, TaskContinuationOptions.AttachedToParent);
             
+            var OrderParams = new OrderDELETERequestParams() { ClOrdID = "bladieblakakkahahhaha" };
+            var result = bitmexApiServiceA.Execute(BitmexApiUrls.Order.DeleteOrder, OrderParams);
+
+            MessageBox.Show(result.Result.Result[0].ToString());
+        }
+
+        private void HandleOrderResponse(Task<BitmexApiResult<OrderDto>> task)
+        {
+            MessageBox.Show($"Yay, Order {task.Result.Result.ClOrdId} successfully placed, zogezegd!");
         }
 
         private void connectToolStripMenuItem_Click(object sender, EventArgs e)

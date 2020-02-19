@@ -42,7 +42,7 @@ namespace MoneyTron.Presenter
 
         private readonly IMTMainForm _view;
         
-        private ZoneRecoveryComputer ZRComputer;
+        //private ZoneRecoveryComputer ZRComputer;
         private Calculator ZRCalculator;
         private bool calculatorEnabled = false;
 
@@ -190,13 +190,23 @@ namespace MoneyTron.Presenter
         {
             //if (ZRComputer == null)
             //    return;
-            if (ZRComputer == null)
-                return;
+
+            ZRCalculator = new Calculator();
 
             if (_communicatorA != null && _communicatorB != null)
             {
                 var WalletBalance = GetTotalBalance();
                 var stats = _orderBookStatsComputer.GetStats();
+
+                ZRCalculator.Initialize(
+                    bitmexApiServiceA, bitmexApiServiceB,
+                    WalletBalance,
+                    _orderStatsHandler.GetOrderDictionary(),
+                    _posStatsHandler.GetPositionDictionary(),
+                    PositionStatsMutex,
+                    "XBTUSD", (int)_view.MaxDepth, _view.ZoneSize, _view.MaxExposure, _view.Leverage, _view.MinProfit);
+
+                calculatorEnabled = true;
 
                 //if (ZRComputer.Initialise(
                 //    bitmexApiServiceA, 
@@ -223,15 +233,15 @@ namespace MoneyTron.Presenter
                 string message = $"OnStartZoneRecovery: Communicators are null";
                 Log.Error(message);
                 Console.WriteLine(message);
-                return;
             }
         }
 
         private void OnStopZoneRecovery()
         {
+            calculatorEnabled = false;
             // TODO: Proper closing of all positions...
-            if (ZRComputer != null)
-                ZRComputer.BringDown();
+            //if (ZRComputer != null)
+            //    ZRComputer.BringDown();
         }
 
         private void OnInit()
@@ -242,8 +252,8 @@ namespace MoneyTron.Presenter
         
         private async Task OnStartA()
         {
-            if (ZRComputer == null)
-                ZRComputer = new ZoneRecoveryComputer();
+            //if (ZRComputer == null)
+            //    ZRComputer = new ZoneRecoveryComputer();
 
             DateTime dt = DateTime.Now;
             _generalStatsHandler = new GeneralStatsHandler(dt);
@@ -505,8 +515,7 @@ namespace MoneyTron.Presenter
 
                 // Bid and Ask
                 await client.Send(new BookSubscribeRequest(pair));
-
-
+                
             }
             else
             {
@@ -543,6 +552,8 @@ namespace MoneyTron.Presenter
 
             try
             {
+                // TODO: If error occurs because of access to multiple thread due to account A and B inflow, add mutex here...
+
                 var acc = (response.Data.First().Account == Accounts[MTAccount.A]) ? ZoneRecoveryAccount.A : ZoneRecoveryAccount.B;
                 List<string> ClOrdIdList = new List<string>();
 
@@ -580,15 +591,6 @@ namespace MoneyTron.Presenter
                     }
                 }
 
-                if (calculatorEnabled)
-                {
-                    Dictionary<string, decimal> dict = _orderBookStatsComputer.GetBidAsk();
-                    if (dict != null)
-                        ZRCalculator.UpdatePrices(dict);
-
-                    ZRCalculator.Evaluate(acc, ClOrdIdList);
-                }
-                
                 // Update the UI
                 var bs = _orderStatsHandler.GetBindingSource(acc);
 
@@ -603,6 +605,16 @@ namespace MoneyTron.Presenter
                     _view.TabOrdersBTitle = $"Orders [{bs.Count.ToString()}]";
                 }
 
+                // Calculate...
+                if (calculatorEnabled)
+                {
+                    Dictionary<string, decimal> dict = _orderBookStatsComputer.GetBidAsk();
+                    if (dict != null)
+                        ZRCalculator.UpdatePrices(dict);
+
+                    ZRCalculator.Evaluate(acc, ClOrdIdList);
+                }
+                
                 SetZRStats();
             }
             catch(Exception exc)
@@ -735,14 +747,21 @@ namespace MoneyTron.Presenter
 
         private void SetZRStats()
         {
-            if (ZRComputer != null)
+            //if (ZRComputer != null)
+            //{
+            //    _view.Direction = ZRComputer.CurrentDirection.ToString();
+            //    _view.UnitSize = ZRComputer.UnitSize.ToString();
+            //    _view.ZRStatus = ZRComputer.CurrentStatus.ToString();
+            //    _view.ZRIndex = ZRComputer.CurrentZRPosition.ToString();
+            //}
+            if (calculatorEnabled)
             {
-                _view.Direction = ZRComputer.CurrentDirection.ToString();
-                _view.UnitSize = ZRComputer.UnitSize.ToString();
-                _view.ZRStatus = ZRComputer.CurrentStatus.ToString();
-                _view.ZRIndex = ZRComputer.CurrentZRPosition.ToString();
+                var stats = ZRCalculator.GetStats();
+                _view.Direction = stats.Direction.ToString();
+                _view.UnitSize = stats.UnitSize.ToString();
+                //_view.ZRStatus = ZRCalculator.CurrentStatus.ToString();
+                //_view.ZRIndex = ZRCalculator.CurrentZRPosition.ToString();
             }
-            
         }
 
         private void HandleOrderBook(BookResponse response)

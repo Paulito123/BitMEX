@@ -64,6 +64,7 @@
     <Compile Include="MeanSearch\Calculator.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ZoneRecovery\Calculator.cs" />
+    <Compile Include="ZoneRecovery\CalculatorStats.cs" />
     <Compile Include="ZoneRecovery\State\ZoneRecoveryState.cs" />
     <Compile Include="ZoneRecovery\ZoneRecoveryAccountStats.cs" />
     <Compile Include="ZoneRecovery\ZoneRecoveryBatch.cs" />
