@@ -44,7 +44,7 @@ namespace MoneyTron.Presenter
         
         //private ZoneRecoveryComputer ZRComputer;
         private Calculator ZRCalculator;
-        private bool calculatorEnabled = false;
+        private bool CalculatorEnabled = false;
 
         private IBitmexApiService bitmexApiServiceA;
         private IBitmexApiService bitmexApiServiceB;
@@ -188,58 +188,62 @@ namespace MoneyTron.Presenter
 
         private void OnStartZoneRecovery()
         {
-            //if (ZRComputer == null)
-            //    return;
+            if (ZRCalculator == null)
+                ZRCalculator = new Calculator();
 
-            ZRCalculator = new Calculator();
-
-            if (_communicatorA != null && _communicatorB != null)
+            try
             {
-                var WalletBalance = GetTotalBalance();
-                var stats = _orderBookStatsComputer.GetStats();
+                //TODO Add all checks to see if all the necessary conditions are met...
 
-                ZRCalculator.Initialize(
-                    bitmexApiServiceA, bitmexApiServiceB,
-                    WalletBalance,
-                    _orderStatsHandler.GetOrderDictionary(),
-                    _posStatsHandler.GetPositionDictionary(),
-                    PositionStatsMutex,
-                    "XBTUSD", (int)_view.MaxDepth, _view.ZoneSize, _view.MaxExposure, _view.Leverage, _view.MinProfit);
+                decimal ask = 0, bid = 0;
+                Dictionary<string, decimal> dict = new Dictionary<string, decimal>();
 
-                calculatorEnabled = true;
+                if (Decimal.TryParse(_view.Ask, out ask) && Decimal.TryParse(_view.Bid, out bid))
+                {
+                    dict.Add("Ask", ask);
+                    dict.Add("Bid", bid);
+                }
+                  
+                if (ask <= 0 || bid <= 0)
+                    throw new Exception($"OnStartZoneRecovery: Bid or Ask not consistent");
+                else
+                    ZRCalculator.UpdatePrices(dict);
 
-                //if (ZRComputer.Initialise(
-                //    bitmexApiServiceA, 
-                //    bitmexApiServiceB, 
-                //    (decimal)stats.Bid,
-                //    (decimal)stats.Ask,
-                //    WalletBalance,
-                //    _orderStatsHandler.GetOrderDictionary(),
-                //    OrderStatsMutex,
-                //    _posStatsHandler.GetPositionDictionary(),
-                //    PositionStatsMutex,
-                //    _defaultPair,
-                //    (int)_view.MaxDepth, 
-                //    _view.ZoneSize, 
-                //    _view.MaxExposure, 
-                //    _view.Leverage, 
-                //    _view.MinProfit))
-                //    ZRComputer.Evaluate();
-                //else
-                //    Log.Error($"OnStartZoneRecovery: error while initializing ZRComputer");
-            }
-            else
+                if (_communicatorA != null && _communicatorB != null)
+                {
+                    var WalletBalance = GetTotalBalance();
+                    var stats = _orderBookStatsComputer.GetStats();
+
+                    ZRCalculator.Initialize(
+                        bitmexApiServiceA, bitmexApiServiceB,
+                        WalletBalance,
+                        _orderStatsHandler.GetOrderDictionary(),
+                        _posStatsHandler.GetPositionDictionary(),
+                        PositionStatsMutex,
+                        "XBTUSD", (int)_view.MaxDepth, _view.ZoneSize, _view.MaxExposure, _view.Leverage, _view.MinProfit);
+
+                    CalculatorEnabled = true;
+                }
+                else
+                    throw new Exception($"OnStartZoneRecovery: Communicators are null");
+
+                // Start...
+                ZRCalculator.SwitchedOn = true;
+    }
+            catch(Exception exc)
             {
-                string message = $"OnStartZoneRecovery: Communicators are null";
-                Log.Error(message);
-                Console.WriteLine(message);
+                Log.Error(exc.Message);
+                Console.WriteLine(exc.Message);
+                CalculatorEnabled = false;
             }
         }
 
         private void OnStopZoneRecovery()
         {
-            calculatorEnabled = false;
             // TODO: Proper closing of all positions...
+            CalculatorEnabled = false;
+            ZRCalculator.SwitchedOn = false;
+            
             //if (ZRComputer != null)
             //    ZRComputer.BringDown();
         }
@@ -606,7 +610,7 @@ namespace MoneyTron.Presenter
                 }
 
                 // Calculate...
-                if (calculatorEnabled)
+                if (CalculatorEnabled && ZRCalculator != null && ZRCalculator.SwitchedOn)
                 {
                     Dictionary<string, decimal> dict = _orderBookStatsComputer.GetBidAsk();
                     if (dict != null)
@@ -754,7 +758,7 @@ namespace MoneyTron.Presenter
             //    _view.ZRStatus = ZRComputer.CurrentStatus.ToString();
             //    _view.ZRIndex = ZRComputer.CurrentZRPosition.ToString();
             //}
-            if (calculatorEnabled)
+            if (CalculatorEnabled)
             {
                 var stats = ZRCalculator.GetStats();
                 _view.Direction = stats.Direction.ToString();

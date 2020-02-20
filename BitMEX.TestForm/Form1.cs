@@ -437,7 +437,7 @@ namespace BitMEX.TestForm
             //    Key = "vUVW4tbj-wZG5UQgRkqHL4_z",
             //    Secret = "8HaCUEbx0qgJfQSo4EiX6RUGzDsjiY-uOsEsCBstIpYu-J7Q"
             //});
-            var bitmexApiServiceA = BitmexApiService_Test_POS_Outcome.CreateDefaultApi();
+            var bitmexApiServiceA = BitmexApiService_Test_POS_Outcome.CreateDefaultApi("111");
             var OrderParamsA = OrderPOSTRequestParams.CreateSimpleLimit("XBTUSD", "1234HoedjeVanPapier-1234", 150, (decimal)10150.0, OrderSide.Buy);
             bitmexApiServiceA.Execute(BitmexApiUrls.Order.PostOrder, OrderParamsA).ContinueWith(HandleOrderResponse, TaskContinuationOptions.AttachedToParent);
             

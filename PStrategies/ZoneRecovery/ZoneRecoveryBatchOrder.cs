@@ -9,14 +9,15 @@ using Serilog;
 
 namespace PStrategies.ZoneRecovery
 {
-    class ZoneRecoveryBatchOrder
+    public class ZoneRecoveryBatchOrder
     {
 
         #region Core variables and containers
-        
-        internal ZoneRecoveryAccount Account { get; }
-        internal OrderPOSTRequestParams PostParams { get; set; }
-        internal ZoneRecoveryOrderStatus CurrentStatus { get; set; }
+
+        // internal...
+        public ZoneRecoveryAccount Account { get; }
+        public OrderPOSTRequestParams PostParams { get; set; }
+        public ZoneRecoveryOrderStatus CurrentStatus { get; set; }
         internal DateTimeOffset? LastUpdateReceived { get; set; }
 
         #endregion Core variables and containers

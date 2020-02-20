@@ -73,6 +73,13 @@ namespace BitMEXRest.Client
 
     public class BitmexApiService_Test_POS_Outcome : IBitmexApiService
     {
+        string Account = "";
+
+        public BitmexApiService_Test_POS_Outcome(string acc)
+        {
+            Account = acc;
+        }
+
         public async Task<BitmexApiResult<TResult>> Execute<TParams, TResult>(ApiActionAttributes<TParams, TResult> apiAction, TParams @params)
         {
             switch (apiAction.Method)
@@ -82,7 +89,7 @@ namespace BitMEXRest.Client
                         var postQueryParams = @params as IJsonQueryParams;
                         dynamic data = JsonConvert.DeserializeObject(postQueryParams.ToJson());
                         string DummyId = DateTime.Now.ToLongDateString();
-                        var serializedResult = new BitmexApiResult<string>($"{{\"orderID\":\"{DummyId}\",\"clOrdID\":\"{data.clOrdID}\",\"account\":11111,\"symbol\":\"{data.symbol}\",\"side\":\"{data.side}\",\"orderQty\":{data.orderQty},\"price\":{data.price},\"stopPx\":null,\"ordType\":\"{data.ordType}\",\"timeInForce\":\"GoodTillCancel\",\"execInst\":\"ParticipateDoNotInitiate\",\"ordStatus\":\"New\",\"triggered\":\"\",\"workingIndicator\":true,\"transactTime\":\"{string.Format("{0:s}", DateTime.Now)}.000Z\",\"timestamp\":\"{string.Format("{0:s}", DateTime.Now)}.000Z\"}}", 60, 59, DateTime.Now);
+                        var serializedResult = new BitmexApiResult<string>($"{{\"orderID\":\"{DummyId}\",\"clOrdID\":\"{data.clOrdID}\",\"account\":{Account},\"symbol\":\"{data.symbol}\",\"side\":\"{data.side}\",\"orderQty\":{data.orderQty},\"price\":{data.price},\"stopPx\":null,\"ordType\":\"{data.ordType}\",\"timeInForce\":\"GoodTillCancel\",\"execInst\":\"ParticipateDoNotInitiate\",\"ordStatus\":\"New\",\"triggered\":\"\",\"workingIndicator\":true,\"transactTime\":\"{string.Format("{0:s}", DateTime.Now)}.000Z\",\"timestamp\":\"{string.Format("{0:s}", DateTime.Now)}.000Z\"}}", 60, 59, DateTime.Now);
                         var deserializedResult = JsonConvert.DeserializeObject<TResult>(serializedResult.Result);
                         return serializedResult.ToResultType<TResult>(deserializedResult);
                     }
@@ -91,7 +98,7 @@ namespace BitMEXRest.Client
                         var deleteQueryParams = (@params as IQueryStringParams).ToQueryString();
                         var clOrdId = deleteQueryParams.Substring(deleteQueryParams.IndexOf(@"&") + 9, deleteQueryParams.LastIndexOf(@"&") - (deleteQueryParams.IndexOf(@"&") + 9));
                         string DummyId = DateTime.Now.ToLongDateString();
-                        var serializedResult = new BitmexApiResult<string>($"[{{\"orderID\":\"{DummyId}\",\"clOrdID\":\"{clOrdId}\",\"account\":11111,\"symbol\":\"XBTUSD\",\"side\":\"Sell\",\"orderQty\":1,\"price\":1,\"stopPx\":null,\"ordType\":\"Limit\",\"timeInForce\":\"GoodTillCancel\",\"execInst\":\"ParticipateDoNotInitiate\",\"ordStatus\":\"Canceled\",\"triggered\":\"\",\"workingIndicator\":true,\"transactTime\":\"{string.Format("{0:s}", DateTime.Now)}.000Z\",\"timestamp\":\"{string.Format("{0:s}", DateTime.Now)}.000Z\"}}]", 60, 59, DateTime.Now);
+                        var serializedResult = new BitmexApiResult<string>($"[{{\"orderID\":\"{DummyId}\",\"clOrdID\":\"{clOrdId}\",\"account\":{Account},\"symbol\":\"XBTUSD\",\"side\":\"Sell\",\"orderQty\":1,\"price\":1,\"stopPx\":null,\"ordType\":\"Limit\",\"timeInForce\":\"GoodTillCancel\",\"execInst\":\"ParticipateDoNotInitiate\",\"ordStatus\":\"Canceled\",\"triggered\":\"\",\"workingIndicator\":true,\"transactTime\":\"{string.Format("{0:s}", DateTime.Now)}.000Z\",\"timestamp\":\"{string.Format("{0:s}", DateTime.Now)}.000Z\"}}]", 60, 59, DateTime.Now);
                         var deserializedResult = JsonConvert.DeserializeObject<TResult>(serializedResult.Result);
                         return serializedResult.ToResultType<TResult>(deserializedResult);
                     }
@@ -100,9 +107,9 @@ namespace BitMEXRest.Client
             }
         }
 
-        public static IBitmexApiService CreateDefaultApi()
+        public static IBitmexApiService CreateDefaultApi(string acc)
         {
-            return new BitmexApiService_Test_POS_Outcome();
+            return new BitmexApiService_Test_POS_Outcome(acc);
         }
     }
 }

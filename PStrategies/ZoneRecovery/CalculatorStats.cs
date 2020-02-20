@@ -20,7 +20,7 @@ namespace PStrategies.ZoneRecovery
         public decimal WalletBalance;
 
         public ZoneRecoveryDirection Direction;
-        internal ZoneRecoveryState State;
+        internal IZoneRecoveryState State;
         
     }
 }

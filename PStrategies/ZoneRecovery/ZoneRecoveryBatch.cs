@@ -15,15 +15,15 @@ using Serilog;
 
 namespace PStrategies.ZoneRecovery
 {
-    class ZoneRecoveryBatch
+    public class ZoneRecoveryBatch
     {
         #region Core variables
 
-        internal long BatchNumber;
+        public long BatchNumber;
         internal ZoneRecoveryBatchType BatchType;
         internal ZoneRecoveryBatchStatus BatchStatus;
         internal ZoneRecoveryDirection Direction;
-        internal readonly List<ZoneRecoveryBatchOrder> ZROrdersList;
+        public readonly List<ZoneRecoveryBatchOrder> ZROrdersList;
         internal int ResponsesReceived;
         private static int MaxWorkingDelayAllowedInSec = 10;
 

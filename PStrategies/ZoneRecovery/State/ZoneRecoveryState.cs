@@ -26,7 +26,7 @@ using Serilog;
 
 namespace PStrategies.ZoneRecovery.State
 {
-    abstract class ZoneRecoveryState
+    public abstract class IZoneRecoveryState
     {
         /// <summary>
         /// The context class for this state.
@@ -101,9 +101,9 @@ namespace PStrategies.ZoneRecovery.State
         }
     }
 
-    class ZRSInitiating : ZoneRecoveryState
+    public class ZRSInitiating : IZoneRecoveryState
     {
-        public ZRSInitiating(ZoneRecoveryState state, bool eval = false) : this(state.Calculator, eval) { }
+        public ZRSInitiating(IZoneRecoveryState state, bool eval = false) : this(state.Calculator, eval) { }
         public ZRSInitiating(Calculator calc, bool eval = false)
         {
             Calculator = calc;
@@ -218,6 +218,7 @@ namespace PStrategies.ZoneRecovery.State
                 if (aPosition == 0 && bPosition == 0)
                 {
                     Calculator.State = new ZRSOrdering(this, ZoneRecoveryBatchType.PeggedStart);
+                    Calculator.Evaluate();
                 }
                 else
                 {
@@ -237,9 +238,9 @@ namespace PStrategies.ZoneRecovery.State
      * TODO Make up your mind which statusses and variables are needed to make this state machine work properly...
      */
 
-    class ZRSOrdering : ZoneRecoveryState
+    public class ZRSOrdering : IZoneRecoveryState
     {
-        public ZRSOrdering(ZoneRecoveryState state, ZoneRecoveryBatchType type)
+        public ZRSOrdering(IZoneRecoveryState state, ZoneRecoveryBatchType type)
         {
             Step = state.Step;
             FactorPosition = state.FactorPosition;
@@ -247,8 +248,6 @@ namespace PStrategies.ZoneRecovery.State
             TPDirection = state.TPDirection;
 
             Console.WriteLine(WhereAmI(GetType().Name));
-            
-            Evaluate();
         }
 
         public override void Evaluate()
@@ -277,9 +276,9 @@ namespace PStrategies.ZoneRecovery.State
         }
     }
 
-    class ZRSWorking : ZoneRecoveryState
+    public class ZRSWorking : IZoneRecoveryState
     {
-        public ZRSWorking(ZoneRecoveryState state)
+        public ZRSWorking(IZoneRecoveryState state)
         {
             Step = state.Step;
             FactorPosition = state.FactorPosition;
@@ -312,9 +311,9 @@ namespace PStrategies.ZoneRecovery.State
         }
     }
 
-    class ZRSWaiting : ZoneRecoveryState
+    public class ZRSWaiting : IZoneRecoveryState
     {
-        public ZRSWaiting(ZoneRecoveryState state, bool eval = false)
+        public ZRSWaiting(IZoneRecoveryState state, bool eval = false)
         {
             this.Step = state.Step;
             this.FactorPosition = state.FactorPosition;
@@ -341,9 +340,9 @@ namespace PStrategies.ZoneRecovery.State
         }
     }
 
-    class ZRSCanceling : ZoneRecoveryState
+    public class ZRSCanceling : IZoneRecoveryState
     {
-        public ZRSCanceling(ZoneRecoveryState state, bool eval = false) : this(state.Calculator, state.Step, state.FactorPosition, state.TPDirection, eval) { }
+        public ZRSCanceling(IZoneRecoveryState state, bool eval = false) : this(state.Calculator, state.Step, state.FactorPosition, state.TPDirection, eval) { }
         public ZRSCanceling(Calculator calc, int step, int factorPosition, int tpDir, bool eval = false)
         {
             Step = step;
@@ -362,9 +361,9 @@ namespace PStrategies.ZoneRecovery.State
         }
     }
 
-    class ZRSRepairing : ZoneRecoveryState
+    public class ZRSRepairing : IZoneRecoveryState
     {
-        public ZRSRepairing(ZoneRecoveryState state, bool eval = false) : this(state.Calculator, state.Step, state.FactorPosition, state.TPDirection, eval) { }
+        public ZRSRepairing(IZoneRecoveryState state, bool eval = false) : this(state.Calculator, state.Step, state.FactorPosition, state.TPDirection, eval) { }
         public ZRSRepairing(Calculator calc, int step, int factorPosition, int tpDir, bool eval = false)
         {
             this.Step = step;

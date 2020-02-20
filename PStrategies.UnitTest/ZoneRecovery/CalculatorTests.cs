@@ -1,10 +1,10 @@
 ﻿using System;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+
 
 using PStrategies.ZoneRecovery;
 using PStrategies.ZoneRecovery.State;
@@ -28,12 +28,18 @@ namespace PStrategies.UnitTest.ZoneRecovery
             var calcBox = new Calculator();
 
             Dictionary<ZoneRecoveryAccount, List<Order>> Orders = new Dictionary<ZoneRecoveryAccount, List<Order>>();
+            Orders.Add(ZoneRecoveryAccount.A, new List<Order>());
+            Orders.Add(ZoneRecoveryAccount.B, new List<Order>());
             Dictionary<ZoneRecoveryAccount, List<Position>> Positions = new Dictionary<ZoneRecoveryAccount, List<Position>>();
+            Positions.Add(ZoneRecoveryAccount.A, new List<Position>());
+            Positions.Add(ZoneRecoveryAccount.B, new List<Position>());
             Mutex PositionStatsMutex = new Mutex();
 
-            var bitmexApiServiceA = BitmexApiService_Test_POS_Outcome.CreateDefaultApi();
-            var bitmexApiServiceB = BitmexApiService_Test_POS_Outcome.CreateDefaultApi();
+            // Create the Api Services
+            var bitmexApiServiceA = BitmexApiService_Test_POS_Outcome.CreateDefaultApi("111");
+            var bitmexApiServiceB = BitmexApiService_Test_POS_Outcome.CreateDefaultApi("222");
 
+            // Initialize the Calculator
             calcBox.Initialize(
                     bitmexApiServiceA, bitmexApiServiceB,
                     1,
@@ -42,177 +48,49 @@ namespace PStrategies.UnitTest.ZoneRecovery
                     PositionStatsMutex,
                     "XBTUSD", 4, 50, (decimal)0.05, 1, (decimal)0.02);
 
+            // Switch on the Calculator
+            calcBox.SwitchedOn = true;
+
+            // Update the market prices
             Dictionary<string, decimal> dict = new Dictionary<string, decimal>();
-            dict.Add("Ask", 10001);
+            dict.Add("Ask", 10000);
             dict.Add("Bid", 10000);
             
             if (dict != null)
                 calcBox.UpdatePrices(dict);
 
-            calcBox.Evaluate(ZoneRecoveryAccount.A, new List<string>() { "ID ID ID ID ID" });
+            calcBox.Evaluate();
 
-            //var bitmexApiServiceA = BitmexApiService_Test_POS_Outcome.CreateDefaultApi();
-            //var OrderParamsA = OrderPOSTRequestParams.CreateSimpleLimit("XBTUSD", "1234HoedjeVanPapier-1234", 150, (decimal)10150.0, OrderSide.Buy);
-            //bitmexApiServiceA.Execute(BitmexApiUrls.Order.PostOrder, OrderParamsA).ContinueWith(HandleOrderResponse, TaskContinuationOptions.AttachedToParent);
+            var ordrA = calcBox.ZRBatchLedger[calcBox.RunningBatchNr].ZROrdersList.Where(x => x.Account == ZoneRecoveryAccount.A).Single();
+            var ordrB = calcBox.ZRBatchLedger[calcBox.RunningBatchNr].ZROrdersList.Where(x => x.Account == ZoneRecoveryAccount.B).Single();
 
-            //var OrderParams = new OrderDELETERequestParams() { ClOrdID = "bladieblakakkahahhaha" };
-            //var result = bitmexApiServiceA.Execute(BitmexApiUrls.Order.DeleteOrder, OrderParams);
+            Orders[ZoneRecoveryAccount.A].Add(new Order() {
+                Account     = 111,
+                Symbol      = "XBTUSD",
+                OrdStatus   = OrderStatus.New,
+                ClOrdId     = ordrA.PostParams.ClOrdID,
+                Price       = (double)ordrA.PostParams.Price,
+                OrderQty    = (long)ordrA.PostParams.OrderQty
+            });
 
-            //// Create an initial OrderResponse that reflects the first position in the strategy
-            //var orderResponse = new OrderResponse()
-            //{
-            //    OrderId = "1234HoedjeVanPapier",
-            //    ClOrdId = MordoR.GenerateGUID(),
-            //    //OrderQty = (int)calcBox.GetInitialVolume(),
-            //    Price = 10000,
-            //    LeavesQty = 0,
-            //    CumQty = 1000,
-            //    AvgPx = 10000,
-            //    OrdType = "Limit",
-            //    OrdStatus = "Filled",
-            //    ExecInst = "",
-            //    TimeInForce = "ImmediateOrCancel",
-            //    Account = 51091,
-            //    Symbol = "XBTUSD",
-            //    Side = "Buy",
-            //    StopPx = null,
-            //    PegOffsetValue = null,
-            //    PegPriceType = "",
-            //    Currency = "USD",
-            //    SettlCurrency = "XBt",
-            //    ContingencyType = "",
-            //    ExDestination = "XBME",
-            //    Triggered = "",
-            //    TransactTime = new DateTime(2019, 7, 7, 1, 1, 1, 1),
-            //    Timestamp = new DateTime(2019, 7, 7, 1, 1, 1, 1)
-            //};
+            calcBox.Evaluate(ZoneRecoveryAccount.A, new List<string>() { ordrA.PostParams.ClOrdID });
 
-            //// Create the expected next action
-            ////var nextAction1 = new ZoneRecoveryAction(1);
-            ////nextAction1.ReverseVolume = 180 * 2;
-            ////nextAction1.ReversePrice = 9950;
-            ////nextAction1.TPVolumeBuy = 
-            ////nextAction1.TPVolumeSell = 
-            ////nextAction1.TPPrice = 
+            Assert.AreEqual(typeof(ZRSWorking), calcBox.State.GetType());
 
-            ////Assert.AreEqual(1, nextStep.PositionIndex);
+            Orders[ZoneRecoveryAccount.B].Add(new Order() {
+                Account     = 222,
+                Symbol      = "XBTUSD",
+                OrdStatus   = OrderStatus.New,
+                ClOrdId     = ordrB.PostParams.ClOrdID,
+                Price       = (double)ordrB.PostParams.Price,
+                OrderQty    = (long)ordrB.PostParams.OrderQty
+            });
 
-            //orderResponse = new OrderResponse()
-            //{
-            //    OrderId = "5678WaHaddeNaVerwacht",
-            //    ClOrdId = MordoR.GenerateGUID(),
-            //    OrderQty = 1000,
-            //    Price = 1000,
-            //    LeavesQty = 0,
-            //    CumQty = 1000,
-            //    AvgPx = 9103.5,
-            //    OrdType = "Limit",
-            //    OrdStatus = "Filled",
-            //    ExecInst = "",
-            //    TimeInForce = "ImmediateOrCancel",
-            //    Account = 51091,
-            //    Symbol = "XBTUSD",
-            //    Side = "Buy",
-            //    StopPx = null,
-            //    PegOffsetValue = null,
-            //    PegPriceType = "",
-            //    Currency = "USD",
-            //    SettlCurrency = "XBt",
-            //    ContingencyType = "",
-            //    ExDestination = "XBME",
-            //    Triggered = "",
-            //    TransactTime = new DateTime(2019, 7, 7, 1, 1, 1, 1),
-            //    Timestamp = new DateTime(2019, 7, 7, 1, 1, 1, 1)
-            //};
-            ////orderResponseList.Add(orderResponse);
+            calcBox.Evaluate(ZoneRecoveryAccount.A, new List<string>() { ordrB.PostParams.ClOrdID });
 
-            //orderResponse = new BitMEX.Model.OrderResponse()
-            //{
-            //    OrderId = "a758f23f-f767-739c-891f-3dff5e6d4558",
-            //    ClOrdId = "a758f23f-f767-739c-891f-3dff5e6d4558",
-            //    OrderQty = 1000,
-            //    Price = 9103.5,
-            //    LeavesQty = 0,
-            //    CumQty = 1000,
-            //    AvgPx = 9103.5,
+            //Assert.AreEqual(typeof(ZRSWorking), calcBox.State.GetType());
 
-            //    OrdType = "Limit",
-            //    OrdStatus = "Filled",
-            //    ExecInst = "",
-            //    TimeInForce = "ImmediateOrCancel",
-
-            //    Account = 51091,
-            //    Symbol = "XBTUSD",
-            //    Side = "Buy",
-            //    StopPx = null,
-            //    PegOffsetValue = null,
-            //    PegPriceType = "",
-            //    Currency = "USD",
-            //    SettlCurrency = "XBt",
-            //    ContingencyType = "",
-            //    ExDestination = "XBME",
-            //    Triggered = "",
-            //    TransactTime = new DateTime(2019, 7, 7, 1, 1, 1, 1),
-            //    Timestamp = new DateTime(2019, 7, 7, 1, 1, 1, 1)
-            //};
-            ////orderResponseList.Add(orderResponse);
-
-            ////calcBox.SetNewPosition(orderResponseList);
-
-
-
-            //// Get next step and assert...
-            ////var nextStep = calcBox.GetNextAction();
-
-            //// Assert
-            ////Assert.AreEqual(1, nextStep.PositionIndex);
-            ////Assert.AreEqual(300, nextStep.ReversePrice);
-            ////Assert.AreEqual("123", nextStep.ReverseVolume);
-            ////Assert.AreEqual(1, nextStep.TPPrice);
-            ////Assert.AreEqual(1, nextStep.TPVolumeBuy);
-            ////Assert.AreEqual(1, nextStep.TPVolumeSell);
-
-            //#region Set new position 2
-            ////orderResponseList = new List<BitMEX.Model.OrderResponse>();
-
-            //orderResponse = new BitMEX.Model.OrderResponse()
-            //{
-            //    OrderId = "a758f23f-f767-739c-891f-3dff5e6d4558",
-            //    ClOrdId = "a758f23f-f767-739c-891f-3dff5e6d4558",
-            //    ClOrdLinkId = "",
-            //    Account = 51091,
-            //    Symbol = "XBTUSD",
-            //    Side = "Sell",
-            //    OrderQty = 1000,
-            //    Price = 9103.5,
-            //    DisplayQty = null,
-            //    StopPx = null,
-            //    PegOffsetValue = null,
-            //    PegPriceType = "",
-            //    Currency = "USD",
-            //    SettlCurrency = "XBt",
-            //    OrdType = "Market",
-            //    TimeInForce = "ImmediateOrCancel",
-            //    ExecInst = "",
-            //    ContingencyType = "",
-            //    ExDestination = "XBME",
-            //    OrdStatus = "Filled",
-            //    Triggered = "",
-            //    LeavesQty = 0,
-            //    CumQty = 1000,
-            //    AvgPx = 9103.5,
-            //    TransactTime = new DateTime(2019, 7, 7, 1, 2, 1, 1),
-            //    Timestamp = new DateTime(2019, 7, 7, 1, 2, 1, 1)
-            //};
-            //orderResponseList.Add(orderResponse);
-
-            //calcBox.SetNewPosition(orderResponseList);
-
-            //#endregion Set new position 2
-
-            //// Get next step and assert...
-            //nextStep = calcBox.GetNextAction();
-
+            
             // Assert
             //Assert.AreEqual(1, nextStep.PositionIndex);
             //Assert.AreEqual(300, nextStep.ReversePrice);

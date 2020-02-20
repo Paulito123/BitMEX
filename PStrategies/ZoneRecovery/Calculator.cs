@@ -23,7 +23,15 @@ namespace PStrategies.ZoneRecovery
     {
         #region Core variables
 
+        public bool SwitchedOn
+        {
+            get => switchedOn;
+            set => SwitchMeOn(value);
+        }
+        private bool switchedOn;
+
         internal static readonly int[] FactorArray = new int[] { 1, 2, 3, 6, 12, 24, 48, 96 };
+        private static decimal PegDistance = 5;
 
         internal string Symbol;
         internal int MaxDepthIndex;
@@ -31,26 +39,39 @@ namespace PStrategies.ZoneRecovery
         internal decimal MaxExposurePerc;
         internal decimal Leverage;
         internal decimal MinimumProfitPercentage;
-        internal long RunningBatchNr;
+        public long RunningBatchNr;
         internal long UnitSize;
         internal decimal WalletBalance;
         internal decimal Ask;
         internal decimal Bid;
 
-        internal ZoneRecoveryState State;
+        public IZoneRecoveryState State;
 
         private IBitmexApiService bitmexApiServiceA { get; set; }
         private IBitmexApiService bitmexApiServiceB { get; set; }
         
         internal static Mutex PositionMutex;
 
-        internal readonly SortedDictionary<long, ZoneRecoveryBatch> ZRBatchLedger;
+        public readonly SortedDictionary<long, ZoneRecoveryBatch> ZRBatchLedger;
         internal Dictionary<ZoneRecoveryAccount, List<Order>> Orders;
         internal Dictionary<ZoneRecoveryAccount, List<Position>> Positions;
         internal Dictionary<ZoneRecoveryAccount, int> RateLimitsRemaining;
         internal int RateLimitTimeOutInMSec = 2000;
 
         #endregion Core variables
+
+        private void SwitchMeOn(bool s)
+        {
+            if (s)
+            {
+                // things to do before switching on this shit
+            }
+            else
+            {
+                // things to do before switching off this shit
+            }
+            switchedOn = s;
+        }
 
         public Calculator()
         {
@@ -85,7 +106,7 @@ namespace PStrategies.ZoneRecovery
             string symbol = "XBTUSD", 
             int maxDepthIndex = 1, decimal zoneSize = 20, decimal maxExposurePerc = (decimal)0.01, decimal leverage = 1, decimal minPrftPerc = (decimal)0.01)
         {
-            // RunningBatchNr should never be reset during the lifetime of this ZoneRecoveryComputer instance...
+            // RunningBatchNr should never be reset during the lifetime of this Calculator instance...
             RunningBatchNr = 0;
 
             try
@@ -157,46 +178,73 @@ namespace PStrategies.ZoneRecovery
         
         public void Evaluate(ZoneRecoveryAccount acc, List<string> clOrdIdList)
         {
-            //Console.WriteLine($"Calculator.Evaluate for Account {acc}");
+            if (switchedOn)
+            {
+                //Console.WriteLine($"Calculator.Evaluate for Account {acc}");
 
-            // Push the latest updates to the Batch
-            var orderList = Orders[acc].Where(o => clOrdIdList.Any(s => s == o.OrderId)).ToList();
-            ZRBatchLedger[RunningBatchNr].CheckStatusses(acc, orderList);
+                // Push the latest updates to the Batch
+                var orderList = Orders[acc].Where(o => clOrdIdList.Any(s => s == o.OrderId)).ToList();
+                ZRBatchLedger[RunningBatchNr].CheckStatusses(acc, orderList);
 
-            // Evaluate the new state
-            State.Evaluate();
+                // Evaluate the new state
+                State.Evaluate();
+            }
         }
 
-        internal async void StartNewZRSession()
+        public void Evaluate()
         {
-            if (ZRBatchLedger[RunningBatchNr].BatchStatus == ZoneRecoveryBatchStatus.Closed)
+            if (switchedOn)
             {
-                // Create a new batch
-                var zrob = new ZoneRecoveryBatch(ZoneRecoveryBatchType.PeggedStart, ZoneRecoveryBatchStatus.Working);
-                ZRBatchLedger.Add(zrob.BatchNumber, zrob);
-                ZoneRecoveryBatchOrder zro;
+                // Evaluate the new state
+                State.Evaluate();
+            }
+        }
 
-                // Create unique ids
-                var idA = CreateNewClOrdID();
-                var idB = CreateNewClOrdID();
-                
-                // Create initial Orders
-                var OrderParamsA = OrderPOSTRequestParams.CreateSimpleLimit(Symbol, idA, UnitSize, (Bid - 1), OrderSide.Buy);
-                zro = new ZoneRecoveryBatchOrder(ZoneRecoveryAccount.A, OrderParamsA);
-                ZRBatchLedger[RunningBatchNr].AddOrder(zro);
-                //bitmexApiServiceA
-                //    .Execute(BitmexApiUrls.Order.PostOrder, OrderParamsA)
-                //    .ContinueWith(HandleOrderResponse, TaskContinuationOptions.AttachedToParent);
-                await PlaceOrder(bitmexApiServiceA, ZoneRecoveryAccount.A, OrderParamsA);
+        public async void StartNewZRSession()
+        {
+            if (switchedOn)
+            {
+                try
+                {
+                    if (!ZRBatchLedger.ContainsKey(RunningBatchNr) || (ZRBatchLedger.ContainsKey(RunningBatchNr) && ZRBatchLedger[RunningBatchNr].BatchStatus == ZoneRecoveryBatchStatus.Closed))
+                    {
+                        // Create a new batch
+                        var zrob = new ZoneRecoveryBatch(ZoneRecoveryBatchType.PeggedStart, ZoneRecoveryBatchStatus.Working);
+                        RunningBatchNr = zrob.BatchNumber;
+                        ZRBatchLedger.Add(RunningBatchNr, zrob);
+                        ZoneRecoveryBatchOrder zro;
 
-                var OrderParamsB = OrderPOSTRequestParams.CreateSimpleLimit(Symbol, idB, UnitSize, (Ask + 1), OrderSide.Sell);
-                zro = new ZoneRecoveryBatchOrder(ZoneRecoveryAccount.B, OrderParamsB);
-                ZRBatchLedger[RunningBatchNr].AddOrder(zro);
-                //bitmexApiServiceB
-                //    .Execute(BitmexApiUrls.Order.PostOrder, OrderParamsB)
-                //    .ContinueWith(HandleOrderResponse, TaskContinuationOptions.AttachedToParent);
-                await PlaceOrder(bitmexApiServiceB, ZoneRecoveryAccount.B, OrderParamsB);
-                
+                        // Create unique ids
+                        var idA = CreateNewClOrdID();
+                        var idB = CreateNewClOrdID();
+
+                        // Create initial Orders
+                        var OrderParamsA = OrderPOSTRequestParams.CreateSimpleLimit(Symbol, idA, UnitSize, (Bid - PegDistance), OrderSide.Buy);
+                        zro = new ZoneRecoveryBatchOrder(ZoneRecoveryAccount.A, OrderParamsA);
+                        ZRBatchLedger[RunningBatchNr].AddOrder(zro);
+                        //bitmexApiServiceA
+                        //    .Execute(BitmexApiUrls.Order.PostOrder, OrderParamsA)
+                        //    .ContinueWith(HandleOrderResponse, TaskContinuationOptions.AttachedToParent);
+                        await PlaceOrder(bitmexApiServiceA, ZoneRecoveryAccount.A, OrderParamsA);
+
+                        var OrderParamsB = OrderPOSTRequestParams.CreateSimpleLimit(Symbol, idB, UnitSize, (Ask + PegDistance), OrderSide.Sell);
+                        zro = new ZoneRecoveryBatchOrder(ZoneRecoveryAccount.B, OrderParamsB);
+                        ZRBatchLedger[RunningBatchNr].AddOrder(zro);
+                        //bitmexApiServiceB
+                        //    .Execute(BitmexApiUrls.Order.PostOrder, OrderParamsB)
+                        //    .ContinueWith(HandleOrderResponse, TaskContinuationOptions.AttachedToParent);
+                        await PlaceOrder(bitmexApiServiceB, ZoneRecoveryAccount.B, OrderParamsB);
+                    }
+                }
+                catch (Exception exc)
+                {
+                    Log.Error(exc.Message);
+                    Console.WriteLine(exc.Message);
+                }
+            }
+            else
+            {
+                Console.WriteLine($"StartNewZRSession: Tried to start but Calculator is switched off...");
             }
         }
 
@@ -290,6 +338,7 @@ namespace PStrategies.ZoneRecovery
                 Console.WriteLine(message);
             }
         }
+        
     }
 }
 
