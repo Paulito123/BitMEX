@@ -126,6 +126,11 @@ namespace PStrategies.ZoneRecovery.State
         /// </summary>
         public override void Evaluate()
         {
+            if (Calculator.ZRBatchLedger.ContainsKey(Calculator.RunningBatchNr))
+                Console.WriteLine($"{WhereAmI(GetType().Name + "." + MethodBase.GetCurrentMethod().Name)}:{Calculator.ZRBatchLedger[Calculator.RunningBatchNr].BatchStatus}");
+            else
+                Console.WriteLine($"{WhereAmI(GetType().Name + "." + MethodBase.GetCurrentMethod().Name)}:<No status>");
+
             bool fail = false;
             decimal aPosition = 0, bPosition = 0;
             List<Order> mergedList = new List<Order>();
@@ -136,17 +141,17 @@ namespace PStrategies.ZoneRecovery.State
                 if (Calculator.Orders[ZoneRecoveryAccount.A] == null || Calculator.Orders[ZoneRecoveryAccount.B] == null)
                     throw new Exception($"Orders list in Calculator is null");
 
-                var aNewList = Calculator.Orders[ZoneRecoveryAccount.A].Where(x => x.Symbol == Calculator.Symbol && x.OrdStatus == OrderStatus.New);
+                var aNewList = Calculator.Orders[ZoneRecoveryAccount.A].Where(x => x.Symbol == Calculator.Symbol && x.OrdStatus == OrderStatus.New).ToList();
                 if (aNewList != null && aNewList.Count() > 0)
                     mergedList.AddRange(aNewList);
 
-                var bNewList = Calculator.Orders[ZoneRecoveryAccount.B].Where(x => x.Symbol == Calculator.Symbol && x.OrdStatus == OrderStatus.New);
+                var bNewList = Calculator.Orders[ZoneRecoveryAccount.B].Where(x => x.Symbol == Calculator.Symbol && x.OrdStatus == OrderStatus.New).ToList();
                 if (bNewList != null && bNewList.Count() > 0)
                     mergedList.AddRange(bNewList);
             }
             catch (Exception exc)
             {
-                string m = $"ZRSInitialization.SyncAndAssess[2]: {exc.Message}";
+                string m = $"{WhereAmI(GetType().Name + "." + MethodBase.GetCurrentMethod().Name)}[2]: {exc.Message}";
                 Log.Error(m);
                 Console.WriteLine(m);
                 fail = true;
@@ -163,12 +168,15 @@ namespace PStrategies.ZoneRecovery.State
                 if (Calculator.Positions[ZoneRecoveryAccount.A] == null || Calculator.Positions[ZoneRecoveryAccount.B] == null)
                     throw new Exception($"Postitions list in Calculator is null");
 
-                aPosition = Calculator.Positions[ZoneRecoveryAccount.A].Where(x => x.Symbol == Calculator.Symbol).Single().CurrentQty ?? 0;
-                bPosition = Calculator.Positions[ZoneRecoveryAccount.B].Where(x => x.Symbol == Calculator.Symbol).Single().CurrentQty ?? 0;
+                if (Calculator.Positions[ZoneRecoveryAccount.A].Where(x => x.Symbol == Calculator.Symbol).Count() == 1)
+                    aPosition = Calculator.Positions[ZoneRecoveryAccount.A].Where(x => x.Symbol == Calculator.Symbol).Single().CurrentQty ?? 0;
+                
+                if (Calculator.Positions[ZoneRecoveryAccount.B].Where(x => x.Symbol == Calculator.Symbol).Count() == 1)
+                    bPosition = Calculator.Positions[ZoneRecoveryAccount.B].Where(x => x.Symbol == Calculator.Symbol).Single().CurrentQty ?? 0;
             }
             catch (Exception exc)
             {
-                string m = $"ZRSInitialization.SyncAndAssess[1]: {exc.Message}";
+                string m = $"{WhereAmI(GetType().Name + "." + MethodBase.GetCurrentMethod().Name)}[1]: {exc.Message}";
                 Log.Error(m);
                 Console.WriteLine(m);
                 fail = true;
@@ -207,7 +215,6 @@ namespace PStrategies.ZoneRecovery.State
                 else
                 {
                     // Open batch found, try to assess the situation
-                    Console.WriteLine(WhereAmI(GetType().Name + "." + MethodBase.GetCurrentMethod().Name));
                     Calculator.State = new ZRSRepairing(this);
                 }
             }
@@ -252,6 +259,11 @@ namespace PStrategies.ZoneRecovery.State
 
         public override void Evaluate()
         {
+            if (Calculator.ZRBatchLedger.ContainsKey(Calculator.RunningBatchNr))
+                Console.WriteLine($"{WhereAmI(GetType().Name + "." + MethodBase.GetCurrentMethod().Name)}:{Calculator.ZRBatchLedger[Calculator.RunningBatchNr].BatchStatus}");
+            else
+                Console.WriteLine($"{WhereAmI(GetType().Name + "." + MethodBase.GetCurrentMethod().Name)}:<No status>");
+
             if (Step == -1)
             {
                 // Create the orders
@@ -263,14 +275,20 @@ namespace PStrategies.ZoneRecovery.State
             else if (Step == 0)
             {
 
+                // Change state
+                Calculator.State = new ZRSWorking(this);
             }
             else if (Step == Calculator.MaxDepthIndex)
             {
 
+                // Change state
+                Calculator.State = new ZRSWorking(this);
             }
             else if (Step == Calculator.MaxDepthIndex)
             {
 
+                // Change state
+                Calculator.State = new ZRSWorking(this);
             }
             
         }
@@ -290,24 +308,25 @@ namespace PStrategies.ZoneRecovery.State
 
         public override void Evaluate()
         {
-            // Check if the sent orders are successfully processed on the server...
-            // [0] too little or no orders are found on the server that have been sent out
-            // [1] all orders arrived on the server and all their statusses are "New" OR at least one status is "Filled"
-            // [2] all orders arrived on the server and one or more orders returned a status "Canceled" or "Rejected"
-            // [3] 
-            // if (0) > Do nothing
-            // if (1) > Change BatchStatus AND Calculator.State = new ZRSWaiting(this);
-            // if (2) > Check last price and reorder the failed orders if possible with adjusted parameters.
-            // if (3) > 
-            if (Calculator.ZRBatchLedger[Calculator.RunningBatchNr].BatchStatus == ZoneRecoveryBatchStatus.ReadyForNext)
-            {
-                
-            }
-            else if (Calculator.ZRBatchLedger[Calculator.RunningBatchNr].BatchStatus == ZoneRecoveryBatchStatus.Error)
-            {
+            if (Calculator.ZRBatchLedger.ContainsKey(Calculator.RunningBatchNr))
+                Console.WriteLine($"{WhereAmI(GetType().Name + "." + MethodBase.GetCurrentMethod().Name)}:{Calculator.ZRBatchLedger[Calculator.RunningBatchNr].BatchStatus}");
+            else
+                Console.WriteLine($"{WhereAmI(GetType().Name + "." + MethodBase.GetCurrentMethod().Name)}:<No status>");
 
+            // Change only if needed else, do nothing
+            if (Calculator.ZRBatchLedger[Calculator.RunningBatchNr].BatchStatus == ZoneRecoveryBatchStatus.Waiting)
+            {
+                Calculator.State = new ZRSWaiting(this);
             }
-            
+            else if (Calculator.ZRBatchLedger[Calculator.RunningBatchNr].BatchStatus == ZoneRecoveryBatchStatus.ReadyForNext)
+            {
+                Calculator.State = new ZRSCanceling(this);
+            }
+            else if (Calculator.ZRBatchLedger[Calculator.RunningBatchNr].BatchStatus == ZoneRecoveryBatchStatus.Error
+                  || Calculator.ZRBatchLedger[Calculator.RunningBatchNr].BatchStatus == ZoneRecoveryBatchStatus.Closed)
+            {
+                Calculator.State = new ZRSRepairing(this);
+            }
         }
     }
 
@@ -327,7 +346,11 @@ namespace PStrategies.ZoneRecovery.State
 
         public override void Evaluate()
         {
-            
+            if (Calculator.ZRBatchLedger.ContainsKey(Calculator.RunningBatchNr))
+                Console.WriteLine($"{WhereAmI(GetType().Name + "." + MethodBase.GetCurrentMethod().Name)}:{Calculator.ZRBatchLedger[Calculator.RunningBatchNr].BatchStatus}");
+            else
+                Console.WriteLine($"{WhereAmI(GetType().Name + "." + MethodBase.GetCurrentMethod().Name)}:<No status>");
+
             // Check if the orders are filled as expected
             // [0] Desired setup, either TP with TL have been filled or REV has been filled.
             // [1] Only TP|TL is filled but TL|TP is still expected
@@ -357,7 +380,17 @@ namespace PStrategies.ZoneRecovery.State
 
         public override void Evaluate()
         {
+            if (Calculator.ZRBatchLedger.ContainsKey(Calculator.RunningBatchNr))
+                Console.WriteLine($"{WhereAmI(GetType().Name + "." + MethodBase.GetCurrentMethod().Name)}:{Calculator.ZRBatchLedger[Calculator.RunningBatchNr].BatchStatus}");
+            else
+                Console.WriteLine($"{WhereAmI(GetType().Name + "." + MethodBase.GetCurrentMethod().Name)}:<No status>");
 
+            foreach (ZoneRecoveryBatchOrder o in Calculator.ZRBatchLedger[Calculator.RunningBatchNr].ZROrdersList)
+            {
+                Calculator.RemoveOrderForAccount(o.Account, o.PostParams.ClOrdID);
+            }
+            
+            //TODO Turn the wheel and move on...
         }
     }
 
@@ -378,6 +411,11 @@ namespace PStrategies.ZoneRecovery.State
 
         public override void Evaluate()
         {
+            if (Calculator.ZRBatchLedger.ContainsKey(Calculator.RunningBatchNr))
+                Console.WriteLine($"{WhereAmI(GetType().Name + "." + MethodBase.GetCurrentMethod().Name)}:{Calculator.ZRBatchLedger[Calculator.RunningBatchNr].BatchStatus}");
+            else
+                Console.WriteLine($"{WhereAmI(GetType().Name + "." + MethodBase.GetCurrentMethod().Name)}:<No status>");
+
 
         }
     }

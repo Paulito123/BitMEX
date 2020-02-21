@@ -9,6 +9,8 @@ using BitMEXRest.Authorization;
 using BitMEXRest.Model;
 using BitMEXRest.Dto;
 
+using Serilog;
+
 namespace BitMEXRest.Client
 {
     public class BitmexApiProxy : IBitmexApiProxy
@@ -86,12 +88,12 @@ namespace BitMEXRest.Client
         {
             Sign(request, @params);
 
-            //Log.Debug($"{request.Method} {request.RequestUri}");
+            Log.Debug($"{request.Method} {request.RequestUri}");
 
             var response = await _httpClient.SendAsync(request);
             var responseString = await response.Content.ReadAsStringAsync();
 
-            //Log.Debug($"{request.Method} {request.RequestUri.PathAndQuery} {(response.IsSuccessStatusCode ? "resp" : "errorResp")}:{responseString}");
+            Log.Debug($"{request.Method} {request.RequestUri.PathAndQuery} {(response.IsSuccessStatusCode ? "resp" : "errorResp")}:{responseString}");
 
             int rateLimitLimit = default(int), rateLimitRemaining = default(int);
             DateTime rateLimitReset = default(DateTime);
@@ -103,7 +105,7 @@ namespace BitMEXRest.Client
             if (response.Headers.TryGetValues("x-ratelimit-reset", out var ratelimitreset) && ratelimitreset.Any())
                 rateLimitReset = _epochTime.AddSeconds(long.Parse(ratelimitreset.First()));
 
-            //Log.Debug($"{request.Method} {request.RequestUri.PathAndQuery} x-ratelimit-limit:{rateLimitLimit} x-ratelimit-remaining:{rateLimitRemaining} x-ratelimit-reset:{rateLimitReset}");
+            Log.Debug($"{request.Method} {request.RequestUri.PathAndQuery} x-ratelimit-limit:{rateLimitLimit} x-ratelimit-remaining:{rateLimitRemaining} x-ratelimit-reset:{rateLimitReset}");
 
             if (!response.IsSuccessStatusCode)
             {

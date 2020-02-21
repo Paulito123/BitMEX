@@ -40,15 +40,14 @@ namespace PStrategies.ZoneRecovery
         internal decimal Leverage;
         internal decimal MinimumProfitPercentage;
         public long RunningBatchNr;
-        internal long UnitSize;
+        public long UnitSize;
         internal decimal WalletBalance;
-        internal decimal Ask;
-        internal decimal Bid;
+        public decimal Ask;
+        public decimal Bid;
 
         public IZoneRecoveryState State;
 
-        private IBitmexApiService bitmexApiServiceA { get; set; }
-        private IBitmexApiService bitmexApiServiceB { get; set; }
+        private Dictionary<ZoneRecoveryAccount, IBitmexApiService> ApiServiceByAccount;
         
         internal static Mutex PositionMutex;
 
@@ -73,10 +72,27 @@ namespace PStrategies.ZoneRecovery
             switchedOn = s;
         }
 
+        internal void RemoveOrderForAccount(ZoneRecoveryAccount acc, string clOrdId)
+        {
+            if (RateLimitsRemaining[acc] >= 5)
+            {
+                var OrderParams = new OrderDELETERequestParams() { ClOrdID = clOrdId };
+                var result = ApiServiceByAccount[acc]
+                    .Execute(BitmexApiUrls.Order.DeleteOrder, OrderParams)
+                    .ContinueWith(HandleDeleteOrderResponse, TaskContinuationOptions.AttachedToParent);
+            }
+            else
+            {
+                RemoveOrderForAccount(acc, clOrdId);
+            }
+        }
+
         public Calculator()
         {
             ZRBatchLedger = new SortedDictionary<long, ZoneRecoveryBatch>();
             RateLimitsRemaining = new Dictionary<ZoneRecoveryAccount, int>();
+            UpdateRateLimitsRemaining(ZoneRecoveryAccount.A, 60);
+            UpdateRateLimitsRemaining(ZoneRecoveryAccount.B, 60);
             State = new ZRSInitiating(this);
         }
 
@@ -96,7 +112,7 @@ namespace PStrategies.ZoneRecovery
             if (dict.ContainsKey("Ask") && dict["Ask"] > 0)
                 Ask = dict["Ask"];
             if (dict.ContainsKey("Bid") && dict["Bid"] > 0)
-                Ask = dict["Bid"];
+                Bid = dict["Bid"];
         }
 
         public void Initialize(IBitmexApiService apiSA, IBitmexApiService apiSB,
@@ -111,11 +127,13 @@ namespace PStrategies.ZoneRecovery
 
             try
             {
+                
                 if (apiSA == null || apiSB == null)
                     throw new Exception("bitmexApiService cannot be null");
 
-                bitmexApiServiceA = apiSA;
-                bitmexApiServiceB = apiSB;
+                ApiServiceByAccount = new Dictionary<ZoneRecoveryAccount, IBitmexApiService>();
+                ApiServiceByAccount.Add(ZoneRecoveryAccount.A, apiSA);
+                ApiServiceByAccount.Add(ZoneRecoveryAccount.B, apiSB);
 
                 if (ordersContainer != null)
                     Orders = ordersContainer;
@@ -167,6 +185,7 @@ namespace PStrategies.ZoneRecovery
                 else
                     throw new Exception("WalletBalance does not have a permitted value");
 
+                Log.Information("Calculator initialized");
             }
             catch (Exception exc)
             {
@@ -184,7 +203,11 @@ namespace PStrategies.ZoneRecovery
 
                 // Push the latest updates to the Batch
                 var orderList = Orders[acc].Where(o => clOrdIdList.Any(s => s == o.OrderId)).ToList();
-                ZRBatchLedger[RunningBatchNr].CheckStatusses(acc, orderList);
+
+                if (ZRBatchLedger.ContainsKey(RunningBatchNr))
+                    ZRBatchLedger[RunningBatchNr].CheckStatusses(acc, orderList);
+                else
+                    throw new Exception($"Evaluate: ZRBatchLedger does not contain RunningBatchNr");
 
                 // Evaluate the new state
                 State.Evaluate();
@@ -200,14 +223,29 @@ namespace PStrategies.ZoneRecovery
             }
         }
 
+        public string GetState()
+        {
+            return State.GetType().Name;
+        }
+
+        public void CleanOrderList()
+        {
+
+        }
+
         public async void StartNewZRSession()
         {
+            Log.Debug($"StartNewZRSession");
+            
             if (switchedOn)
             {
                 try
                 {
                     if (!ZRBatchLedger.ContainsKey(RunningBatchNr) || (ZRBatchLedger.ContainsKey(RunningBatchNr) && ZRBatchLedger[RunningBatchNr].BatchStatus == ZoneRecoveryBatchStatus.Closed))
                     {
+                        // Set UnitSize
+                        CalculateUnitSize(Bid);
+
                         // Create a new batch
                         var zrob = new ZoneRecoveryBatch(ZoneRecoveryBatchType.PeggedStart, ZoneRecoveryBatchStatus.Working);
                         RunningBatchNr = zrob.BatchNumber;
@@ -218,6 +256,9 @@ namespace PStrategies.ZoneRecovery
                         var idA = CreateNewClOrdID();
                         var idB = CreateNewClOrdID();
 
+                        MessageBox.Show($"Symbol{Symbol}-UnitSize{UnitSize}-(Bid - PegDistance){(Bid - PegDistance)}");
+                        MessageBox.Show($"Symbol{Symbol}-UnitSize{UnitSize}-(Ask + PegDistance){(Ask + PegDistance)}");
+
                         // Create initial Orders
                         var OrderParamsA = OrderPOSTRequestParams.CreateSimpleLimit(Symbol, idA, UnitSize, (Bid - PegDistance), OrderSide.Buy);
                         zro = new ZoneRecoveryBatchOrder(ZoneRecoveryAccount.A, OrderParamsA);
@@ -225,7 +266,7 @@ namespace PStrategies.ZoneRecovery
                         //bitmexApiServiceA
                         //    .Execute(BitmexApiUrls.Order.PostOrder, OrderParamsA)
                         //    .ContinueWith(HandleOrderResponse, TaskContinuationOptions.AttachedToParent);
-                        await PlaceOrder(bitmexApiServiceA, ZoneRecoveryAccount.A, OrderParamsA);
+                        PlaceOrder(ApiServiceByAccount[ZoneRecoveryAccount.A], ZoneRecoveryAccount.A, OrderParamsA);
 
                         var OrderParamsB = OrderPOSTRequestParams.CreateSimpleLimit(Symbol, idB, UnitSize, (Ask + PegDistance), OrderSide.Sell);
                         zro = new ZoneRecoveryBatchOrder(ZoneRecoveryAccount.B, OrderParamsB);
@@ -233,7 +274,7 @@ namespace PStrategies.ZoneRecovery
                         //bitmexApiServiceB
                         //    .Execute(BitmexApiUrls.Order.PostOrder, OrderParamsB)
                         //    .ContinueWith(HandleOrderResponse, TaskContinuationOptions.AttachedToParent);
-                        await PlaceOrder(bitmexApiServiceB, ZoneRecoveryAccount.B, OrderParamsB);
+                        PlaceOrder(ApiServiceByAccount[ZoneRecoveryAccount.B], ZoneRecoveryAccount.B, OrderParamsB);
                     }
                 }
                 catch (Exception exc)
@@ -248,21 +289,42 @@ namespace PStrategies.ZoneRecovery
             }
         }
 
-        private async Task PlaceOrder(IBitmexApiService api, ZoneRecoveryAccount acc, OrderPOSTRequestParams paramz, bool bypass = false)
+        private void PlaceOrder(IBitmexApiService api, ZoneRecoveryAccount acc, OrderPOSTRequestParams paramz, bool bypass = false)
         {
             if (!bypass && RateLimitsRemaining[acc] <= 5)
             {
                 Thread.Sleep(2000);
-                await PlaceOrder(api, acc, paramz, true);
+                PlaceOrder(api, acc, paramz, true);
             }
             else
-                await api.Execute(BitmexApiUrls.Order.PostOrder, paramz).ContinueWith(HandleOrderResponse, TaskContinuationOptions.AttachedToParent);
+                api.Execute(BitmexApiUrls.Order.PostOrder, paramz).ContinueWith(HandleOrderResponse, TaskContinuationOptions.AttachedToParent);
+        }
+        
+        private void HandleDeleteOrderResponse(Task<BitmexApiResult<List<OrderDto>>> task)
+        {
+            // Update RateLimitsRemaining
+            ZoneRecoveryAccount acc;
+            if (ZRBatchLedger[RunningBatchNr].ZROrdersList.Where(x => x.PostParams.ClOrdID == task.Result.Result.First().ClOrdId).Count() == 1)
+                acc = ZRBatchLedger[RunningBatchNr].ZROrdersList.Where(x => x.PostParams.ClOrdID == task.Result.Result.First().ClOrdId).Select(y => y.Account).Single();
+            else
+                throw new Exception($"HandleOrderResponse[1]: Shit happening....");
+
+            UpdateRateLimitsRemaining(acc, task.Result.RateLimitRemaining);
+                
+            Console.WriteLine($"HandleDeleteOrderResponse: [{task.Result.Result}] order(s) canceled");
+
+            ZRBatchLedger[RunningBatchNr].CheckBatchStatus();
         }
 
         private void HandleOrderResponse(Task<BitmexApiResult<OrderDto>> task)
         {
             // Update RateLimitsRemaining
-            var acc = ZRBatchLedger[RunningBatchNr].ZROrdersList.Where(x => x.PostParams.ClOrdID == task.Result.Result.ClOrdId).Select(y => y.Account).Single();
+            ZoneRecoveryAccount acc;
+            if (ZRBatchLedger[RunningBatchNr].ZROrdersList.Where(x => x.PostParams.ClOrdID == task.Result.Result.ClOrdId).Count() == 1)
+                acc = ZRBatchLedger[RunningBatchNr].ZROrdersList.Where(x => x.PostParams.ClOrdID == task.Result.Result.ClOrdId).Select(y => y.Account).Single();
+            else
+                throw new Exception($"HandleOrderResponse[1]: Shit happening....");
+
             UpdateRateLimitsRemaining(acc, task.Result.RateLimitRemaining);
 
             // Increase ResponsesReceived

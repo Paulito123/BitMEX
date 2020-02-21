@@ -229,6 +229,7 @@ namespace MoneyTron.Presenter
 
                 // Start...
                 ZRCalculator.SwitchedOn = true;
+                ZRCalculator.Evaluate();
     }
             catch(Exception exc)
             {

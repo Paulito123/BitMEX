@@ -79,6 +79,10 @@ namespace PStrategies.ZoneRecovery
                         else
                             Direction = ZoneRecoveryDirection.Down;                            
                     }
+                    else if (ZROrdersList.Where(x => x.CurrentStatus == ZoneRecoveryOrderStatus.New).Count() == 0)
+                    {
+                        BatchStatus = ZoneRecoveryBatchStatus.Closed;
+                    }
                     else
                     {
                         BatchStatus = ZoneRecoveryBatchStatus.Error;
@@ -102,6 +106,10 @@ namespace PStrategies.ZoneRecovery
                     else if (ZROrdersList.Where(x => x.CurrentStatus == ZoneRecoveryOrderStatus.Filled).Count() == 1)
                     {
                         BatchStatus = ZoneRecoveryBatchStatus.ReadyForNext;
+                    }
+                    else if (ZROrdersList.Where(x => x.CurrentStatus == ZoneRecoveryOrderStatus.New).Count() == 0)
+                    {
+                        BatchStatus = ZoneRecoveryBatchStatus.Closed;
                     }
                     else
                     {
@@ -128,6 +136,10 @@ namespace PStrategies.ZoneRecovery
                     else if (ZROrdersList.Where(x => x.CurrentStatus == ZoneRecoveryOrderStatus.Filled).Count() == 1)
                     {
                         BatchStatus = ZoneRecoveryBatchStatus.ReadyForNext;
+                    }
+                    else if (ZROrdersList.Where(x => x.CurrentStatus == ZoneRecoveryOrderStatus.New).Count() == 0)
+                    {
+                        BatchStatus = ZoneRecoveryBatchStatus.Closed;
                     }
                     else
                     {

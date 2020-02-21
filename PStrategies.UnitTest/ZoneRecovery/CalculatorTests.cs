@@ -51,6 +51,8 @@ namespace PStrategies.UnitTest.ZoneRecovery
             // Switch on the Calculator
             calcBox.SwitchedOn = true;
 
+            Assert.AreEqual(true, calcBox.SwitchedOn);
+
             // Update the market prices
             Dictionary<string, decimal> dict = new Dictionary<string, decimal>();
             dict.Add("Ask", 10000);
@@ -59,38 +61,47 @@ namespace PStrategies.UnitTest.ZoneRecovery
             if (dict != null)
                 calcBox.UpdatePrices(dict);
 
+            Assert.AreEqual(10000, calcBox.Ask);
+            Assert.AreEqual(10000, calcBox.Bid);
+
+            Assert.AreEqual("ZRSInitiating", calcBox.GetState());
+
             calcBox.Evaluate();
 
-            var ordrA = calcBox.ZRBatchLedger[calcBox.RunningBatchNr].ZROrdersList.Where(x => x.Account == ZoneRecoveryAccount.A).Single();
-            var ordrB = calcBox.ZRBatchLedger[calcBox.RunningBatchNr].ZROrdersList.Where(x => x.Account == ZoneRecoveryAccount.B).Single();
+            Assert.AreEqual("ZRSOrdering", calcBox.GetState());
 
-            Orders[ZoneRecoveryAccount.A].Add(new Order() {
-                Account     = 111,
-                Symbol      = "XBTUSD",
-                OrdStatus   = OrderStatus.New,
-                ClOrdId     = ordrA.PostParams.ClOrdID,
-                Price       = (double)ordrA.PostParams.Price,
-                OrderQty    = (long)ordrA.PostParams.OrderQty
-            });
+            //Assert.AreEqual(calcBox.RunningBatchNr, 0);
 
-            calcBox.Evaluate(ZoneRecoveryAccount.A, new List<string>() { ordrA.PostParams.ClOrdID });
+            //var ordrA = calcBox.ZRBatchLedger[calcBox.RunningBatchNr].ZROrdersList.Where(x => x.Account == ZoneRecoveryAccount.A).Single();
+            //var ordrB = calcBox.ZRBatchLedger[calcBox.RunningBatchNr].ZROrdersList.Where(x => x.Account == ZoneRecoveryAccount.B).Single();
 
-            Assert.AreEqual(typeof(ZRSWorking), calcBox.State.GetType());
+            //Orders[ZoneRecoveryAccount.A].Add(new Order() {
+            //    Account     = 111,
+            //    Symbol      = "XBTUSD",
+            //    OrdStatus   = OrderStatus.New,
+            //    ClOrdId     = ordrA.PostParams.ClOrdID,
+            //    Price       = (double)ordrA.PostParams.Price,
+            //    OrderQty    = (long)ordrA.PostParams.OrderQty
+            //});
 
-            Orders[ZoneRecoveryAccount.B].Add(new Order() {
-                Account     = 222,
-                Symbol      = "XBTUSD",
-                OrdStatus   = OrderStatus.New,
-                ClOrdId     = ordrB.PostParams.ClOrdID,
-                Price       = (double)ordrB.PostParams.Price,
-                OrderQty    = (long)ordrB.PostParams.OrderQty
-            });
-
-            calcBox.Evaluate(ZoneRecoveryAccount.A, new List<string>() { ordrB.PostParams.ClOrdID });
+            //calcBox.Evaluate(ZoneRecoveryAccount.A, new List<string>() { ordrA.PostParams.ClOrdID });
 
             //Assert.AreEqual(typeof(ZRSWorking), calcBox.State.GetType());
 
-            
+            //Orders[ZoneRecoveryAccount.B].Add(new Order() {
+            //    Account     = 222,
+            //    Symbol      = "XBTUSD",
+            //    OrdStatus   = OrderStatus.New,
+            //    ClOrdId     = ordrB.PostParams.ClOrdID,
+            //    Price       = (double)ordrB.PostParams.Price,
+            //    OrderQty    = (long)ordrB.PostParams.OrderQty
+            //});
+
+            //calcBox.Evaluate(ZoneRecoveryAccount.A, new List<string>() { ordrB.PostParams.ClOrdID });
+
+            //Assert.AreEqual(typeof(ZRSWorking), calcBox.State.GetType());
+
+
             // Assert
             //Assert.AreEqual(1, nextStep.PositionIndex);
             //Assert.AreEqual(300, nextStep.ReversePrice);
