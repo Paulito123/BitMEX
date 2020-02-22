@@ -47,11 +47,6 @@ namespace PStrategies.ZoneRecovery.State
         protected int currentZRPosition;
 
         /// <summary>
-        /// The current position withing the FactorArray.
-        /// </summary>
-        protected int factorPosition;
-
-        /// <summary>
         /// The direction in which current TP order is resting.
         /// </summary>
         protected int tpDirection;
@@ -73,13 +68,7 @@ namespace PStrategies.ZoneRecovery.State
             get => currentZRPosition;
             set => currentZRPosition = value;
         }
-
-        public int FactorPosition
-        {
-            get => factorPosition;
-            set => factorPosition = value;
-        }
-
+        
         public int TPDirection
         {
             get => tpDirection;
@@ -87,17 +76,109 @@ namespace PStrategies.ZoneRecovery.State
         }
 
         public abstract void Evaluate();
+
         public void InitiateState(string me)
         {
             Step = -1;
-            FactorPosition = 1;
             TPDirection = 0;
             CurrentZRPosition = 0;
-            Console.WriteLine(WhereAmI(me));
         }
+
         public string WhereAmI(string me)
         {
-            return $"New state:{me} => [CurrentZRPosition]:[{CurrentZRPosition}], [Step]:[{Step}], [FactorPosition]:[{FactorPosition}], [TPDirection]:[{TPDirection}]";
+            return $"New state:{me} => [CurrentZRPosition]:[{CurrentZRPosition}], [Step]:[{Step}], [TPDirection]:[{TPDirection}]";
+        }
+
+        public ZoneRecoveryBatchType TurnTheWheel()
+        {
+            ZoneRecoveryBatchType nextType = ZoneRecoveryBatchType.Undefined;
+
+            try
+            {
+                if (Calculator.ZRBatchLedger[Calculator.RunningBatchNr].BatchStatus != ZoneRecoveryBatchStatus.Closed)
+                    throw new Exception("ZoneRecoveryBatchStatus not Closed");
+
+                int direction;
+                
+                // TPDirection
+                if (Calculator.ZRBatchLedger[Calculator.RunningBatchNr].Direction == ZoneRecoveryDirection.Down)
+                    direction = 1;
+                else if (Calculator.ZRBatchLedger[Calculator.RunningBatchNr].Direction == ZoneRecoveryDirection.Up)
+                    direction = -1;
+                else
+                    direction = 0;
+
+                switch (Calculator.ZRBatchLedger[Calculator.RunningBatchNr].BatchType)
+                {
+                    case ZoneRecoveryBatchType.PeggedStart:
+
+                        // Correction of TPDirection because direction for PeggedStart and WindingFirst are equal!
+                        direction = direction * -1;
+
+                        // Next Type
+                        nextType = ZoneRecoveryBatchType.WindingFirst;
+
+                        // Current Zone Recovery Position
+                        CurrentZRPosition++;
+
+                        break;
+                    case ZoneRecoveryBatchType.Unwinding:
+                        
+                        // Next Type
+                        if (CurrentZRPosition == 1)
+                            nextType = ZoneRecoveryBatchType.UnwindingLast;
+                        else if (CurrentZRPosition == 0)
+                            throw new Exception("UnwindingUp has CurrentZRPosition = 0");
+
+                        // Current Zone Recovery Position
+                        CurrentZRPosition--;
+
+                        break;
+                    case ZoneRecoveryBatchType.WindingFirst:
+                    case ZoneRecoveryBatchType.Winding:
+                        
+                        if (CurrentZRPosition < Calculator.MaxDepthIndex)
+                        {
+                            // Current Zone Recovery Position
+                            CurrentZRPosition++;
+                        }
+                        else if(CurrentZRPosition == Calculator.MaxDepthIndex)
+                        {
+                            // Current Zone Recovery Position
+                            CurrentZRPosition--;
+
+                            // Next Type
+                            nextType = ZoneRecoveryBatchType.Unwinding;
+                        }
+                        else
+                            throw new Exception("Winding: CurrentZRPosition > MaxDepthIndex error");
+                        
+                        break;
+                    case ZoneRecoveryBatchType.UnwindingLast:
+                        
+                        // Next Type
+                        nextType = ZoneRecoveryBatchType.PeggedStart;
+
+                        // Current Zone Recovery Position
+                        CurrentZRPosition--;
+
+                        break;
+                }
+
+                // Step
+                Step++;
+
+                TPDirection = direction;
+            }
+            catch (Exception exc)
+            {
+                var message = $"{WhereAmI(GetType().Name)}[Error]:{exc.Message}";
+                Console.WriteLine(message);
+                Log.Error(message);
+                nextType = ZoneRecoveryBatchType.Error;
+            }
+            
+            return nextType;
         }
     }
 
@@ -250,7 +331,6 @@ namespace PStrategies.ZoneRecovery.State
         public ZRSOrdering(IZoneRecoveryState state, ZoneRecoveryBatchType type)
         {
             Step = state.Step;
-            FactorPosition = state.FactorPosition;
             Calculator = state.Calculator;
             TPDirection = state.TPDirection;
 
@@ -274,7 +354,7 @@ namespace PStrategies.ZoneRecovery.State
             }
             else if (Step == 0)
             {
-
+                // TODO: Shizzle manizzle
                 // Change state
                 Calculator.State = new ZRSWorking(this);
             }
@@ -299,7 +379,6 @@ namespace PStrategies.ZoneRecovery.State
         public ZRSWorking(IZoneRecoveryState state)
         {
             Step = state.Step;
-            FactorPosition = state.FactorPosition;
             Calculator = state.Calculator;
             TPDirection = state.TPDirection;
 
@@ -335,7 +414,6 @@ namespace PStrategies.ZoneRecovery.State
         public ZRSWaiting(IZoneRecoveryState state, bool eval = false)
         {
             this.Step = state.Step;
-            this.FactorPosition = state.FactorPosition;
             this.Calculator = state.Calculator;
             this.TPDirection = state.TPDirection;
             Console.WriteLine(WhereAmI(GetType().Name));
@@ -365,11 +443,10 @@ namespace PStrategies.ZoneRecovery.State
 
     public class ZRSCanceling : IZoneRecoveryState
     {
-        public ZRSCanceling(IZoneRecoveryState state, bool eval = false) : this(state.Calculator, state.Step, state.FactorPosition, state.TPDirection, eval) { }
-        public ZRSCanceling(Calculator calc, int step, int factorPosition, int tpDir, bool eval = false)
+        public ZRSCanceling(IZoneRecoveryState state, bool eval = false) : this(state.Calculator, state.Step, state.TPDirection, eval) { }
+        public ZRSCanceling(Calculator calc, int step, int tpDir, bool eval = false)
         {
             Step = step;
-            FactorPosition = factorPosition;
             Calculator = calc;
             TPDirection = tpDir;
             Console.WriteLine(WhereAmI(GetType().Name));
@@ -383,24 +460,50 @@ namespace PStrategies.ZoneRecovery.State
             if (Calculator.ZRBatchLedger.ContainsKey(Calculator.RunningBatchNr))
                 Console.WriteLine($"{WhereAmI(GetType().Name + "." + MethodBase.GetCurrentMethod().Name)}:{Calculator.ZRBatchLedger[Calculator.RunningBatchNr].BatchStatus}");
             else
-                Console.WriteLine($"{WhereAmI(GetType().Name + "." + MethodBase.GetCurrentMethod().Name)}:<No status>");
-
-            foreach (ZoneRecoveryBatchOrder o in Calculator.ZRBatchLedger[Calculator.RunningBatchNr].ZROrdersList)
             {
-                Calculator.RemoveOrderForAccount(o.Account, o.PostParams.ClOrdID);
+                Console.WriteLine($"{WhereAmI(GetType().Name + "." + MethodBase.GetCurrentMethod().Name)}:<No status>");
+                throw new Exception($"ZRSCanceling.Evaluate: ZRBatchLedger does not contain key");
             }
-            
+                
+            foreach (ZoneRecoveryBatchOrder o in Calculator.ZRBatchLedger[Calculator.RunningBatchNr].ZROrdersList)
+            {   
+                if (o.CurrentStatus == ZoneRecoveryOrderStatus.New)
+                    Calculator.RemoveOrderForAccount(o.Account, o.PostParams.ClOrdID);
+
+                // Remove Orders from list
+                Calculator.Orders[o.Account]
+                    .RemoveAll(filter => (Calculator.Orders[o.Account]
+                        .Any(x => x.ClOrdId == o.PostParams.ClOrdID)));
+            }
+
             //TODO Turn the wheel and move on...
+            ZoneRecoveryBatchType newType = TurnTheWheel();
+
+            switch (newType)
+            {
+                case ZoneRecoveryBatchType.Error:
+                case ZoneRecoveryBatchType.Undefined:
+                    Calculator.State = new ZRSRepairing(this);
+                    break;
+                case ZoneRecoveryBatchType.PeggedStart:
+                    Calculator.State = new ZRSOrdering(this, newType);
+                    break;
+                case ZoneRecoveryBatchType.Unwinding:
+                case ZoneRecoveryBatchType.Winding:
+                case ZoneRecoveryBatchType.UnwindingLast:
+                case ZoneRecoveryBatchType.WindingFirst:
+                    Calculator.State = new ZRSOrdering(this, newType);
+                    break;
+            }
         }
     }
 
     public class ZRSRepairing : IZoneRecoveryState
     {
-        public ZRSRepairing(IZoneRecoveryState state, bool eval = false) : this(state.Calculator, state.Step, state.FactorPosition, state.TPDirection, eval) { }
-        public ZRSRepairing(Calculator calc, int step, int factorPosition, int tpDir, bool eval = false)
+        public ZRSRepairing(IZoneRecoveryState state, bool eval = false) : this(state.Calculator, state.Step, state.TPDirection, eval) { }
+        public ZRSRepairing(Calculator calc, int step, int tpDir, bool eval = false)
         {
             this.Step = step;
-            this.FactorPosition = factorPosition;
             this.Calculator = calc;
             this.TPDirection = tpDir;
             Console.WriteLine(WhereAmI(GetType().Name));

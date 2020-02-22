@@ -45,11 +45,11 @@ namespace PStrategies.ZoneRecovery
     {
         PeggedStart,
         WindingFirst,
-        WindingUp,
-        WindingDown,
-        UnwindingUp,
-        UnwindingDown,
-        UnwindingLast
+        Winding,
+        Unwinding,
+        UnwindingLast,
+        Error,
+        Undefined
     }
 
     public enum ZoneRecoveryBatchStatus
