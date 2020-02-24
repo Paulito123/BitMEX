@@ -18,17 +18,19 @@ namespace PStrategies.ZoneRecovery
         public ZoneRecoveryAccount Account { get; }
         public OrderPOSTRequestParams PostParams { get; set; }
         public ZoneRecoveryOrderStatus CurrentStatus { get; set; }
+        public ZoneRecoveryOrderType OrderType { get; set; }
         internal DateTimeOffset? LastUpdateReceived { get; set; }
 
         #endregion Core variables and containers
 
         #region Constructors
 
-        public ZoneRecoveryBatchOrder(ZoneRecoveryAccount acc, OrderPOSTRequestParams postParams)
+        public ZoneRecoveryBatchOrder(ZoneRecoveryAccount acc, OrderPOSTRequestParams postParams, ZoneRecoveryOrderType orderType)
         {
             PostParams = postParams;
             Account = acc;
             CurrentStatus = ZoneRecoveryOrderStatus.Undefined;
+            OrderType = orderType;
         }
 
         #endregion Constructors

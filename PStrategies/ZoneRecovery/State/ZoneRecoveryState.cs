@@ -328,11 +328,14 @@ namespace PStrategies.ZoneRecovery.State
 
     public class ZRSOrdering : IZoneRecoveryState
     {
+        ZoneRecoveryBatchType ZRBType;
+
         public ZRSOrdering(IZoneRecoveryState state, ZoneRecoveryBatchType type)
         {
             Step = state.Step;
             Calculator = state.Calculator;
             TPDirection = state.TPDirection;
+            ZRBType = type;
 
             Console.WriteLine(WhereAmI(GetType().Name));
         }
@@ -344,13 +347,27 @@ namespace PStrategies.ZoneRecovery.State
             else
                 Console.WriteLine($"{WhereAmI(GetType().Name + "." + MethodBase.GetCurrentMethod().Name)}:<No status>");
 
+            switch(ZRBType)
+            {
+                case ZoneRecoveryBatchType.PeggedStart:
+                    // Create the orders
+                    Calculator.CreateNewBatch(ZRBType);
+
+                    // Change state
+                    Calculator.State = new ZRSWorking(this);
+                    break;
+                case ZoneRecoveryBatchType.Winding:
+                    // Create the orders
+                    Calculator.CreateNewBatch(ZRBType);
+
+                    // Change state
+                    Calculator.State = new ZRSWorking(this);
+                    break;
+            }
+
             if (Step == -1)
             {
-                // Create the orders
-                Calculator.StartNewZRSession();
-
-                // Change state
-                Calculator.State = new ZRSWorking(this);
+                
             }
             else if (Step == 0)
             {
