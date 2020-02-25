@@ -117,10 +117,8 @@ namespace PStrategies.ZoneRecovery
                         throw new Exception("ZoneRecoveryBatch.CheckBatchStatus: ZoneRecoveryBatchStatus.Error[2]");
                     }
                     break;
-                case ZoneRecoveryBatchType.WindingUp:
-                case ZoneRecoveryBatchType.WindingDown:
-                case ZoneRecoveryBatchType.UnwindingUp:
-                case ZoneRecoveryBatchType.UnwindingDown:
+                case ZoneRecoveryBatchType.Winding:
+                case ZoneRecoveryBatchType.Unwinding:
                     if (ResponsesReceived < 3)
                     {
                         if (ZROrdersList.Max(x => x.LastUpdateReceived) < DateTime.Now.AddSeconds(-MaxWorkingDelayAllowedInSec))

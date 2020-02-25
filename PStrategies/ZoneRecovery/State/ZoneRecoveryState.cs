@@ -32,15 +32,7 @@ namespace PStrategies.ZoneRecovery.State
         /// The context class for this state.
         /// </summary>
         protected Calculator calculator;
-
-        /// <summary>
-        /// Defines the step in the zone recovery strategy. Possible values:
-        /// -1      : Not defined
-        /// 0       : First orders are waiting to be filled
-        /// 1..n    : Orders are waiting to be filled
-        /// </summary>
-        protected int step;
-
+        
         /// <summary>
         /// 
         /// </summary>
@@ -56,13 +48,7 @@ namespace PStrategies.ZoneRecovery.State
             get => calculator;
             set => calculator = value;
         }
-
-        public int Step
-        {
-            get => step;
-            set => step = value;
-        }
-
+        
         public int CurrentZRPosition
         {
             get => currentZRPosition;
@@ -79,14 +65,13 @@ namespace PStrategies.ZoneRecovery.State
 
         public void InitiateState(string me)
         {
-            Step = -1;
             TPDirection = 0;
             CurrentZRPosition = 0;
         }
 
         public string WhereAmI(string me)
         {
-            return $"New state:{me} => [CurrentZRPosition]:[{CurrentZRPosition}], [Step]:[{Step}], [TPDirection]:[{TPDirection}]";
+            return $"New state:{me} => [CurrentZRPosition]:[{CurrentZRPosition}], [TPDirection]:[{TPDirection}]";
         }
 
         public ZoneRecoveryBatchType TurnTheWheel()
@@ -165,9 +150,6 @@ namespace PStrategies.ZoneRecovery.State
                         break;
                 }
 
-                // Step
-                Step++;
-
                 TPDirection = direction;
             }
             catch (Exception exc)
@@ -195,15 +177,7 @@ namespace PStrategies.ZoneRecovery.State
         }
 
         /// <summary>
-        /// 1. Fetch 
-        ///     a. positions 
-        ///     b. orders
-        /// 2. Check if there is a batch open
-        ///     y. See what is the status of this batch and if it corresponds with the status on the server
-        ///         y. continue with the batch as it is defined and Goto End
-        ///         n. Repair
-        ///     n. Goto 3.
-        /// 3. Change status to Opening
+        /// 
         /// </summary>
         public override void Evaluate()
         {
@@ -212,63 +186,8 @@ namespace PStrategies.ZoneRecovery.State
             else
                 Console.WriteLine($"{WhereAmI(GetType().Name + "." + MethodBase.GetCurrentMethod().Name)}:<No status>");
 
-            bool fail = false;
-            decimal aPosition = 0, bPosition = 0;
-            List<Order> mergedList = new List<Order>();
-
-            // 1.b Fetch Orders
-            try
-            {
-                if (Calculator.Orders[ZoneRecoveryAccount.A] == null || Calculator.Orders[ZoneRecoveryAccount.B] == null)
-                    throw new Exception($"Orders list in Calculator is null");
-
-                var aNewList = Calculator.Orders[ZoneRecoveryAccount.A].Where(x => x.Symbol == Calculator.Symbol && x.OrdStatus == OrderStatus.New).ToList();
-                if (aNewList != null && aNewList.Count() > 0)
-                    mergedList.AddRange(aNewList);
-
-                var bNewList = Calculator.Orders[ZoneRecoveryAccount.B].Where(x => x.Symbol == Calculator.Symbol && x.OrdStatus == OrderStatus.New).ToList();
-                if (bNewList != null && bNewList.Count() > 0)
-                    mergedList.AddRange(bNewList);
-            }
-            catch (Exception exc)
-            {
-                string m = $"{WhereAmI(GetType().Name + "." + MethodBase.GetCurrentMethod().Name)}[2]: {exc.Message}";
-                Log.Error(m);
-                Console.WriteLine(m);
-                fail = true;
-            }
-
-            if (fail)
-                return;
-
-            // 1.a Fetch Positions
-            try
-            {
-                Calculator.PositionMutex.WaitOne();
-
-                if (Calculator.Positions[ZoneRecoveryAccount.A] == null || Calculator.Positions[ZoneRecoveryAccount.B] == null)
-                    throw new Exception($"Postitions list in Calculator is null");
-
-                if (Calculator.Positions[ZoneRecoveryAccount.A].Where(x => x.Symbol == Calculator.Symbol).Count() == 1)
-                    aPosition = Calculator.Positions[ZoneRecoveryAccount.A].Where(x => x.Symbol == Calculator.Symbol).Single().CurrentQty ?? 0;
-                
-                if (Calculator.Positions[ZoneRecoveryAccount.B].Where(x => x.Symbol == Calculator.Symbol).Count() == 1)
-                    bPosition = Calculator.Positions[ZoneRecoveryAccount.B].Where(x => x.Symbol == Calculator.Symbol).Single().CurrentQty ?? 0;
-            }
-            catch (Exception exc)
-            {
-                string m = $"{WhereAmI(GetType().Name + "." + MethodBase.GetCurrentMethod().Name)}[1]: {exc.Message}";
-                Log.Error(m);
-                Console.WriteLine(m);
-                fail = true;
-            }
-            finally
-            {
-                Calculator.PositionMutex.ReleaseMutex();
-            }
-
-            if (fail)
-                return;
+            var orderDict = Calculator.GetOrdersCopy();
+            var posDict = Calculator.GetPositions();
 
             // Check if there is a batch open
             if (Calculator.ZRBatchLedger.Count > 0)
@@ -277,12 +196,12 @@ namespace PStrategies.ZoneRecovery.State
                 if (Calculator.ZRBatchLedger[Calculator.RunningBatchNr].BatchStatus == ZoneRecoveryBatchStatus.Closed)
                 {
                     // Check if the positions are flat and no orders are resting
-                    if (aPosition == 0 && bPosition == 0 && mergedList.Count == 0)
+                    if (posDict[ZoneRecoveryAccount.A].CurrentQty == 0 && posDict[ZoneRecoveryAccount.B].CurrentQty == 0 && mergedList.Count == 0)
                     {
                         InitiateState(GetType().Name + "." + MethodBase.GetCurrentMethod().Name);
                         Calculator.State = new ZRSOrdering(this, ZoneRecoveryBatchType.PeggedStart);
                     }
-                    else if (aPosition == 0 && bPosition == 0)
+                    else if (posDict[ZoneRecoveryAccount.A].CurrentQty == 0 && posDict[ZoneRecoveryAccount.B].CurrentQty == 0)
                     {
                         InitiateState(GetType().Name + "." + MethodBase.GetCurrentMethod().Name);
                         Calculator.State = new ZRSCanceling(this);
@@ -303,7 +222,7 @@ namespace PStrategies.ZoneRecovery.State
             {
                 InitiateState(GetType().Name + "." + MethodBase.GetCurrentMethod().Name);
 
-                if (aPosition == 0 && bPosition == 0)
+                if (posDict[ZoneRecoveryAccount.A].CurrentQty == 0 && posDict[ZoneRecoveryAccount.B].CurrentQty == 0)
                 {
                     Calculator.State = new ZRSOrdering(this, ZoneRecoveryBatchType.PeggedStart);
                     Calculator.Evaluate();
@@ -316,23 +235,13 @@ namespace PStrategies.ZoneRecovery.State
         }
     }
 
-    /*
-     * Step = -1;
-     * FactorPosition = 1;
-     * TPDirection = 0;
-     * CurrentZRPosition = 0;
-     * 
-     * TODO CHECK ZoneRecoveryBatchType and ZoneRecoveryBatchStatus
-     * TODO Make up your mind which statusses and variables are needed to make this state machine work properly...
-     */
-
     public class ZRSOrdering : IZoneRecoveryState
     {
         ZoneRecoveryBatchType ZRBType;
 
         public ZRSOrdering(IZoneRecoveryState state, ZoneRecoveryBatchType type)
         {
-            Step = state.Step;
+            //Step = state.Step;
             Calculator = state.Calculator;
             TPDirection = state.TPDirection;
             ZRBType = type;
@@ -347,46 +256,12 @@ namespace PStrategies.ZoneRecovery.State
             else
                 Console.WriteLine($"{WhereAmI(GetType().Name + "." + MethodBase.GetCurrentMethod().Name)}:<No status>");
 
-            switch(ZRBType)
-            {
-                case ZoneRecoveryBatchType.PeggedStart:
-                    // Create the orders
-                    Calculator.CreateNewBatch(ZRBType);
+            // Create the orders
+            Calculator.CreateNewBatch(ZRBType);
 
-                    // Change state
-                    Calculator.State = new ZRSWorking(this);
-                    break;
-                case ZoneRecoveryBatchType.Winding:
-                    // Create the orders
-                    Calculator.CreateNewBatch(ZRBType);
+            // Change state
+            Calculator.State = new ZRSWorking(this);
 
-                    // Change state
-                    Calculator.State = new ZRSWorking(this);
-                    break;
-            }
-
-            if (Step == -1)
-            {
-                
-            }
-            else if (Step == 0)
-            {
-                // TODO: Shizzle manizzle
-                // Change state
-                Calculator.State = new ZRSWorking(this);
-            }
-            else if (Step == Calculator.MaxDepthIndex)
-            {
-
-                // Change state
-                Calculator.State = new ZRSWorking(this);
-            }
-            else if (Step == Calculator.MaxDepthIndex)
-            {
-
-                // Change state
-                Calculator.State = new ZRSWorking(this);
-            }
             
         }
     }
@@ -395,7 +270,6 @@ namespace PStrategies.ZoneRecovery.State
     {
         public ZRSWorking(IZoneRecoveryState state)
         {
-            Step = state.Step;
             Calculator = state.Calculator;
             TPDirection = state.TPDirection;
 
@@ -430,7 +304,6 @@ namespace PStrategies.ZoneRecovery.State
     {
         public ZRSWaiting(IZoneRecoveryState state, bool eval = false)
         {
-            this.Step = state.Step;
             this.Calculator = state.Calculator;
             this.TPDirection = state.TPDirection;
             Console.WriteLine(WhereAmI(GetType().Name));
@@ -446,24 +319,15 @@ namespace PStrategies.ZoneRecovery.State
             else
                 Console.WriteLine($"{WhereAmI(GetType().Name + "." + MethodBase.GetCurrentMethod().Name)}:<No status>");
 
-            // Check if the orders are filled as expected
-            // [0] Desired setup, either TP with TL have been filled or REV has been filled.
-            // [1] Only TP|TL is filled but TL|TP is still expected
-            // [2] An undesired combination has been filled for some reason
-            // [3] 
-            // if (0) > Turn the wheel, close what must be closed and Calculator.State = new ZRSOrdering(this)
-            // if (1) > Start a task on a new thread to check if TP|TL was still on its way
-            // if (2) > Calculator.State = new ZRSRepairing(this);
-            // if (3) > 
+            
         }
     }
 
     public class ZRSCanceling : IZoneRecoveryState
     {
-        public ZRSCanceling(IZoneRecoveryState state, bool eval = false) : this(state.Calculator, state.Step, state.TPDirection, eval) { }
-        public ZRSCanceling(Calculator calc, int step, int tpDir, bool eval = false)
+        public ZRSCanceling(IZoneRecoveryState state, bool eval = false) : this(state.Calculator, state.TPDirection, eval) { }
+        public ZRSCanceling(Calculator calc, int tpDir, bool eval = false)
         {
-            Step = step;
             Calculator = calc;
             TPDirection = tpDir;
             Console.WriteLine(WhereAmI(GetType().Name));
@@ -517,10 +381,9 @@ namespace PStrategies.ZoneRecovery.State
 
     public class ZRSRepairing : IZoneRecoveryState
     {
-        public ZRSRepairing(IZoneRecoveryState state, bool eval = false) : this(state.Calculator, state.Step, state.TPDirection, eval) { }
-        public ZRSRepairing(Calculator calc, int step, int tpDir, bool eval = false)
+        public ZRSRepairing(IZoneRecoveryState state, bool eval = false) : this(state.Calculator, state.TPDirection, eval) { }
+        public ZRSRepairing(Calculator calc, int tpDir, bool eval = false)
         {
-            this.Step = step;
             this.Calculator = calc;
             this.TPDirection = tpDir;
             Console.WriteLine(WhereAmI(GetType().Name));
